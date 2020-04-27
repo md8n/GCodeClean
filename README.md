@@ -21,7 +21,7 @@ Get yourself to a command line prompt, change to the folder where you've cloned 
 dotnet run
 ```
 
-... and, after it has downloaded all of the packages it needs with nuget, and built `GCodeClean`, you'll get a little bit of help info like this:
+... and, after it has downloaded all of the packages it needs with nuget (which may take a while), and built `GCodeClean`, you'll get a little bit of help info like this:
 ```
 GCode Clean
 -----------
@@ -50,6 +50,11 @@ And then run the `GCodeClean` executable.
 e.g. for Windows that might look like:
 ```
 D:\GitHub\gcodeclean>bin\Debug\netcoreapp3.1\publish\gcodeclean FacadeFullAlternate.nc
+```
+
+or for Linux (Ubuntu 18.04)
+```
+./bin/Debug/netcoreapp3.1/publish/GCodeClean FacadeFullAlternate.nc
 ```
 
 After processing `GCodeClean` will report the number of lines that it output.
