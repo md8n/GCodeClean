@@ -84,7 +84,7 @@ namespace GCodeClean
         
         public static async IAsyncEnumerable<List<string>> Augment(this IAsyncEnumerable<List<string>> tokenizedLines) {
             var previousXYZCoords = new List<string>() {"X0.00", "Y0.00", "Z0.00"};
-            var previousIJCoords = new List<string>() {"I0.00", "J0.00"};
+            var previousIJKCoords = new List<string>() {"I0.00", "J0.00", "K0.00"};
 
             await foreach (var tokens in tokenizedLines) {
                 var hasXY = false;
@@ -110,12 +110,12 @@ namespace GCodeClean
                     previousXYZCoords[ix] = newCoord;
                 }
 
-                for (var ix = 0; ix < previousIJCoords.Count; ix++) {
-                    var newCoord = tokens.FirstOrDefault(t => t[0] == previousIJCoords[ix][0]);
+                for (var ix = 0; ix < previousIJKCoords.Count; ix++) {
+                    var newCoord = tokens.FirstOrDefault(t => t[0] == previousIJKCoords[ix][0]);
                     if (newCoord == null) {
-                        newCoord = previousIJCoords[ix];
+                        newCoord = previousIJKCoords[ix];
                     }
-                    previousIJCoords[ix] = newCoord;
+                    previousIJKCoords[ix] = newCoord;
                 }
 
                 if (hasXY) {
@@ -133,7 +133,7 @@ namespace GCodeClean
                             tokens.RemoveAt(ix);
                         }
                     }
-                    tokens.AddRange(previousIJCoords);
+                    tokens.AddRange(previousIJKCoords);
                 }
 
                 yield return tokens;                    
@@ -295,6 +295,46 @@ namespace GCodeClean
                 if (!isDuplicate && annotationTokens.Count > 0) {
                     tokens.Add($"({string.Join(", ", annotationTokens)})");
                     previousTokenCodes = tokenCodes;
+                }
+
+                yield return tokens;
+            }
+        }
+
+        public static async IAsyncEnumerable<List<string>> DedupTokens(this IAsyncEnumerable<List<string>> tokenizedLines) {
+            var previousXYZCoords = new List<string>() {"X0.00", "Y0.00", "Z0.00"};
+            var previousIJKCoords = new List<string>() {"I0.00", "J0.00", "K0.00"};
+
+            await foreach (var tokens in tokenizedLines) {
+                if (!tokens.Any()) {
+                    yield return tokens;
+                    continue;
+                }
+
+                for (var ix = tokens.Count - 1; ix >= 0; ix--) {
+                    if (previousXYZCoords.Any(c => c == tokens[ix])) {
+                        tokens.RemoveAt(ix);
+                    }
+                }
+
+                for (var ix = tokens.Count - 1; ix >= 0; ix--) {
+                    if (previousIJKCoords.Any(c => c == tokens[ix])) {
+                        tokens.RemoveAt(ix);
+                    }
+                }
+
+                for (var ix = 0; ix < previousXYZCoords.Count; ix++) {
+                    var newCoord = tokens.FirstOrDefault(t => t[0] == previousXYZCoords[ix][0]);
+                    if (newCoord != null) {
+                        previousXYZCoords[ix] = newCoord;
+                    }
+                }
+
+                for (var ix = 0; ix < previousIJKCoords.Count; ix++) {
+                    var newCoord = tokens.FirstOrDefault(t => t[0] == previousIJKCoords[ix][0]);
+                    if (newCoord != null) {
+                        previousIJKCoords[ix] = newCoord;
+                    }
                 }
 
                 yield return tokens;

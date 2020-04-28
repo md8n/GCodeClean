@@ -40,7 +40,8 @@ namespace GCodeClean
                 .DedupLinear()
                 .DedupLinear()
                 .DedupLinear()
-                .Annotate()
+                //.Annotate()
+                .DedupTokens()
                 .JoinTokens();
             var lineCount = outputFile.WriteLinesAsync(outputLines);
 
