@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 using Newtonsoft.Json.Linq;
 
@@ -13,7 +14,9 @@ namespace GCodeClean
     public static class Processing {
         public static async IAsyncEnumerable<List<string>> Tokenize(this IAsyncEnumerable<string> lines) {
             await foreach (var line in lines) {
-                var tokens = line.Split().ToList();
+                // prepare comments to always have spaces before and after
+                var cleanedline = line.Replace("(", " (").Replace(")", ") ").Replace("  (", " (").Replace(")  ", ") ");
+                var tokens = cleanedline.Split().ToList();
                 for (var ix = tokens.Count - 1; ix >= 0; ix--) {
                     tokens[ix] = tokens[ix].Trim().ToUpper();
                     if (string.IsNullOrWhiteSpace(tokens[ix])) {
@@ -80,23 +83,39 @@ namespace GCodeClean
         }
         
         public static async IAsyncEnumerable<List<string>> Augment(this IAsyncEnumerable<List<string>> tokenizedLines) {
-            var previousCoords = new List<string>(){"X0.00", "Y0.00", "Z0.00"};
+            var previousXYZCoords = new List<string>() {"X0.00", "Y0.00", "Z0.00"};
+            var previousIJCoords = new List<string>() {"I0.00", "J0.00"};
 
             await foreach (var tokens in tokenizedLines) {
                 var hasXY = false;
+                var hasIJ = false;
                 foreach(var token in tokens) {
                     if (token[0] == 'X' || token[0] == 'Y') {
                         hasXY = true;
                         break;
                     }
                 }
-
-                for (var ix = 0; ix < previousCoords.Count; ix++) {
-                    var newCoord = tokens.FirstOrDefault(t => t[0] == previousCoords[ix][0]);
-                    if (newCoord == null) {
-                        newCoord = previousCoords[ix];
+                foreach(var token in tokens) {
+                    if (token[0] == 'I' || token[0] == 'J') {
+                        hasIJ = true;
+                        break;
                     }
-                    previousCoords[ix] = newCoord;
+                }
+
+                for (var ix = 0; ix < previousXYZCoords.Count; ix++) {
+                    var newCoord = tokens.FirstOrDefault(t => t[0] == previousXYZCoords[ix][0]);
+                    if (newCoord == null) {
+                        newCoord = previousXYZCoords[ix];
+                    }
+                    previousXYZCoords[ix] = newCoord;
+                }
+
+                for (var ix = 0; ix < previousIJCoords.Count; ix++) {
+                    var newCoord = tokens.FirstOrDefault(t => t[0] == previousIJCoords[ix][0]);
+                    if (newCoord == null) {
+                        newCoord = previousIJCoords[ix];
+                    }
+                    previousIJCoords[ix] = newCoord;
                 }
 
                 if (hasXY) {
@@ -105,7 +124,16 @@ namespace GCodeClean
                             tokens.RemoveAt(ix);
                         }
                     }
-                    tokens.AddRange(previousCoords);
+                    tokens.AddRange(previousXYZCoords);
+                }
+
+                if (hasIJ) {
+                    for (var ix = tokens.Count - 1; ix >= 0; ix--) {
+                        if (tokens[ix][0] == 'I' || tokens[ix][0] == 'J') {
+                            tokens.RemoveAt(ix);
+                        }
+                    }
+                    tokens.AddRange(previousIJCoords);
                 }
 
                 yield return tokens;                    
@@ -131,8 +159,9 @@ namespace GCodeClean
             var tokensB = new List<string>();
             var areTokensBSet = false;
             await foreach (var tokensC in tokenizedLines) {
-                if (!tokensA.AreTokensCompatible(tokensC)) {
-                    // A -> C are not of compatible 'form'
+                var hasLinearMovement = tokensC.Any(tc => new []{"G0", "G1", "G00", "G01"}.Contains(tc));
+                if (!hasLinearMovement || !tokensA.AreTokensCompatible(tokensC)) {
+                    // Not a linear movement command or A -> C are not of compatible 'form'
                     yield return tokensA;
                     if (areTokensBSet) {
                         yield return tokensB;
@@ -273,9 +302,15 @@ namespace GCodeClean
         }
 
         public static async IAsyncEnumerable<string> JoinTokens(this IAsyncEnumerable<List<string>> tokenizedLines) {
-
+            var isFirstLine = true;
             await foreach (var tokens in tokenizedLines) {
-                yield return string.Join(' ', tokens);
+                var joinedLine = string.Join(' ', tokens);
+                if (String.IsNullOrWhiteSpace(joinedLine) && isFirstLine) {
+                    continue;
+                }
+                isFirstLine = false;
+
+                yield return joinedLine;
             }
         }
 

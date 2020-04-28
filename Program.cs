@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace GCodeClean
@@ -20,9 +21,15 @@ namespace GCodeClean
             }
 
             var inputFile = args[0];
-            var outputFile = inputFile.EndsWith(".nc")
-                ? inputFile.Replace(".nc", "-gcc.nc")
-                : inputFile + "-gcc.nc";
+            var outputFile = inputFile;
+            var inputExtension = Path.GetExtension(inputFile);
+            Console.WriteLine(inputExtension);
+            if (String.IsNullOrEmpty(inputExtension)) {
+                outputFile += "-gcc.nc";
+            } else {
+                outputFile = outputFile.Replace(inputExtension, "-gcc" + inputExtension);
+            }
+            Console.WriteLine("Outputting to:" + outputFile);
 
             var inputLines = inputFile.ReadLinesAsync();
             var outputLines = inputLines.Tokenize()
