@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 using Newtonsoft.Json.Linq;
 
@@ -44,6 +43,11 @@ namespace GCodeClean
             var context = new Dictionary<string, string>();
 
             await foreach (var tokens in tokenizedLines) {
+                if (tokens.IsEmptyOrComments()) {
+                    yield return tokens;
+                    continue;
+                }
+
                 for (var ix = 0; ix < tokens.Count; ix++)
                 {
                     var replacement = (JObject)replacements[tokens[ix]];
@@ -69,7 +73,7 @@ namespace GCodeClean
                         var hasDP = tokens[ix].IndexOf(".") != -1;
                         if (hasUnits && hasDP && value.HasValue)
                         {
-                            // Round to 2dp for mm and 3dp for inch
+                            // Round to 1dp for mm and 2dp for inch
                             var clip = (context["lengthUnits"] == "mm") ? 1 : 2;
                             var clipFormat = clip == 1 ? "{0}{1:0.0}" : "{0}{1:0.00}";
                             value = Math.Round(value.Value, clip);
@@ -84,9 +88,14 @@ namespace GCodeClean
         
         public static async IAsyncEnumerable<List<string>> Augment(this IAsyncEnumerable<List<string>> tokenizedLines) {
             var previousXYZCoords = new List<string>() {"X0.00", "Y0.00", "Z0.00"};
-            var previousIJKCoords = new List<string>() {"I0.00", "J0.00", "K0.00"};
+            var previousIJKCoords = new List<string>() {"I0.00", "J0.00"};
 
             await foreach (var tokens in tokenizedLines) {
+                if (tokens.IsEmptyOrComments()) {
+                    yield return tokens;
+                    continue;
+                }
+
                 var hasXY = false;
                 var hasIJ = false;
                 foreach(var token in tokens) {
@@ -98,6 +107,12 @@ namespace GCodeClean
                 foreach(var token in tokens) {
                     if (token[0] == 'I' || token[0] == 'J') {
                         hasIJ = true;
+                        break;
+                    }
+                }
+                foreach(var token in tokens) {
+                    if (token[0] == 'K') {
+                        previousIJKCoords.Add("K0.00");
                         break;
                     }
                 }
@@ -129,7 +144,7 @@ namespace GCodeClean
 
                 if (hasIJ) {
                     for (var ix = tokens.Count - 1; ix >= 0; ix--) {
-                        if (tokens[ix][0] == 'I' || tokens[ix][0] == 'J') {
+                        if (tokens[ix][0] == 'I' || tokens[ix][0] == 'J' || tokens[ix][0] == 'K') {
                             tokens.RemoveAt(ix);
                         }
                     }
@@ -144,7 +159,10 @@ namespace GCodeClean
             var previousTokens = new List<string>();
             await foreach (var tokens in tokenizedLines) {
                 if (!previousTokens.AreTokensEqual(tokens)) {
-                    previousTokens = tokens;
+                    if (!tokens.IsEmptyOrComments()) {
+                        previousTokens = tokens;
+                    }
+
                     yield return tokens;
                 }
 
@@ -254,6 +272,11 @@ namespace GCodeClean
             var previousTokenCodes = new List<string>();
 
             await foreach (var tokens in tokenizedLines) {
+                if (tokens.IsEmptyOrComments()) {
+                    yield return tokens;
+                    continue;
+                }
+
                 var annotationTokens = new List<string>();
                 var tokenCodes = new List<string>();
                 foreach (var token in tokens) {
@@ -301,12 +324,35 @@ namespace GCodeClean
             }
         }
 
+        public static async IAsyncEnumerable<List<string>> DedupZTokens(this IAsyncEnumerable<List<string>> tokenizedLines) {
+            var previousZCoord = "Z0.00";
+
+            await foreach (var tokens in tokenizedLines) {
+                if (tokens.IsEmptyOrComments()) {
+                    yield return tokens;
+                    continue;
+                }
+
+                for (var ix = tokens.Count - 1; ix >= 0; ix--) {
+                    if (previousZCoord[0] == tokens[ix][0]) {
+                        if (previousZCoord == tokens[ix]) {
+                            tokens.RemoveAt(ix);
+                        } else {
+                            previousZCoord = tokens[ix];
+                        }
+                    } 
+                }
+
+                yield return tokens;
+            }
+        }
+
         public static async IAsyncEnumerable<List<string>> DedupTokens(this IAsyncEnumerable<List<string>> tokenizedLines) {
             var previousXYZCoords = new List<string>() {"X0.00", "Y0.00", "Z0.00"};
             var previousIJKCoords = new List<string>() {"I0.00", "J0.00", "K0.00"};
 
             await foreach (var tokens in tokenizedLines) {
-                if (!tokens.Any()) {
+                if (tokens.IsEmptyOrComments()) {
                     yield return tokens;
                     continue;
                 }
@@ -352,6 +398,10 @@ namespace GCodeClean
 
                 yield return joinedLine;
             }
+        }
+
+        private static Boolean IsEmptyOrComments(this List<string> tokens) {
+            return tokens.Count == 0 || tokens.All(t => t[0] == '(');
         }
 
         private static Boolean AreTokensEqual(this List<string> tokensA, List<string> tokensB) {
