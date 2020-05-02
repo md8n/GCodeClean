@@ -11,30 +11,6 @@ using Newtonsoft.Json.Linq;
 namespace GCodeClean
 {
     public static class Processing {
-        public static async IAsyncEnumerable<List<string>> Tokenize(this IAsyncEnumerable<string> lines) {
-            await foreach (var line in lines) {
-                // prepare comments to always have spaces before and after
-                var cleanedline = line.Replace("(", " (").Replace(")", ") ").Replace("  (", " (").Replace(")  ", ") ");
-                var tokens = cleanedline.Split().ToList();
-                for (var ix = tokens.Count - 1; ix >= 0; ix--) {
-                    tokens[ix] = tokens[ix].Trim().ToUpper();
-                    if (string.IsNullOrWhiteSpace(tokens[ix])) {
-                        // Remove any empty tokens
-                        tokens.RemoveAt(ix);
-                        continue;
-                    }
-                    if (tokens[ix].EndsWith(')') && !tokens[ix].StartsWith('(')) {
-                        // Collapse comments into a single token
-                        tokens[ix - 1] += ' ' + tokens[ix];
-                        tokens.RemoveAt(ix);
-                        continue;
-                    }
-                }
-
-                yield return tokens;
-            }
-        }
-
         public static async IAsyncEnumerable<List<string>> Clip(this IAsyncEnumerable<List<string>> tokenizedLines) {
             JObject tokenDefinitions = JObject.Parse(File.ReadAllText("tokenDefinitions.json"));
 
@@ -172,10 +148,11 @@ namespace GCodeClean
 
         /// Testing whether A -> B -> C is a straight line
         /// and eliminating B if that's the case
-        public static async IAsyncEnumerable<List<string>> DedupLinear(this IAsyncEnumerable<List<string>> tokenizedLines) {
+        public static async IAsyncEnumerable<List<string>> DedupLinear(this IAsyncEnumerable<List<string>> tokenizedLines, Double tolerance) {
             var tokensA = new List<string>();
             var tokensB = new List<string>();
             var areTokensBSet = false;
+
             await foreach (var tokensC in tokenizedLines) {
                 var hasLinearMovement = tokensC.Any(tc => new []{"G0", "G1", "G00", "G01"}.Contains(tc));
                 if (!hasLinearMovement || !tokensA.AreTokensCompatible(tokensC)) {
@@ -197,61 +174,69 @@ namespace GCodeClean
                     continue;
                 }
 
-                // A 'wobble' - we know that A -> B -> C cannot be colinear, because A == C
-                var hasWobble = tokensA.AreTokensEqual(tokensC);
-                var notCoords = false;
+                var coordsA = tokensA.ExtractCoords();
+                var coordsB = tokensB.ExtractCoords();
+                var coordsC = tokensC.ExtractCoords();
+
+                // Check we've got a full set of coords for the three token sets
+                var notCoords = (coordsA.Set + coordsB.Set + coordsC.Set).Length != 9;
                 var outOfBounds = false;
-                var notColinear = false;
+                var notSignificant = false;
 
-                if (!hasWobble) {
-                    // Extract X, Y, Z from each set of tokens
-                    var coordsA = tokensA.ExtractCoords();
-                    var coordsB = tokensB.ExtractCoords();
-                    var coordsC = tokensC.ExtractCoords();
+                if (!notCoords)
+                {
+                    // basic check that B is roughly between A and C
+                    outOfBounds = !(coordsB.X.WithinRange(coordsA.X, coordsC.X)
+                        && coordsB.Y.WithinRange(coordsA.Y, coordsC.Y)
+                        && coordsB.Z.WithinRange(coordsA.Z, coordsC.Z));                    
+                }
 
-                    // Check we've got a full set of coords for the three token sets
-                    notCoords = (coordsA.Set + coordsB.Set + coordsC.Set).Length != 9;
+                if (!notCoords && !outOfBounds)
+                {
+                    // Check if any value is too small to matter                    
+                    var (acX, acY, acZ) = coordsA.CoordsDifference(coordsC);
+                    var (abX, abY, abZ) = coordsA.CoordsDifference(coordsB);
+                    var (bcX, bcY, bcZ) = coordsB.CoordsDifference(coordsC);
 
-                    if (!notCoords) {
-                        // basic check that B is roughly between A and C
-                        outOfBounds = !(coordsB.X.WithinRange(coordsA.X, coordsC.X)
-                            && coordsB.Y.WithinRange(coordsA.Y, coordsC.Y)
-                            && coordsB.Z.WithinRange(coordsA.Z, coordsC.Z));
+                    var xIsRelevant = (acX >= tolerance && abX >= tolerance && bcX >= tolerance) ? 1 : 0;
+                    var yIsRelevant = (acY >= tolerance && abY >= tolerance && bcY >= tolerance) ? 1 : 0;
+                    var zIsRelevant = (acZ >= tolerance && abZ >= tolerance && bcZ >= tolerance) ? 1 : 0;
+
+                    notSignificant = xIsRelevant + yIsRelevant + zIsRelevant < 2;
+
+                    var xyNotRelevant = true;
+                    var xzNotRelevant = true;
+                    var yzNotRelevant = true;
+
+                    if (!notSignificant) {
+                        var acXYAngle = (acX, acY).Angle();
+                        var abXYAngle = (abX, abY).Angle();
+
+                        var acXZAngle = (acX, acZ).Angle();
+                        var abXZAngle = (abX, abZ).Angle();
+
+                        var acYZAngle = (acY, acZ).Angle();
+                        var abYZAngle = (abY, abZ).Angle();
+
+                        if (xIsRelevant + yIsRelevant == 2)
+                        {
+                            xyNotRelevant = Math.Abs(acXYAngle - abXYAngle) < tolerance;
+                        }
+                        if (xIsRelevant + zIsRelevant == 2)
+                        {
+                            xzNotRelevant = Math.Abs(acXZAngle - abXZAngle) < tolerance;
+                        }
+                        if (yIsRelevant + zIsRelevant == 2)
+                        {
+                            yzNotRelevant = Math.Abs(acYZAngle - abYZAngle) < tolerance;
+                        }
                     }
 
-                    if (!notCoords && !outOfBounds) {
-                        var acX = (Double)(coordsA.X - coordsC.X);
-                        var acY = (Double)(coordsA.Y - coordsC.Y);
-                        var acZ = (Double)(coordsA.Z - coordsC.Z);
-
-                        var abX = (Double)(coordsA.X - coordsB.X);
-                        var abY = (Double)(coordsA.Y - coordsB.Y);
-                        var abZ = (Double)(coordsA.Z - coordsB.Z);
-
-                        var bcX = (Double)(coordsB.X - coordsC.X);
-                        var bcY = (Double)(coordsB.Y - coordsC.Y);
-                        var bcZ = (Double)(coordsB.Z - coordsC.Z);
-
-                        var acXY2 = Math.Sqrt((acX * acX) + (acY * acY));
-                        var abXY2 = Math.Sqrt((abX * abX) + (abY * abY));
-                        var bcXY2 = Math.Sqrt((bcX * bcX) + (bcY * bcY));
-
-                        var acXZ2 = Math.Sqrt((acX * acX) + (acZ * acZ));
-                        var abXZ2 = Math.Sqrt((abX * abX) + (abZ * abZ));
-                        var bcXZ2 = Math.Sqrt((bcX * bcX) + (bcZ * bcZ));
-
-                        var xyOoM = Math.Max(acXY2, abXY2).OoM();
-                        var xzOoM = Math.Max(acXZ2, abXZ2).OoM();
-
-                        var xyTolerance = Math.Min(Math.Pow(10, xyOoM) * 0.005, 0.005);
-                        var xzTolerance = Math.Min(Math.Pow(10, xzOoM) * 0.005, 0.005);
-
-                        notColinear = !((acXY2 - (abXY2 + bcXY2) <= xyTolerance) && (acXZ2 - (abXZ2 + bcXZ2) <= xzTolerance));
-                    }
+                    notSignificant = (xyNotRelevant && xzNotRelevant && yzNotRelevant);
                 }
 
                 yield return tokensA;
-                if (hasWobble || notCoords || outOfBounds || notColinear) {
+                if (notCoords || outOfBounds || notSignificant) {
                     yield return tokensB;
                 }
                 // else - They are colinear! so move things along and silently drop tokenB
@@ -324,8 +309,8 @@ namespace GCodeClean
             }
         }
 
-        public static async IAsyncEnumerable<List<string>> DedupZTokens(this IAsyncEnumerable<List<string>> tokenizedLines) {
-            var previousZCoord = "Z0.00";
+        public static async IAsyncEnumerable<List<string>> DedupSelectTokens(this IAsyncEnumerable<List<string>> tokenizedLines, List<char> selectedTokens) {
+            var previousSelectedTokens = selectedTokens.Select(st => $"{st}0.00").ToList();
 
             await foreach (var tokens in tokenizedLines) {
                 if (tokens.IsEmptyOrComments()) {
@@ -334,13 +319,16 @@ namespace GCodeClean
                 }
 
                 for (var ix = tokens.Count - 1; ix >= 0; ix--) {
-                    if (previousZCoord[0] == tokens[ix][0]) {
-                        if (previousZCoord == tokens[ix]) {
-                            tokens.RemoveAt(ix);
-                        } else {
-                            previousZCoord = tokens[ix];
-                        }
-                    } 
+                    if (previousSelectedTokens.Any(c => c == tokens[ix])) {
+                        tokens.RemoveAt(ix);
+                    }
+                }
+
+                for (var ix = 0; ix < previousSelectedTokens.Count; ix++) {
+                    var newToken = tokens.FirstOrDefault(t => t[0] == previousSelectedTokens[ix][0]);
+                    if (newToken != null) {
+                        previousSelectedTokens[ix] = newToken;
+                    }
                 }
 
                 yield return tokens;
@@ -384,19 +372,6 @@ namespace GCodeClean
                 }
 
                 yield return tokens;
-            }
-        }
-
-        public static async IAsyncEnumerable<string> JoinTokens(this IAsyncEnumerable<List<string>> tokenizedLines) {
-            var isFirstLine = true;
-            await foreach (var tokens in tokenizedLines) {
-                var joinedLine = string.Join(' ', tokens);
-                if (String.IsNullOrWhiteSpace(joinedLine) && isFirstLine) {
-                    continue;
-                }
-                isFirstLine = false;
-
-                yield return joinedLine;
             }
         }
 
@@ -472,26 +447,22 @@ namespace GCodeClean
             return B >= low && B <= high;
         }
 
-        private static int OoM(this double value) {
-            var mag = 0;
+        private static Double Angle(this Double da, Double db) {
+            var theta = Math.Atan2((Double)da, (Double)db); // range (-PI, PI]
+            theta *= 180 / Math.PI; // rads to degs, range (-180, 180]
 
-            if (value == 0) {
-                return mag;
-            }
- 
-            if (Math.Abs(value) > 1.0) {
-                while(value > 1) { 
-                    mag++; 
-                    value /= 10; 
-                };
-            } else if (Math.Abs(value) < 0.1) {
-                while(value < 1) { 
-                    mag--; 
-                    value *= 10; 
-                };
-            }
+            return theta;
+        }
 
-            return mag;
+        private static Double Angle(this (Double A, Double B) d) {
+            var theta = Math.Atan2((Double)d.A, (Double)d.B); // range (-PI, PI]
+            theta *= 180 / Math.PI; // rads to degs, range (-180, 180]
+
+            return theta;
+        }
+
+        private static (Double X, Double Y, Double Z) CoordsDifference(this (decimal X, decimal Y, decimal Z, string Set) coords1, (decimal X, decimal Y, decimal Z, string Set) coords2) {
+            return ((Double)(coords2.X - coords1.X), (Double)(coords2.Y - coords1.Y), (Double)(coords2.Z - coords1.Z));
         }
     }
 }

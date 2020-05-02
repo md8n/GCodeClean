@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -36,12 +37,12 @@ namespace GCodeClean
                 .Clip()
                 .Augment()
                 .Dedup()
-                .DedupLinear()
-                .DedupLinear()
-                .DedupLinear()
-                .DedupLinear()
+                .DedupLinear(0.0005)
+                // .DedupLinear(0.0005)
+                // .DedupLinear(0.0005)
+                // .DedupLinear(0.0005)
                 //.Annotate()
-                .DedupZTokens()
+                .DedupSelectTokens(new List<char> {'F', 'Z'})
                 //.DedupTokens()
                 .JoinTokens();
             var lineCount = outputFile.WriteLinesAsync(outputLines);
