@@ -3,29 +3,20 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Text.RegularExpressions;
 
-namespace GCodeClean
+namespace GCodeClean.Processing
 {
     public static class Tokenizer {
+        // A 'basic' gcode parser pattern, this does not support expressions that equate to numbers
+        public const string pattern = @"((\%)|((?<linenumber>N\s*\d{1,5})?\s*(?<word>[ABCDFGHIJKLMNPRSTXYZ]\s*[+-]?\d*\.?\d*\s*)|(?<comment>\(.*\)\s*)))";
+
         public static async IAsyncEnumerable<List<string>> Tokenize(this IAsyncEnumerable<string> lines) {
             await foreach (var line in lines) {
-                // prepare comments to always have spaces before and after
-                var cleanedline = line.Replace("(", " (").Replace(")", ") ").Replace("  (", " (").Replace(")  ", ") ");
-                var tokens = cleanedline.Split().ToList();
-                for (var ix = tokens.Count - 1; ix >= 0; ix--) {
-                    tokens[ix] = tokens[ix].Trim().ToUpper();
-                    if (string.IsNullOrWhiteSpace(tokens[ix])) {
-                        // Remove any empty tokens
-                        tokens.RemoveAt(ix);
-                        continue;
-                    }
-                    if (tokens[ix].EndsWith(')') && !tokens[ix].StartsWith('(')) {
-                        // Collapse comments into a single token
-                        tokens[ix - 1] += ' ' + tokens[ix];
-                        tokens.RemoveAt(ix);
-                        continue;
-                    }
+                var tokens = new List<string>();
+                foreach (Match match in Regex.Matches(line, pattern, RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture))
+                {
+                    tokens.Add(match.Value.Trim());
                 }
 
                 yield return tokens;

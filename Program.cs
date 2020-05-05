@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
+using GCodeClean.Processing;
+
 namespace GCodeClean
 {
     class Program
@@ -36,7 +38,7 @@ namespace GCodeClean
             var outputLines = inputLines.Tokenize()
                 .Clip()
                 .Augment()
-                .Dedup()
+                .DedupLine()
                 .DedupLinear(0.0005)
                 // .DedupLinear(0.0005)
                 // .DedupLinear(0.0005)
