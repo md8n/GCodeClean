@@ -1,6 +1,15 @@
 # GCodeClean
 
-A command line utility to do some 'cleaning' of a gcode (an `.nc`) file.
+A command line utility to do some 'cleaning' of a gcode (an `.nc`, `.gcode`) file.
+The primary objective is to be a `GCode Linter`.
+But we'll also look at supporting:
+* annotating the GCode with explanatory comments (optional),
+* eliminating redundant lines (within tolerances),
+* clipping decimal places on arguments to meaningful values,
+* reorganising the 'words' on a line to meet the official rules, then conform to some common practices (but not all), and then actually replicate the order they must be processed in,
+* injecting blank lines to highlight significant instructions (tool raising, tool changes),
+* removing some superfluous tokens (soft minimisation), or
+* removing all superfluous tokens and spaces (hard minimisation)
 
 ## Getting Started
 
@@ -29,8 +38,8 @@ Usage:
 gccodeclean <filename>
 ```
 
-So find yourself a gcode (`.nc`) file to use for `<filename>`.
-And replace `<filename>` with the full path to your `.nc` file (as per what your OS requires).
+So find yourself a gcode (`.nc`, `.gcode`, etc.) file to use for `<filename>`.
+And replace `<filename>` with the full path to your gcode file (as per what your OS requires).
 
 `GCodeClean` will require Read acces to that file, and Write access to the folder where that file is located.
 
@@ -58,7 +67,7 @@ or for Linux (Ubuntu 18.04)
 ```
 
 After processing `GCodeClean` will report the number of lines that it output.
-The output file will have `-gcc.nc` appended to name of the input file that you provided on the command line.
+The output file will have `-gcc` appended to name of the input file (but before the file extension) that you provided on the command line.
 
 Note: If the input file does not exist then `GCodeClean` will silently fail, that's how it is designed.
 
