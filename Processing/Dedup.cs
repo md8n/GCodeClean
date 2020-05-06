@@ -28,19 +28,41 @@ namespace GCodeClean.Processing
         public static async IAsyncEnumerable<List<string>> DedupLinear(this IAsyncEnumerable<List<string>> tokenizedLines, Double tolerance) {
             var tokensA = new List<string>();
             var tokensB = new List<string>();
+            var areTokensASet = false;
             var areTokensBSet = false;
 
             await foreach (var tokensC in tokenizedLines) {
                 var hasLinearMovement = tokensC.Any(tc => new []{"G0", "G1", "G00", "G01"}.Contains(tc));
-                if (!hasLinearMovement || !tokensA.AreTokensCompatible(tokensC)) {
-                    // Not a linear movement command or A -> C are not of compatible 'form'
-                    yield return tokensA;
+                if (!hasLinearMovement) {
+                    // Not a linear movement command
+                    if (areTokensASet)
+                    {
+                        yield return tokensA;
+                        tokensA = new List<string>();
+                        areTokensASet = false;
+                    }
+                    if (areTokensBSet)
+                    {
+                        yield return tokensB;
+                        tokensB = new List<string>();
+                        areTokensBSet = false;
+                    }
+                    yield return tokensC;
+                    continue;
+                }
+                if (!tokensA.AreTokensCompatible(tokensC)) {
+                    // A linear movement command but A -> C are not of compatible 'form'
+                    if (areTokensASet)
+                    {
+                        yield return tokensA;
+                    }
                     if (areTokensBSet) {
                         yield return tokensB;
                         tokensB = new List<string>();
                         areTokensBSet = false;
                     }
                     tokensA = tokensC;
+                    areTokensASet = true;
                     continue;
                 }
 

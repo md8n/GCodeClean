@@ -36,6 +36,13 @@ namespace GCodeClean.Processing
                     isCompatible = false;
                     break;
                 }
+                if (tokensA[ix][0] == 'G' || tokensA[ix][0] == 'M') {
+                    // For 'Commands' the whole thing must be the same
+                    if (tokensA[ix] != tokensB[ix]) {
+                        isCompatible = false;
+                        break;
+                    }
+                }
             }
             return isCompatible;
         }
