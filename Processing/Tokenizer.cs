@@ -11,7 +11,7 @@ namespace GCodeClean.Processing
         /// <summary>
         /// A 'basic' gcode parser pattern, this does not support expressions that equate to numbers
         /// </summary>
-        public const string pattern = @"((\%)|((?<linenumber>N\s*\d{1,5})?\s*(?<word>[ABCDFGHIJKLMNPRSTXYZ]\s*[+-]?(\d|\s)*\.?(\d|\s)*\s*)|(?<comment>\(.*\)\s*)))";
+        public const string pattern = @"((\%)|((?<linenumber>N\s*\d{1,5})?\s*(?<word>[ABCDFGHIJKLMNPRSTXYZ]\s*[+-]?(\d|\s)*\.?(\d|\s)*\s*)|(?<comment>\(.*?\)\s*)))";
 
 
         public static async IAsyncEnumerable<List<string>> Tokenize(this IAsyncEnumerable<string> lines) {
