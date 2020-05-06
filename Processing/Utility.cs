@@ -81,10 +81,7 @@ namespace GCodeClean.Processing
 
         /// Is B between A and C, inclusive
         public static Boolean WithinRange(this decimal B, decimal A, decimal C) {
-            var low = Math.Min(A, C);
-            var high = Math.Max(A, C);
-
-            return B >= low && B <= high;
+            return (A >= B && B >= C) || (A <= B && B <= C);
         }
 
         public static Double Angle(this Double da, Double db) {

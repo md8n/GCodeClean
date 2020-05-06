@@ -78,19 +78,20 @@ namespace GCodeClean.Processing
                 var coordsC = tokensC.ExtractCoords();
 
                 // Check we've got a full set of coords for the three token sets
-                var notCoords = (coordsA.Set + coordsB.Set + coordsC.Set).Length != 9;
-                var outOfBounds = false;
-                var notSignificant = false;
+                var hasCoords = (coordsA.Set + coordsB.Set + coordsC.Set).Length == 9;
+                var withinBounds = false;
+                var isSignificant = false;
 
-                if (!notCoords)
+                if (hasCoords)
                 {
                     // basic check that B is roughly between A and C
-                    outOfBounds = !(coordsB.X.WithinRange(coordsA.X, coordsC.X)
-                        && coordsB.Y.WithinRange(coordsA.Y, coordsC.Y)
-                        && coordsB.Z.WithinRange(coordsA.Z, coordsC.Z));                    
+                    var xOK = coordsB.X.WithinRange(coordsA.X, coordsC.X);
+                    var yOK = coordsB.Y.WithinRange(coordsA.Y, coordsC.Y);
+                    var zOK = coordsB.Z.WithinRange(coordsA.Z, coordsC.Z);
+                    withinBounds = xOK && yOK && zOK;                 
                 }
 
-                if (!notCoords && !outOfBounds)
+                if (hasCoords && withinBounds)
                 {
                     // Check if any value is too small to matter                    
                     var (acX, acY, acZ) = coordsA.CoordsDifference(coordsC);
@@ -101,13 +102,13 @@ namespace GCodeClean.Processing
                     var yIsRelevant = (acY >= tolerance && abY >= tolerance && bcY >= tolerance) ? 1 : 0;
                     var zIsRelevant = (acZ >= tolerance && abZ >= tolerance && bcZ >= tolerance) ? 1 : 0;
 
-                    notSignificant = xIsRelevant + yIsRelevant + zIsRelevant < 2;
+                    isSignificant = xIsRelevant + yIsRelevant + zIsRelevant < 2;
 
-                    var xyNotRelevant = true;
-                    var xzNotRelevant = true;
-                    var yzNotRelevant = true;
+                    var xyIsSignificant = false;
+                    var xzIsSignificant = false;
+                    var yzIsSignificant = false;
 
-                    if (!notSignificant) {
+                    if (isSignificant) {
                         var acXYAngle = (acX, acY).Angle();
                         var abXYAngle = (abX, abY).Angle();
 
@@ -119,28 +120,29 @@ namespace GCodeClean.Processing
 
                         if (xIsRelevant + yIsRelevant == 2)
                         {
-                            xyNotRelevant = Math.Abs(acXYAngle - abXYAngle) < tolerance;
+                            xyIsSignificant = Math.Abs(acXYAngle - abXYAngle) >= tolerance;
                         }
                         if (xIsRelevant + zIsRelevant == 2)
                         {
-                            xzNotRelevant = Math.Abs(acXZAngle - abXZAngle) < tolerance;
+                            xzIsSignificant = Math.Abs(acXZAngle - abXZAngle) >=tolerance;
                         }
                         if (yIsRelevant + zIsRelevant == 2)
                         {
-                            yzNotRelevant = Math.Abs(acYZAngle - abYZAngle) < tolerance;
+                            yzIsSignificant = Math.Abs(acYZAngle - abYZAngle) >= tolerance;
                         }
                     }
 
-                    notSignificant = (xyNotRelevant && xzNotRelevant && yzNotRelevant);
+                    isSignificant = xyIsSignificant || xzIsSignificant || yzIsSignificant;
                 }
 
                 yield return tokensA;
-                if (notCoords || outOfBounds || notSignificant) {
+                if (!hasCoords || !withinBounds || !isSignificant) {
                     yield return tokensB;
                 }
                 // else - They are colinear! so move things along and silently drop tokenB
 
                 tokensA = tokensC;
+                areTokensASet = true;
                 tokensB = new List<string>();
                 areTokensBSet = false;
             }
