@@ -18,6 +18,9 @@ namespace GCodeClean.Processing
             return tokens.Count == 0 || tokens.All(t => t[0] == '%') || tokens.All(t => t[0] == '(');
         }
 
+        /// <summary>
+        /// Compares two sets of tokens to ensure they are completely the same
+        /// </summary>
         public static Boolean AreTokensEqual(this List<string> tokensA, List<string> tokensB) {
             if (tokensA.Count != tokensB.Count) {
                 return false;
@@ -32,6 +35,9 @@ namespace GCodeClean.Processing
             return isDuplicate;
         }
 
+        /// <sumary>
+        /// Compares two sets of tokens to ensure they are `compatible`
+        /// </summary>
         public static Boolean AreTokensCompatible(this List<string> tokensA, List<string> tokensB) {
             if (tokensA.Count != tokensB.Count) {
                 return false;
@@ -85,7 +91,9 @@ namespace GCodeClean.Processing
             return null;
         }
 
+        /// <summary>
         /// Is B between A and C, inclusive
+        /// </summary>
         public static Boolean WithinRange(this decimal B, decimal A, decimal C) {
             return (A >= B && B >= C) || (A <= B && B <= C);
         }

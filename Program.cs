@@ -37,6 +37,7 @@ namespace GCodeClean
             var inputLines = inputFile.ReadLinesAsync();
             var outputLines = inputLines.Tokenize()
                 .Clip()
+                .DedupRepeatedTokens()
                 .Augment()
                 .DedupLine()
                 .DedupLinear(0.0005)
