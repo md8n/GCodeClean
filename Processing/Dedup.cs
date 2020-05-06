@@ -12,7 +12,7 @@ namespace GCodeClean.Processing
             var previousTokens = new List<string>();
             await foreach (var tokens in tokenizedLines) {
                 if (!previousTokens.AreTokensEqual(tokens)) {
-                    if (!tokens.IsEmptyOrComments()) {
+                    if (!tokens.IsNotCommandOrArguments()) {
                         previousTokens = tokens;
                     }
 
@@ -152,7 +152,7 @@ namespace GCodeClean.Processing
             var previousSelectedTokens = selectedTokens.Select(st => $"{st}0.00").ToList();
 
             await foreach (var tokens in tokenizedLines) {
-                if (tokens.IsEmptyOrComments()) {
+                if (tokens.IsNotCommandOrArguments()) {
                     yield return tokens;
                     continue;
                 }
@@ -179,7 +179,7 @@ namespace GCodeClean.Processing
             var previousIJKCoords = new List<string>() {"I0.00", "J0.00", "K0.00"};
 
             await foreach (var tokens in tokenizedLines) {
-                if (tokens.IsEmptyOrComments()) {
+                if (tokens.IsNotCommandOrArguments()) {
                     yield return tokens;
                     continue;
                 }

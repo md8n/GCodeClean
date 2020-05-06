@@ -19,7 +19,7 @@ namespace GCodeClean.Processing
             var context = new Dictionary<string, string>();
 
             await foreach (var tokens in tokenizedLines) {
-                if (tokens.IsEmptyOrComments()) {
+                if (tokens.IsNotCommandOrArguments()) {
                     yield return tokens;
                     continue;
                 }
@@ -67,7 +67,7 @@ namespace GCodeClean.Processing
             var previousIJKCoords = new List<string>() {"I0.00", "J0.00"};
 
             await foreach (var tokens in tokenizedLines) {
-                if (tokens.IsEmptyOrComments()) {
+                if (tokens.IsNotCommandOrArguments()) {
                     yield return tokens;
                     continue;
                 }
@@ -141,7 +141,7 @@ namespace GCodeClean.Processing
             var previousTokenCodes = new List<string>();
 
             await foreach (var tokens in tokenizedLines) {
-                if (tokens.IsEmptyOrComments()) {
+                if (tokens.IsNotCommandOrArguments()) {
                     yield return tokens;
                     continue;
                 }

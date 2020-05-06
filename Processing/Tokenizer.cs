@@ -26,8 +26,8 @@ namespace GCodeClean.Processing
             foreach (Match match in Regex.Matches(line, pattern, RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture))
             {
                 var token = match.Value.Trim();
-                // if this isn't a comment then strip out all spaces
-                if (!token.StartsWith('(')) {
+                // if this isn't a comment or file terminator then strip out all spaces
+                if (!token.StartsWith('(') && !token.StartsWith('%')) {
                     token.Replace(" ", "");
                     decimal number;
                     if (token.Length == 1 || !decimal.TryParse(token.Substring(1), out number)) {

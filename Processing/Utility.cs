@@ -8,8 +8,14 @@ using System.Linq;
 namespace GCodeClean.Processing
 {
     public static class Utility {
-        public static Boolean IsEmptyOrComments(this List<string> tokens) {
-            return tokens.Count == 0 || tokens.All(t => t[0] == '(');
+        /// <summary>
+        /// Roughly equivalent to `IsNullOrWhiteSpace` this returns true if there are:
+        /// * no tokens,
+        /// * only a file terminator,
+        /// * only one or more comments
+        /// </summary>
+        public static Boolean IsNotCommandOrArguments(this List<string> tokens) {
+            return tokens.Count == 0 || tokens.All(t => t[0] == '%') || tokens.All(t => t[0] == '(');
         }
 
         public static Boolean AreTokensEqual(this List<string> tokensA, List<string> tokensB) {
