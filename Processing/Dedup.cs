@@ -23,8 +23,21 @@ namespace GCodeClean.Processing
             }
         }
 
+        /// <summary>
+        /// Eliminates repeated tokens within the same line
+        /// </summary>
+        public static async IAsyncEnumerable<List<string>> DedupRepeatedTokens(this IAsyncEnumerable<List<string>> tokenizedLines) {
+            await foreach (var tokens in tokenizedLines) {
+                var distinctTokens = tokens.Distinct().ToList();
+                yield return distinctTokens;
+            }
+        }
+
+
+        /// <summary>
         /// Testing whether A -> B -> C is a straight line
         /// and eliminating B if that's the case
+        /// </summary>
         public static async IAsyncEnumerable<List<string>> DedupLinear(this IAsyncEnumerable<List<string>> tokenizedLines, Double tolerance) {
             var tokensA = new List<string>();
             var tokensB = new List<string>();
