@@ -49,9 +49,9 @@ namespace GCodeClean.Processing
                         var hasDP = tokens[ix].IndexOf(".") != -1;
                         if (hasUnits && hasDP && value.HasValue)
                         {
-                            // Round to 1dp for mm and 2dp for inch
-                            var clip = (context["lengthUnits"] == "mm") ? 1 : 2;
-                            var clipFormat = clip == 1 ? "{0}{1:0.0}" : "{0}{1:0.00}";
+                            // Round to 1dp for mm and 3dp for inch
+                            var clip = (context["lengthUnits"] == "mm") ? 1 : 3;
+                            var clipFormat = clip == 1 ? "{0}{1:0.0}" : "{0}{1:0.000}";
                             value = Math.Round(value.Value, clip);
                             tokens[ix] = String.Format(clipFormat, subToken, value);
                         }
