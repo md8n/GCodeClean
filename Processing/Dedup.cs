@@ -38,14 +38,21 @@ namespace GCodeClean.Processing
         /// Testing whether A -> B -> C is a straight line
         /// and eliminating B if that's the case
         /// </summary>
-        public static async IAsyncEnumerable<List<string>> DedupLinear(this IAsyncEnumerable<List<string>> tokenizedLines, Double tolerance) {
+        public static async IAsyncEnumerable<List<string>> DedupLinear(this IAsyncEnumerable<List<string>> tokenizedLines, decimal tolerance) {
             var tokensA = new List<string>();
             var tokensB = new List<string>();
             var areTokensASet = false;
             var areTokensBSet = false;
 
             await foreach (var tokensC in tokenizedLines) {
-                var hasLinearMovement = tokensC.Any(tc => new []{"G0", "G1", "G00", "G01"}.Contains(tc));
+                var hasMovement = tokensC.Any(tc => new []{"G0", "G1", "G2", "G3", "G00", "G01", "G02", "G03"}.Contains(tc));
+                var hasLinearMovement = tokensC.Any(tc => new []{"G1", "G01"}.Contains(tc));
+                if (hasMovement && !areTokensASet && !areTokensBSet) {
+                    // Some movement command, and we're at a 'start'
+                    tokensA = tokensC;
+                    areTokensASet = true;
+                    continue;
+                }
                 if (!hasLinearMovement) {
                     // Not a linear movement command
                     if (areTokensASet)
@@ -91,7 +98,7 @@ namespace GCodeClean.Processing
                 var coordsC = tokensC.ExtractCoords();
 
                 // Check we've got a full set of coords for the three token sets
-                var hasCoords = (coordsA.Set + coordsB.Set + coordsC.Set).Length == 9;
+                var hasCoords = (coordsA.Set & coordsB.Set & coordsC.Set) == CoordSet.All;
                 var withinBounds = false;
                 var isSignificant = false;
 
@@ -107,13 +114,13 @@ namespace GCodeClean.Processing
                 if (hasCoords && withinBounds)
                 {
                     // Check if any value is too small to matter                    
-                    var (acX, acY, acZ) = coordsA.CoordsDifference(coordsC);
-                    var (abX, abY, abZ) = coordsA.CoordsDifference(coordsB);
-                    var (bcX, bcY, bcZ) = coordsB.CoordsDifference(coordsC);
+                    var coordsAC = coordsA - coordsC;
+                    var coordsAB = coordsA - coordsB;
+                    var coordsBC = coordsB - coordsC;
 
-                    var xIsRelevant = (acX >= tolerance && abX >= tolerance && bcX >= tolerance) ? 1 : 0;
-                    var yIsRelevant = (acY >= tolerance && abY >= tolerance && bcY >= tolerance) ? 1 : 0;
-                    var zIsRelevant = (acZ >= tolerance && abZ >= tolerance && bcZ >= tolerance) ? 1 : 0;
+                    var xIsRelevant = (coordsAC.X >= tolerance && coordsAB.X >= tolerance && coordsBC.X >= tolerance) ? 1 : 0;
+                    var yIsRelevant = (coordsAC.Y >= tolerance && coordsAB.Y >= tolerance && coordsBC.Y >= tolerance) ? 1 : 0;
+                    var zIsRelevant = (coordsAC.Z >= tolerance && coordsAB.Z >= tolerance && coordsBC.Z >= tolerance) ? 1 : 0;
 
                     isSignificant = xIsRelevant + yIsRelevant + zIsRelevant < 2;
 
@@ -122,14 +129,14 @@ namespace GCodeClean.Processing
                     var yzIsSignificant = false;
 
                     if (isSignificant) {
-                        var acXYAngle = (acX, acY).Angle();
-                        var abXYAngle = (abX, abY).Angle();
+                        var acXYAngle = (coordsAC.X, coordsAC.Y).Angle();
+                        var abXYAngle = (coordsAB.X, coordsAB.Y).Angle();
 
-                        var acXZAngle = (acX, acZ).Angle();
-                        var abXZAngle = (abX, abZ).Angle();
+                        var acXZAngle = (coordsAC.X, coordsAC.Z).Angle();
+                        var abXZAngle = (coordsAB.X, coordsAB.Z).Angle();
 
-                        var acYZAngle = (acY, acZ).Angle();
-                        var abYZAngle = (abY, abZ).Angle();
+                        var acYZAngle = (coordsAC.Y, coordsAC.Z).Angle();
+                        var abYZAngle = (coordsAB.Y, coordsAB.Z).Angle();
 
                         if (xIsRelevant + yIsRelevant == 2)
                         {
@@ -160,6 +167,165 @@ namespace GCodeClean.Processing
                 areTokensBSet = false;
             }
         }
+
+
+        /// <summary>
+        /// Testing whether A -> B -> C can be fitted to an arc
+        /// and eliminating B if that's the case
+        /// </summary>
+        public static async IAsyncEnumerable<List<string>> DedupLinearToArc(this IAsyncEnumerable<List<string>> tokenizedLines, decimal tolerance) {
+            var tokensA = new List<string>();
+            var tokensB = new List<string>();
+            var areTokensASet = false;
+            var areTokensBSet = false;
+
+            await foreach (var tokensC in tokenizedLines) {
+                var hasMovement = tokensC.Any(tc => new []{"G0", "G1", "G2", "G3", "G00", "G01", "G02", "G03"}.Contains(tc));
+                var hasLinearMovement = tokensC.Any(tc => new []{"G1", "G01"}.Contains(tc));
+                if (hasMovement && !areTokensASet && !areTokensBSet) {
+                    // Some movement command, and we're at a 'start'
+                    tokensA = tokensC;
+                    areTokensASet = true;
+                    continue;
+                }
+                if (!hasLinearMovement) {
+                    // Not a linear movement command
+                    if (areTokensASet)
+                    {
+                        yield return tokensA;
+                        tokensA = new List<string>();
+                        areTokensASet = false;
+                    }
+                    if (areTokensBSet)
+                    {
+                        yield return tokensB;
+                        tokensB = new List<string>();
+                        areTokensBSet = false;
+                    }
+                    yield return tokensC;
+                    continue;
+                }
+                if (!tokensA.AreTokensCompatible(tokensC)) {
+                    // A linear movement command but A -> C are not of compatible 'form'
+                    if (areTokensASet)
+                    {
+                        yield return tokensA;
+                    }
+                    if (areTokensBSet) {
+                        yield return tokensB;
+                        tokensB = new List<string>();
+                        areTokensBSet = false;
+                    }
+                    tokensA = tokensC;
+                    areTokensASet = true;
+                    continue;
+                }
+
+                if (!areTokensBSet) {
+                    // Set up the B token
+                    tokensB = tokensC;
+                    areTokensBSet = true;
+                    continue;
+                }
+
+                var coordsA = tokensA.ExtractCoords();
+                var coordsB = tokensB.ExtractCoords();
+                var coordsC = tokensC.ExtractCoords();
+
+                // Check we've got a full set of coords for the three token sets
+                var hasCoords = (coordsA.Set & coordsB.Set & coordsC.Set) == CoordSet.All;
+                var withinBounds = false;
+                var isSignificant = false;
+
+                if (hasCoords)
+                {
+                    // basic check that B is roughly between A and C
+                    // curves just off some orthogonal plane will fail this test - but I'm OK with that
+                    var xOK = coordsB.X.WithinRange(coordsA.X, coordsC.X);
+                    var yOK = coordsB.Y.WithinRange(coordsA.Y, coordsC.Y);
+                    var zOK = coordsB.Z.WithinRange(coordsA.Z, coordsC.Z);
+                    withinBounds = xOK && yOK && zOK;                 
+                }
+
+                var center = new Coord();
+                var radius = 0M;
+                var isClockwise = false;
+
+                if (hasCoords && withinBounds)
+                {
+                    // Check if any value is too small to matter                    
+                    var coordsAC = coordsA - coordsC;
+                    var coordsAB = coordsA - coordsB;
+                    var coordsBC = coordsB - coordsC;
+
+                    var xIsRelevant = (coordsAC.X >= tolerance && coordsAB.X >= tolerance && coordsBC.X >= tolerance) ? 1 : 0;
+                    var yIsRelevant = (coordsAC.Y >= tolerance && coordsAB.Y >= tolerance && coordsBC.Y >= tolerance) ? 1 : 0;
+                    var zIsRelevant = (coordsAC.Z >= tolerance && coordsAB.Z >= tolerance && coordsBC.Z >= tolerance) ? 1 : 0;
+
+                    isSignificant = xIsRelevant + yIsRelevant + zIsRelevant < 2;
+
+                    if (isSignificant)
+                    {
+                        (center, radius, isClockwise) = Utility.FindCircle(coordsA, coordsB, coordsC);
+
+                        if (radius > tolerance)
+                        {
+                            var abDistance = (coordsA, coordsB).Distance().Sqr() / 4;
+                            var bcDistance = (coordsB, coordsC).Distance().Sqr() / 4;
+
+                            var radSqr = radius.Sqr();
+
+                            var abr = (double)radius - Math.Sqrt((double)(radSqr - abDistance));
+                            var bcr = (double)radius - Math.Sqrt((double)(radSqr - bcDistance));
+
+                            isSignificant = (abr <= (double)tolerance && bcr <= (double)tolerance);
+                        }
+                        else
+                        {
+                            isSignificant = false;
+                        }
+                    }
+                }
+
+                yield return tokensA;
+                if (!hasCoords || !withinBounds || !isSignificant) {
+                    tokensA = tokensB;
+                    tokensB = tokensC;
+                    areTokensASet = true;
+                    areTokensBSet = true;
+                }
+                else
+                {
+                    // They are on an arc! so move things along, silently drop tokenB and change tokenC to an arc token
+                    for (var ix = 0; ix < tokensC.Count; ix++)
+                    {
+                        if (tokensC[ix] == "G1" || tokensC[ix] == "G01")
+                        {
+                            tokensC[ix] = isClockwise ? "G02" : "G03";
+                            break;
+                        }
+                    }
+                    if ((center.Set & CoordSet.X) == CoordSet.X && (coordsA.Set & CoordSet.X) == CoordSet.X)
+                    {
+                        tokensC.Add($"I{center.X - coordsA.X:0.#####}");
+                    }
+                    if ((center.Set & CoordSet.Y) == CoordSet.Y && (coordsA.Set & CoordSet.Y) == CoordSet.Y)
+                    {
+                        tokensC.Add($"J{center.Y - coordsA.Y:0.#####}");
+                    }
+                    if ((center.Set & CoordSet.Z) == CoordSet.Z && (coordsA.Set & CoordSet.Z) == CoordSet.Z)
+                    {
+                        tokensC.Add($"Z{center.Z - coordsA.Z:0.#####}");
+                    }
+                    yield return tokensC;
+                    tokensA = new List<string>();
+                    areTokensASet = false;
+                    tokensB = new List<string>();
+                    areTokensBSet = false;
+                }
+            }
+        }
+
 
         public static async IAsyncEnumerable<List<string>> DedupSelectTokens(this IAsyncEnumerable<List<string>> tokenizedLines, List<char> selectedTokens) {
             var previousSelectedTokens = selectedTokens.Select(st => $"{st}0.00").ToList();

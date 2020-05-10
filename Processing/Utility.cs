@@ -3,31 +3,38 @@
 
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 
 namespace GCodeClean.Processing
 {
-    public static class Utility {
+    public static class Utility
+    {
         /// <summary>
         /// Roughly equivalent to `IsNullOrWhiteSpace` this returns true if there are:
         /// * no tokens,
         /// * only a file terminator,
         /// * only one or more comments
         /// </summary>
-        public static Boolean IsNotCommandOrArguments(this List<string> tokens) {
+        public static Boolean IsNotCommandOrArguments(this List<string> tokens)
+        {
             return tokens.Count == 0 || tokens.All(t => t[0] == '%') || tokens.All(t => t[0] == '(');
         }
 
         /// <summary>
         /// Compares two sets of tokens to ensure they are completely the same
         /// </summary>
-        public static Boolean AreTokensEqual(this List<string> tokensA, List<string> tokensB) {
-            if (tokensA.Count != tokensB.Count) {
+        public static Boolean AreTokensEqual(this List<string> tokensA, List<string> tokensB)
+        {
+            if (tokensA.Count != tokensB.Count)
+            {
                 return false;
             }
             var isDuplicate = true;
-            for (var ix = 0; ix < tokensB.Count; ix++) {
-                if (tokensA[ix] != tokensB[ix]) {
+            for (var ix = 0; ix < tokensB.Count; ix++)
+            {
+                if (tokensA[ix] != tokensB[ix])
+                {
                     isDuplicate = false;
                     break;
                 }
@@ -38,19 +45,25 @@ namespace GCodeClean.Processing
         /// <sumary>
         /// Compares two sets of tokens to ensure they are `compatible`
         /// </summary>
-        public static Boolean AreTokensCompatible(this List<string> tokensA, List<string> tokensB) {
-            if (tokensA.Count != tokensB.Count) {
+        public static Boolean AreTokensCompatible(this List<string> tokensA, List<string> tokensB)
+        {
+            if (tokensA.Count != tokensB.Count)
+            {
                 return false;
             }
             var isCompatible = true;
-            for (var ix = 0; ix < tokensB.Count; ix++) {
-                if (tokensA[ix][0] != tokensB[ix][0]) {
+            for (var ix = 0; ix < tokensB.Count; ix++)
+            {
+                if (tokensA[ix][0] != tokensB[ix][0])
+                {
                     isCompatible = false;
                     break;
                 }
-                if (tokensA[ix][0] == 'G' || tokensA[ix][0] == 'M') {
+                if (tokensA[ix][0] == 'G' || tokensA[ix][0] == 'M')
+                {
                     // For 'Commands' the whole thing must be the same
-                    if (tokensA[ix] != tokensB[ix]) {
+                    if (tokensA[ix] != tokensB[ix])
+                    {
                         isCompatible = false;
                         break;
                     }
@@ -59,33 +72,41 @@ namespace GCodeClean.Processing
             return isCompatible;
         }
 
-        public static (decimal X, decimal Y, decimal Z, string Set) ExtractCoords(this List<string> tokens) {
-            (decimal X, decimal Y, decimal Z, string Set) coords = (0M, 0M, 0M, "");
+        public static Coord ExtractCoords(this List<string> tokens)
+        {
+            var coords = new Coord();
             decimal? value = null;
-            foreach(var token in tokens) {
+            foreach (var token in tokens)
+            {
                 value = token.ExtractCoord();
-                if (value.HasValue) {
-                    if (token[0] == 'X') {
+                if (value.HasValue)
+                {
+                    if (token[0] == 'X')
+                    {
                         coords.X = value.Value;
-                        coords.Set += "X";
-                    }                    
-                    if (token[0] == 'Y') {
+                        coords.Set |= CoordSet.X;
+                    }
+                    if (token[0] == 'Y')
+                    {
                         coords.Y = value.Value;
-                        coords.Set += "Y";
-                    }                    
-                    if (token[0] == 'Z') {
+                        coords.Set |= CoordSet.Y;
+                    }
+                    if (token[0] == 'Z')
+                    {
                         coords.Z = value.Value;
-                        coords.Set += "Z";
-                    }                    
+                        coords.Set |= CoordSet.Z;
+                    }
                 }
             }
 
             return coords;
         }
 
-        public static decimal? ExtractCoord(this string token) {
+        public static decimal? ExtractCoord(this string token)
+        {
             decimal value;
-            if (decimal.TryParse((string)token.Substring(1), out value)) {
+            if (decimal.TryParse((string)token.Substring(1), out value))
+            {
                 return value;
             }
             return null;
@@ -94,26 +115,146 @@ namespace GCodeClean.Processing
         /// <summary>
         /// Is B between A and C, inclusive
         /// </summary>
-        public static Boolean WithinRange(this decimal B, decimal A, decimal C) {
+        public static Boolean WithinRange(this decimal B, decimal A, decimal C)
+        {
             return (A >= B && B >= C) || (A <= B && B <= C);
         }
 
-        public static Double Angle(this Double da, Double db) {
+        public static Double Angle(this Double da, Double db)
+        {
             var theta = Math.Atan2((Double)da, (Double)db); // range (-PI, PI]
             theta *= 180 / Math.PI; // rads to degs, range (-180, 180]
 
             return theta;
         }
 
-        public static Double Angle(this (Double A, Double B) d) {
+        public static decimal Sqr(this decimal value)
+        {
+            return value * value;
+        }
+
+        public static decimal Distance(this (Coord A, Coord B) c)
+        {
+            return (decimal)Math.Sqrt((double)((c.B.X - c.A.X).Sqr() + (c.B.Y - c.A.Y).Sqr() + (c.B.Z - c.A.Z).Sqr()));
+        }
+
+        public static decimal Angle(this (decimal A, decimal B) d)
+        {
             var theta = Math.Atan2((Double)d.A, (Double)d.B); // range (-PI, PI]
             theta *= 180 / Math.PI; // rads to degs, range (-180, 180]
 
-            return theta;
+            return (decimal)theta;
         }
 
-        public static (Double X, Double Y, Double Z) CoordsDifference(this (decimal X, decimal Y, decimal Z, string Set) coords1, (decimal X, decimal Y, decimal Z, string Set) coords2) {
-            return ((Double)(coords2.X - coords1.X), (Double)(coords2.Y - coords1.Y), (Double)(coords2.Z - coords1.Z));
+        // Function to find the circle on 
+        // which the given three points lie 
+        public static (Coord center, decimal radius, bool isClockwise) FindCircle(Coord a, Coord b, Coord c)
+        {
+            var center = new Coord();
+            var radius = 0M;
+            var isClockwise = false;
+
+            // We only calculate a circle through one orthogonal plane,
+            // therefore at least one of the dimensions must be the same for all 3 coords
+            var ortho = Coord.Ortho(new List<Coord>() { a, b, c });
+            if (ortho == CoordSet.None)
+            {
+                return (center, radius, isClockwise);
+            }
+
+            // Convert to points in 2 dimensions
+            var dropCoord = CoordSet.Z;
+            if ((ortho & CoordSet.X) == CoordSet.X)
+            {
+                dropCoord = CoordSet.X;
+            }
+            else if ((ortho & CoordSet.Y) == CoordSet.Y)
+            {
+                dropCoord = CoordSet.Y;
+            }
+            var pA = a.ToPointF(dropCoord);
+            var pB = b.ToPointF(dropCoord);
+            var pC = c.ToPointF(dropCoord);
+
+            var xAB = pA.X - pB.X;
+            var xAC = pA.X - pC.X;
+
+            var yAB = pA.Y - pB.Y;
+            var yAC = pA.Y - pC.Y;
+
+            var yCA = pC.Y - pA.Y;
+            var yBA = pB.Y - pA.Y;
+
+            var xCA = pC.X - pA.X;
+            var xBA = pB.X - pA.X;
+
+            // pA.X^2 - pC.X^2 
+            var sxAC = Math.Pow(pA.X, 2) - Math.Pow(pC.X, 2);
+
+            // pA.Y^2 - pC.Y^2 
+            var syAC = Math.Pow(pA.Y, 2) - Math.Pow(pC.Y, 2);
+
+            var sxBA = Math.Pow(pB.X, 2) - Math.Pow(pA.X, 2);
+
+            var syBA = Math.Pow(pB.Y, 2) - Math.Pow(pA.Y, 2);
+
+            var f = ((sxAC) * (xAB)
+                    + (syAC) * (xAB)
+                    + (sxBA) * (xAC)
+                    + (syBA) * (xAC))
+                    / (2 * ((yCA) * (xAB) - (yBA) * (xAC)));
+            var g = ((sxAC) * (yAB)
+                    + (syAC) * (yAB)
+                    + (sxBA) * (yAC)
+                    + (syBA) * (yAC))
+                    / (2 * ((xCA) * (yAB) - (xBA) * (yAC)));
+
+            if (double.IsInfinity(f) || double.IsInfinity(g))
+            {
+                // lines are parallel / colinear
+                return (center, radius, isClockwise);
+            }
+
+            var circ = -Math.Pow(pA.X, 2) - Math.Pow(pA.Y, 2) -
+                                        2 * g * pA.X - 2 * f * pA.Y;
+
+            // eqn of circle be x^2 + y^2 + 2*g*x + 2*f*y + c = 0 
+            // where centre is (h = -g, k = -f) and radius r 
+            // as r^2 = h^2 + k^2 - c 
+            var h = -g;
+            var k = -f;
+            var sqr_of_r = h * h + k * k - circ;
+
+            radius = (decimal)Math.Round(Math.Sqrt(sqr_of_r), 5);
+            center = new Coord((decimal)h, (decimal)k, dropCoord);
+
+            isClockwise = DirectionOfPoint(pA, pB, center.ToPointF()) < 0;
+
+            return (center, radius, isClockwise);
+        }
+
+        public static int DirectionOfPoint(PointF pA, PointF pB, PointF pC)
+        {
+            // subtracting co-ordinates of point A  
+            // from B and P, to make A as origin
+            pB.X -= pA.X;
+            pB.Y -= pA.Y;
+            pC.X -= pA.X;
+            pC.Y -= pA.Y;
+
+            // Determining cross product 
+            var cross_product = (pB.X * pC.Y) - (pB.Y * pC.X);
+
+            // return the sign of the cross product 
+            if (cross_product > 0)
+            {
+                return 1;
+            }
+            if (cross_product < 0)
+            {
+                return -1;
+            }
+            return 0;
         }
     }
 }
