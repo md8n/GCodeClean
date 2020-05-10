@@ -178,6 +178,11 @@ namespace GCodeClean.Processing
             var tokensB = new List<string>();
             var areTokensASet = false;
             var areTokensBSet = false;
+            var inArc = false;
+
+            var prevCenter = new Coord();
+            var prevRadius = 0M;
+            var prevIsClockwise = false;
 
             await foreach (var tokensC in tokenizedLines) {
                 var hasMovement = tokensC.Any(tc => new []{"G0", "G1", "G2", "G3", "G00", "G01", "G02", "G03"}.Contains(tc));
@@ -188,6 +193,11 @@ namespace GCodeClean.Processing
                     areTokensASet = true;
                     continue;
                 }
+
+                var coordsA = tokensA.ExtractCoords();
+                var coordsB = areTokensBSet ? tokensB.ExtractCoords() : new Coord();
+                var coordsC = tokensC.ExtractCoords();
+
                 if (!hasLinearMovement) {
                     // Not a linear movement command
                     if (areTokensASet)
@@ -198,6 +208,14 @@ namespace GCodeClean.Processing
                     }
                     if (areTokensBSet)
                     {
+                        if (inArc) {
+                            tokensB = tokensB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise);
+
+                            prevCenter = new Coord();
+                            prevRadius = 0M;
+                            prevIsClockwise = false;
+                        }
+
                         yield return tokensB;
                         tokensB = new List<string>();
                         areTokensBSet = false;
@@ -205,13 +223,22 @@ namespace GCodeClean.Processing
                     yield return tokensC;
                     continue;
                 }
+
                 if (!tokensA.AreTokensCompatible(tokensC)) {
-                    // A linear movement command but A -> C are not of compatible 'form'
+                    // A movement command but A -> C are not of compatible 'form'
                     if (areTokensASet)
                     {
                         yield return tokensA;
                     }
                     if (areTokensBSet) {
+                        if (inArc) {
+                            tokensB = tokensB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise);
+
+                            prevCenter = new Coord();
+                            prevRadius = 0M;
+                            prevIsClockwise = false;
+                        }
+
                         yield return tokensB;
                         tokensB = new List<string>();
                         areTokensBSet = false;
@@ -227,10 +254,6 @@ namespace GCodeClean.Processing
                     areTokensBSet = true;
                     continue;
                 }
-
-                var coordsA = tokensA.ExtractCoords();
-                var coordsB = tokensB.ExtractCoords();
-                var coordsC = tokensC.ExtractCoords();
 
                 // Check we've got a full set of coords for the three token sets
                 var hasCoords = (coordsA.Set & coordsB.Set & coordsC.Set) == CoordSet.All;
@@ -270,15 +293,32 @@ namespace GCodeClean.Processing
 
                         if (radius > tolerance)
                         {
-                            var abDistance = (coordsA, coordsB).Distance().Sqr() / 4;
-                            var bcDistance = (coordsB, coordsC).Distance().Sqr() / 4;
-
                             var radSqr = radius.Sqr();
 
-                            var abr = (double)radius - Math.Sqrt((double)(radSqr - abDistance));
+                            var bcDistance = (coordsB, coordsC).Distance().Sqr() / 4;
                             var bcr = (double)radius - Math.Sqrt((double)(radSqr - bcDistance));
 
-                            isSignificant = (abr <= (double)tolerance && bcr <= (double)tolerance);
+                            if (inArc)
+                            {
+                                var centerDiff = Coord.Difference(center, prevCenter);
+                                var radiusDiff = Math.Abs(radius - prevRadius);
+
+                                if (centerDiff.X <= tolerance && centerDiff.Y <= tolerance && centerDiff.Z <= tolerance && radiusDiff <= tolerance)
+                                {
+                                    isSignificant = bcr <= (double)tolerance;
+                                }
+                                else
+                                {
+                                    isSignificant = false;
+                                }
+                            }
+                            else
+                            {
+                                var abDistance = (coordsA, coordsB).Distance().Sqr() / 4;
+                                var abr = (double)radius - Math.Sqrt((double)(radSqr - abDistance));
+
+                                isSignificant = abr <= (double)tolerance && bcr <= (double)tolerance;
+                            }
                         }
                         else
                         {
@@ -287,43 +327,72 @@ namespace GCodeClean.Processing
                     }
                 }
 
-                yield return tokensA;
                 if (!hasCoords || !withinBounds || !isSignificant) {
-                    tokensA = tokensB;
-                    tokensB = tokensC;
-                    areTokensASet = true;
-                    areTokensBSet = true;
+                    yield return tokensA;
+                    if (!inArc) {
+                        tokensA = tokensB;
+                        tokensB = tokensC;
+
+                        areTokensASet = true;
+                        areTokensBSet = true;
+                    }
+                    else
+                    {
+                        // Finish the arc manipulation we were doing,
+                        // the new arc end point will be tokensB
+                        tokensB = tokensB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise);
+
+                        prevCenter = new Coord();
+                        prevRadius = 0M;
+                        prevIsClockwise = false;
+
+                        yield return tokensB;
+                        tokensA = tokensC;
+                        areTokensASet = true;
+                        tokensB = new List<string>();
+                        areTokensBSet = false;
+
+                        inArc = false;
+                    }
                 }
                 else
                 {
-                    // They are on an arc! so move things along, silently drop tokenB and change tokenC to an arc token
-                    for (var ix = 0; ix < tokensC.Count; ix++)
-                    {
-                        if (tokensC[ix] == "G1" || tokensC[ix] == "G01")
-                        {
-                            tokensC[ix] = isClockwise ? "G02" : "G03";
-                            break;
-                        }
-                    }
-                    if ((center.Set & CoordSet.X) == CoordSet.X && (coordsA.Set & CoordSet.X) == CoordSet.X)
-                    {
-                        tokensC.Add($"I{center.X - coordsA.X:0.#####}");
-                    }
-                    if ((center.Set & CoordSet.Y) == CoordSet.Y && (coordsA.Set & CoordSet.Y) == CoordSet.Y)
-                    {
-                        tokensC.Add($"J{center.Y - coordsA.Y:0.#####}");
-                    }
-                    if ((center.Set & CoordSet.Z) == CoordSet.Z && (coordsA.Set & CoordSet.Z) == CoordSet.Z)
-                    {
-                        tokensC.Add($"Z{center.Z - coordsA.Z:0.#####}");
-                    }
-                    yield return tokensC;
-                    tokensA = new List<string>();
-                    areTokensASet = false;
-                    tokensB = new List<string>();
-                    areTokensBSet = false;
+                    // They are on an arc! so move things along, silently drop tokenB
+                    prevCenter = center;
+                    prevRadius = radius;
+                    prevIsClockwise = isClockwise;
+
+                    tokensB = tokensC;
+                    areTokensBSet = true;
+
+                    inArc = true;
                 }
             }
+        }
+
+        private static List<string> ConvertLinearToArc(this List<string> tokensB, Coord coordsA, Coord prevCenter, bool prevIsClockwise) {
+            for (var ix = 0; ix < tokensB.Count; ix++)
+            {
+                if (tokensB[ix] == "G1" || tokensB[ix] == "G01")
+                {
+                    tokensB[ix] = prevIsClockwise ? "G02" : "G03";
+                    break;
+                }
+            }
+            if ((prevCenter.Set & CoordSet.X) == CoordSet.X && (coordsA.Set & CoordSet.X) == CoordSet.X)
+            {
+                tokensB.Add($"I{prevCenter.X - coordsA.X:0.####}");
+            }
+            if ((prevCenter.Set & CoordSet.Y) == CoordSet.Y && (coordsA.Set & CoordSet.Y) == CoordSet.Y)
+            {
+                tokensB.Add($"J{prevCenter.Y - coordsA.Y:0.####}");
+            }
+            if ((prevCenter.Set & CoordSet.Z) == CoordSet.Z && (coordsA.Set & CoordSet.Z) == CoordSet.Z)
+            {
+                tokensB.Add($"Z{prevCenter.Z - coordsA.Z:0.####}");
+            }
+
+            return tokensB;
         }
 
 

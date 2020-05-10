@@ -85,6 +85,12 @@ public class Coord {
         return new PointF ((float)(this.X), (float)(this.Y));
     }
 
+    public static Coord Difference (Coord coords1, Coord coords2)
+    {
+        var coords3 = coords1 - coords2;
+        return new Coord(Math.Abs(coords3.X), Math.Abs(coords3.Y), Math.Abs(coords3.Z));
+    }
+
     public static Coord operator -(Coord coords1, Coord coords2)
     {
         return new Coord((coords2.X - coords1.X), (coords2.Y - coords1.Y), (coords2.Z - coords1.Z));

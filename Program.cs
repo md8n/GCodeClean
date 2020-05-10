@@ -39,7 +39,7 @@ namespace GCodeClean
                 .DedupRepeatedTokens()
                 .Augment()
                 .DedupLinearToArc(0.005M)
-                //.Clip()
+                .Clip()
                 .DedupRepeatedTokens()
                 .DedupLine()
                 .DedupLinear(0.0005M)
