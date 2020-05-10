@@ -10,6 +10,13 @@ namespace GCodeClean.Processing
 {
     public static class Utility
     {
+        public static char[] Commands = { 'G', 'M' };
+
+        public static char[] Arguments = { 'A', 'B', 'C', 'D', 'F', 'H', 'I', 'J', 'K', 'L', 'N', 'P', 'R', 'S', 'T', 'X', 'Y', 'Z' };
+
+        public static string[] MovementCommands = {"G0", "G1", "G2", "G3", "G00", "G01", "G02", "G03"};
+
+
         /// <summary>
         /// Roughly equivalent to `IsNullOrWhiteSpace` this returns true if there are:
         /// * no tokens,
@@ -19,6 +26,32 @@ namespace GCodeClean.Processing
         public static Boolean IsNotCommandOrArguments(this List<string> tokens)
         {
             return tokens.Count == 0 || tokens.All(t => t[0] == '%') || tokens.All(t => t[0] == '(');
+        }
+
+        /// <summary>
+        /// This returns true if there are one or more Arguments but no Commands, comments are ignored for this test
+        /// </summary>
+        public static Boolean IsArgumentsOnly(this List<string> tokens)
+        {
+            if (tokens.IsNotCommandOrArguments())
+            {
+                return false;
+            }
+
+            return tokens.Any(t => Arguments.Any(a => a == t[0])) && !tokens.Any(t => Commands.Any(a => a == t[0]));
+        }
+
+        /// <summary>
+        /// This returns true if there are one or more Arguments but no Commands, comments are ignored for this test
+        /// </summary>
+        public static Boolean HasMovementCommand(this List<string> tokens)
+        {
+            if (tokens.IsArgumentsOnly())
+            {
+                return false;
+            }
+
+            return tokens.Any(t => MovementCommands.Contains(t));
         }
 
         /// <summary>

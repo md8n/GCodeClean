@@ -45,7 +45,7 @@ namespace GCodeClean.Processing
             var areTokensBSet = false;
 
             await foreach (var tokensC in tokenizedLines) {
-                var hasMovement = tokensC.Any(tc => new []{"G0", "G1", "G2", "G3", "G00", "G01", "G02", "G03"}.Contains(tc));
+                var hasMovement = tokensC.HasMovementCommand();
                 var hasLinearMovement = tokensC.Any(tc => new []{"G1", "G01"}.Contains(tc));
                 if (hasMovement && !areTokensASet && !areTokensBSet) {
                     // Some movement command, and we're at a 'start'
@@ -185,7 +185,7 @@ namespace GCodeClean.Processing
             var prevIsClockwise = false;
 
             await foreach (var tokensC in tokenizedLines) {
-                var hasMovement = tokensC.Any(tc => new []{"G0", "G1", "G2", "G3", "G00", "G01", "G02", "G03"}.Contains(tc));
+                var hasMovement = tokensC.HasMovementCommand();
                 var hasLinearMovement = tokensC.Any(tc => new []{"G1", "G01"}.Contains(tc));
                 if (hasMovement && !areTokensASet && !areTokensBSet) {
                     // Some movement command, and we're at a 'start'
@@ -375,7 +375,7 @@ namespace GCodeClean.Processing
             {
                 if (tokensB[ix] == "G1" || tokensB[ix] == "G01")
                 {
-                    tokensB[ix] = prevIsClockwise ? "G02" : "G03";
+                    tokensB[ix] = prevIsClockwise ? "G2" : "G3";
                     break;
                 }
             }
@@ -389,7 +389,7 @@ namespace GCodeClean.Processing
             }
             if ((prevCenter.Set & CoordSet.Z) == CoordSet.Z && (coordsA.Set & CoordSet.Z) == CoordSet.Z)
             {
-                tokensB.Add($"Z{prevCenter.Z - coordsA.Z:0.####}");
+                tokensB.Add($"K{prevCenter.Z - coordsA.Z:0.####}");
             }
 
             return tokensB;
