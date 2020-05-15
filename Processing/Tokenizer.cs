@@ -13,7 +13,6 @@ namespace GCodeClean.Processing
         /// </summary>
         public const string pattern = @"((\%)|((?<linenumber>N\s*\d{1,5})?\s*(?<word>[ABCDFGHIJKLMNPRSTXYZ]\s*[+-]?(\d|\s)*\.?(\d|\s)*\s*)|(?<comment>\(.*?\)\s*)))";
 
-
         public static async IAsyncEnumerable<List<string>> Tokenize(this IAsyncEnumerable<string> lines) {
             await foreach (var line in lines) {
                 yield return line.Tokenize();
@@ -34,6 +33,7 @@ namespace GCodeClean.Processing
                         // Invalid command or argument - doesn't have a valid number
                         continue;
                     }
+                    token = token.ToUpperInvariant();
                 }
                 tokens.Add(token);
             }

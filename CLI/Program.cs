@@ -63,6 +63,7 @@ namespace GCodeClean.CLI
             var inputLines = inputFile.ReadLinesAsync();
             var outputLines = inputLines.Tokenize()
                 .DedupRepeatedTokens()
+                .SingleCommandPerLine()
                 .Augment()
                 .ConvertArcRadiusToCenter()
                 .DedupLinearToArc(0.005M)

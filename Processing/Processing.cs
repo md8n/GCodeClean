@@ -22,7 +22,7 @@ namespace GCodeClean.Processing
 
             await foreach (var tokens in tokenizedLines)
             {
-                if (tokens.IsNotCommandOrArguments())
+                if (tokens.IsNotCommandCodeOrArguments())
                 {
                     yield return tokens;
                     continue;
@@ -74,7 +74,7 @@ namespace GCodeClean.Processing
 
             await foreach (var tokens in tokenizedLines)
             {
-                if (tokens.IsNotCommandOrArguments())
+                if (tokens.IsNotCommandCodeOrArguments())
                 {
                     yield return tokens;
                     continue;
@@ -251,7 +251,7 @@ namespace GCodeClean.Processing
 
             await foreach (var tokens in tokenizedLines)
             {
-                if (tokens.IsNotCommandOrArguments())
+                if (tokens.IsNotCommandCodeOrArguments())
                 {
                     yield return tokens;
                     continue;

@@ -12,7 +12,9 @@ namespace GCodeClean.Processing
     {
         public static char[] Commands = { 'G', 'M' };
 
-        public static char[] Arguments = { 'A', 'B', 'C', 'D', 'F', 'H', 'I', 'J', 'K', 'L', 'N', 'P', 'R', 'S', 'T', 'X', 'Y', 'Z' };
+        public static char[] Codes = { 'F', 'S', 'T' };
+
+        public static char[] Arguments = { 'A', 'B', 'C', 'D', 'H', 'I', 'J', 'K', 'L', 'N', 'P', 'R', 'X', 'Y', 'Z' };
 
         public static string[] MovementCommands = { "G0", "G1", "G2", "G3", "G00", "G01", "G02", "G03" };
 
@@ -25,17 +27,17 @@ namespace GCodeClean.Processing
         /// * only a file terminator,
         /// * only one or more comments
         /// </summary>
-        public static Boolean IsNotCommandOrArguments(this List<string> tokens)
+        public static Boolean IsNotCommandCodeOrArguments(this List<string> tokens)
         {
             return tokens.Count == 0 || tokens.All(t => t[0] == '%') || tokens.All(t => t[0] == '(');
         }
 
         /// <summary>
-        /// This returns true if there are one or more Arguments but no Commands, comments are ignored for this test
+        /// This returns true if there are one or more Arguments but no Commands, comments and codes are ignored for this test
         /// </summary>
         public static Boolean IsArgumentsOnly(this List<string> tokens)
         {
-            if (tokens.IsNotCommandOrArguments())
+            if (tokens.IsNotCommandCodeOrArguments())
             {
                 return false;
             }
