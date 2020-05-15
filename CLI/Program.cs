@@ -27,7 +27,7 @@ namespace GCodeClean.CLI
                 get
                 {
                     return new List<Example>() {
-                        new Example("Convert file to a trendy format", new Options { filename = "file.bin" })
+                        new Example("Clean GCode file", new Options { filename = "facade.nc" })
                     };
                 }
             }
@@ -35,25 +35,13 @@ namespace GCodeClean.CLI
 
         public static async Task Main(string[] args)
         {
+            if (args.Length == 0)
+            {
+                args = new string[] { "--help" };
+            }
             await Parser.Default.ParseArguments<Options>(args)
                 .WithParsedAsync(RunAsync);
             Console.WriteLine($"Exit code= {Environment.ExitCode}");
-        }
-
-        private static async Task HandleParseErrorAsync(IEnumerable<Error> errs)
-        {
-            if (errs.IsVersion())
-            {
-                Console.WriteLine("Version Request");
-                return;
-            }
-
-            if (errs.IsHelp())
-            {
-                Console.WriteLine("Help Request");
-                return;
-            }
-            Console.WriteLine("Parser Fail");
         }
 
         static async Task RunAsync(Options options)
@@ -76,6 +64,7 @@ namespace GCodeClean.CLI
             var outputLines = inputLines.Tokenize()
                 .DedupRepeatedTokens()
                 .Augment()
+                .ConvertArcRadiusToCenter()
                 .DedupLinearToArc(0.005M)
                 .Clip()
                 .DedupRepeatedTokens()
@@ -86,7 +75,7 @@ namespace GCodeClean.CLI
                 .DedupLinear(0.0005M)
                 //.Annotate()
                 .DedupSelectTokens(new List<char> { 'F', 'Z' })
-                .DedupTokens()
+                //.DedupTokens()
                 .JoinTokens();
             var lineCount = outputFile.WriteLinesAsync(outputLines);
 
