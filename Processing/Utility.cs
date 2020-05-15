@@ -14,7 +14,9 @@ namespace GCodeClean.Processing
 
         public static char[] Arguments = { 'A', 'B', 'C', 'D', 'F', 'H', 'I', 'J', 'K', 'L', 'N', 'P', 'R', 'S', 'T', 'X', 'Y', 'Z' };
 
-        public static string[] MovementCommands = {"G0", "G1", "G2", "G3", "G00", "G01", "G02", "G03"};
+        public static string[] MovementCommands = { "G0", "G1", "G2", "G3", "G00", "G01", "G02", "G03" };
+
+        public static string[] ArcCommands = { "G2", "G3", "G02", "G03" };
 
 
         /// <summary>
@@ -137,11 +139,17 @@ namespace GCodeClean.Processing
 
         public static decimal? ExtractCoord(this string token)
         {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return null;
+            }
+
             decimal value;
             if (decimal.TryParse((string)token.Substring(1), out value))
             {
                 return value;
             }
+
             return null;
         }
 
@@ -288,6 +296,66 @@ namespace GCodeClean.Processing
                 return -1;
             }
             return 0;
+        }
+
+        public static List<Coord> FindIntersections(Coord cA, Coord cB, decimal radius)
+        {
+            var intersections = new List<Coord>();
+
+            // We only calculate a circle through one orthogonal plane,
+            // therefore at least one of the dimensions must be the same for both coords
+            var ortho = Coord.Ortho(new List<Coord>() { cA, cB });
+            if (ortho == CoordSet.None)
+            {
+                return intersections;
+            }
+
+            // Convert to points in 2 dimensions
+            var dropCoord = CoordSet.Z;
+            if ((ortho & CoordSet.X) == CoordSet.X)
+            {
+                dropCoord = CoordSet.X;
+            }
+            else if ((ortho & CoordSet.Y) == CoordSet.Y)
+            {
+                dropCoord = CoordSet.Y;
+            }
+            var pA = cA.ToPointF(dropCoord);
+            var pB = cB.ToPointF(dropCoord);
+
+            // Find the distance between the centers.
+            var dx = pA.X - pB.X;
+            var dy = pA.Y - pB.Y;
+            double dist = Math.Sqrt(dx * dx + dy * dy);
+
+            // See how many solutions there are.
+            if (dist > (double)(radius * 2) || dist == 0)
+            {
+                // No solutions, the circles are too far apart or coincide, must be malformed
+                return intersections;
+            }
+
+            // Find a and h.
+            var a = (dist * dist) / (2 * dist);
+            var h = Math.Sqrt((double)radius.Sqr() - a * a);
+
+            // Find pC.
+            var pC = new PointF((float)(pA.X + a * (pB.X - pA.X) / dist), (float)(pA.Y + a * (pB.Y - pA.Y) / dist));
+
+            // Get the points P3.
+            intersections.Add(new Coord(new PointF(
+                (float)(pC.X + h * (pB.Y - pA.Y) / dist),
+                (float)(pC.Y - h * (pB.X - pA.X) / dist)), dropCoord));
+
+            // Do we have 1 or 2 solutions.
+            if (dist < (double)(radius * 2))
+            {
+                intersections.Add(new Coord(new PointF(
+                (float)(pC.X - h * (pB.Y - pA.Y) / dist),
+                (float)(pC.Y + h * (pB.X - pA.X) / dist)), dropCoord));
+            }
+
+            return intersections;
         }
     }
 }

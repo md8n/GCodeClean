@@ -80,15 +80,17 @@ namespace GCodeClean.Processing
                     continue;
                 }
 
-                var hasXY = tokens.Any(t => new[]{'X', 'Y'}.Contains(t[0]));
+                var hasXY = tokens.Any(t => new[] { 'X', 'Y' }.Contains(t[0]));
                 var hasZ = tokens.Any(t => t[0] == 'Z');
-                var hasIJ = tokens.Any(t => new[]{'I', 'J'}.Contains(t[0]));
+                var hasIJ = tokens.Any(t => new[] { 'I', 'J' }.Contains(t[0]));
                 var hasK = tokens.Any(t => t[0] == 'K');
-                if (hasK) {
+                if (hasK)
+                {
                     previousIJKCoords.Add("K");
                 }
 
-                if (hasXY || hasZ || hasIJ || hasK) {
+                if (hasXY || hasZ || hasIJ || hasK)
+                {
                     if (tokens.HasMovementCommand())
                     {
                         foreach (var token in tokens)
@@ -161,6 +163,80 @@ namespace GCodeClean.Processing
                 //     }
                 // }
             }
+        }
+
+        public static async IAsyncEnumerable<List<string>> ConvertArcRadiusToCenter(this IAsyncEnumerable<List<string>> tokenizedLines)
+        {
+            var previousCoords = new List<string>() { "X", "Y", "Z" }.ExtractCoords();
+
+            await foreach (var tokens in tokenizedLines)
+            {
+                var hasMovement = tokens.HasMovementCommand();
+                if (!hasMovement)
+                {
+                    yield return tokens;
+                    continue;
+                }
+
+                var coords = tokens.ExtractCoords();
+                if (!previousCoords.HasCoordPair())
+                {
+                    // Some movement command, and we're at a 'start'
+                    previousCoords = Coord.Merge(previousCoords, coords, true);
+
+                    yield return tokens;
+                    continue;
+                }
+
+                var radius = tokens.FirstOrDefault(t => t[0] == 'R').ExtractCoord();
+                if (!radius.HasValue || !coords.HasCoordPair())
+                {
+                    previousCoords = Coord.Merge(previousCoords, coords, true);
+
+                    yield return tokens;
+                    continue;
+                }
+
+                var intersections = Utility.FindIntersections(coords, previousCoords, radius.Value);
+                if (intersections.Count == 0)
+                {
+                    // malformed Arc Radius
+                    previousCoords = Coord.Merge(previousCoords, coords, true);
+
+                    yield return tokens;
+                    continue;
+                }
+
+                if (intersections.Count == 2)
+                {
+                    var isClockwise = tokens.Any(t => t == "G2" || t == "G02");
+                    var isClockwiseIntersection = Utility.DirectionOfPoint(previousCoords.ToPointF(), coords.ToPointF(), intersections[0].ToPointF()) < 0;
+
+                    intersections.RemoveAt((isClockwise != isClockwiseIntersection) ? 0 : 1);
+                }
+
+                previousCoords = Coord.Merge(previousCoords, coords, true);
+                yield return tokens.ArcRadiusToCenter(previousCoords, intersections[0]);
+            }
+        }
+
+        private static List<string> ArcRadiusToCenter(this List<string> tokensB, Coord coordsA, Coord center) {
+            tokensB = tokensB.Where(t => t[0] != 'R').ToList();
+
+            if ((center.Set & CoordSet.X) == CoordSet.X && (coordsA.Set & CoordSet.X) == CoordSet.X)
+            {
+                tokensB.Add($"I{center.X - coordsA.X:0.####}");
+            }
+            if ((center.Set & CoordSet.Y) == CoordSet.Y && (coordsA.Set & CoordSet.Y) == CoordSet.Y)
+            {
+                tokensB.Add($"J{center.Y - coordsA.Y:0.####}");
+            }
+            if ((center.Set & CoordSet.Z) == CoordSet.Z && (coordsA.Set & CoordSet.Z) == CoordSet.Z)
+            {
+                tokensB.Add($"K{center.Z - coordsA.Z:0.####}");
+            }
+
+            return tokensB;
         }
 
         public static async IAsyncEnumerable<List<string>> Annotate(this IAsyncEnumerable<List<string>> tokenizedLines)
