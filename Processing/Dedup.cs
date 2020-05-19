@@ -397,7 +397,7 @@ namespace GCodeClean.Processing
 
 
         public static async IAsyncEnumerable<List<string>> DedupSelectTokens(this IAsyncEnumerable<List<string>> tokenizedLines, List<char> selectedTokens) {
-            var previousSelectedTokens = selectedTokens.Select(st => $"{st}0.00").ToList();
+            var previousSelectedTokens = selectedTokens.Select(st => $"{st}0.####").ToList();
 
             await foreach (var tokens in tokenizedLines) {
                 if (tokens.IsNotCommandCodeOrArguments()) {
@@ -415,46 +415,6 @@ namespace GCodeClean.Processing
                     var newToken = tokens.FirstOrDefault(t => t[0] == previousSelectedTokens[ix][0]);
                     if (newToken != null) {
                         previousSelectedTokens[ix] = newToken;
-                    }
-                }
-
-                yield return tokens;
-            }
-        }
-
-        public static async IAsyncEnumerable<List<string>> DedupTokens(this IAsyncEnumerable<List<string>> tokenizedLines) {
-            var previousXYZCoords = new List<string>() {"X0.00", "Y0.00", "Z0.00"};
-            var previousIJKCoords = new List<string>() {"I0.00", "J0.00", "K0.00"};
-
-            await foreach (var tokens in tokenizedLines) {
-                if (tokens.IsNotCommandCodeOrArguments()) {
-                    yield return tokens;
-                    continue;
-                }
-
-                for (var ix = tokens.Count - 1; ix >= 0; ix--) {
-                    if (previousXYZCoords.Any(c => c == tokens[ix])) {
-                        tokens.RemoveAt(ix);
-                    }
-                }
-
-                for (var ix = tokens.Count - 1; ix >= 0; ix--) {
-                    if (previousIJKCoords.Any(c => c == tokens[ix])) {
-                        tokens.RemoveAt(ix);
-                    }
-                }
-
-                for (var ix = 0; ix < previousXYZCoords.Count; ix++) {
-                    var newCoord = tokens.FirstOrDefault(t => t[0] == previousXYZCoords[ix][0]);
-                    if (newCoord != null) {
-                        previousXYZCoords[ix] = newCoord;
-                    }
-                }
-
-                for (var ix = 0; ix < previousIJKCoords.Count; ix++) {
-                    var newCoord = tokens.FirstOrDefault(t => t[0] == previousIJKCoords[ix][0]);
-                    if (newCoord != null) {
-                        previousIJKCoords[ix] = newCoord;
                     }
                 }
 

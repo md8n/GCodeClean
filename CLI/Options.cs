@@ -1,23 +1,30 @@
 using System.Collections.Generic;
 
 using CommandLine;
+using CommandLine.Text;
 
 namespace GCodeClean.CLI
 {
     class Options
-    {
-        [Option('r', "read", Required = true, HelpText = "Input files to be processed.")]
-        public IEnumerable<string> InputFiles { get; set; }
+{
+        [Option("filename", Required = true, HelpText = "Full path to the input filename.")]
+        public string filename { get; set; }
 
-        // Omitting long name, defaults to name of property, ie "--verbose"
-        [Option(
-            Default = false, HelpText = "Prints all messages to standard output.")]
-        public bool Verbose { get; set; }
+        [Option("annotate", Required = false, HelpText = "Annotate the GCode with inline comments.")]
+        public bool annotate { get; set; }
 
-        [Option("stdin", Default = false, HelpText = "Read from stdin")]
-        public bool stdin { get; set; }
+        [Option("minimise", Required = false, HelpText = "Select preferred minimisation strategy, 'soft' - (default) FZ only, 'hard' - All codes, or list of codes e.g. FGXYZIJK")]
+        public string minimise { get; set; }
 
-        [Value(0, MetaName = "offset", HelpText = "File offset.")]
-        public long? Offset { get; set; }
+        [Usage(ApplicationAlias = "GCodeClean")]
+        public static IEnumerable<Example> Examples
+        {
+            get
+            {
+                return new List<Example>() {
+                    new Example("Clean GCode file", new Options { filename = "facade.nc" })
+                };
+            }
+        }
     }
 }

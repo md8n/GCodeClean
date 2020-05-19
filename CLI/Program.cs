@@ -4,10 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 using CommandLine;
-using CommandLine.Text;
 
 using GCodeClean.IO;
 using GCodeClean.Processing;
@@ -16,23 +16,6 @@ namespace GCodeClean.CLI
 {
     class Program
     {
-        class Options
-        {
-            [Option("filename", Required = false, HelpText = "Full path to the input filename.")]
-            public string filename { get; set; }
-
-            [Usage(ApplicationAlias = "GCodeClean")]
-            public static IEnumerable<Example> Examples
-            {
-                get
-                {
-                    return new List<Example>() {
-                        new Example("Clean GCode file", new Options { filename = "facade.nc" })
-                    };
-                }
-            }
-        }
-
         public static async Task Main(string[] args)
         {
             if (args.Length == 0)
@@ -73,12 +56,28 @@ namespace GCodeClean.CLI
                 .DedupLinear(0.0005M)
                 .DedupLinear(0.0005M)
                 .DedupLinear(0.0005M)
-                .DedupLinear(0.0005M)
-                //.Annotate()
-                .DedupSelectTokens(new List<char> { 'F', 'Z' })
-                //.DedupTokens()
-                .JoinTokens();
-            var lineCount = outputFile.WriteLinesAsync(outputLines);
+                .DedupLinear(0.0005M);
+
+            var minimisationStrategy = options.minimise.ToUpperInvariant();
+            var dedupSelection = new List<char> { 'F', 'Z' };
+            if (!string.IsNullOrWhiteSpace(options.minimise) && minimisationStrategy != "SOFT")
+            {
+                var hardList = new List<char> { 'A', 'B', 'C', 'D', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'P', 'R', 'S', 'T', 'X', 'Y', 'Z' };
+                if (minimisationStrategy == "HARD")
+                {
+                    dedupSelection = hardList;
+                }
+                else
+                {
+                    dedupSelection = new List<char>(minimisationStrategy).Intersect(hardList).ToList();
+                }
+            }
+
+            var minimisedLines = outputLines.DedupSelectTokens(dedupSelection);
+
+            var annotatedLines = options.annotate ? minimisedLines.Annotate() : minimisedLines;
+            var reassembledLines = annotatedLines.JoinTokens(minimisationStrategy);
+            var lineCount = outputFile.WriteLinesAsync(reassembledLines);
 
             await foreach (var line in lineCount)
             {
