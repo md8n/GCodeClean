@@ -20,10 +20,10 @@ jobs:
     - name: Install dependencies
       run: dotnet restore
     - name: Build Linux-x64 Standalone
-      run: dotnet build --configuration Release --no-restore /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary --runtime linux-x64 --output bin/release/netcoreapp3.1/publish --self-contained
+      run: dotnet build --configuration Release /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary --runtime linux-x64 --output bin/release/netcoreapp3.1/publish --self-contained
     - name: Build OSX-x64 Standalone
-      run: dotnet build --configuration Release --no-restore /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary --runtime osx-x64 --output bin/release/netcoreapp3.1/publish --self-contained
+      run: dotnet build --configuration Release /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary --runtime osx-x64 --output bin/release/netcoreapp3.1/publish --self-contained
     - name: Build Windows-x64 Standalone
-      run: dotnet build --configuration Release --no-restore /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary --runtime win-x64 --output bin/release/netcoreapp3.1/publish --self-contained
+      run: dotnet build --configuration Release /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary --runtime win-x64 --output bin/release/netcoreapp3.1/publish --self-contained
     - name: Test
       run: dotnet test --no-restore --verbosity normal
