@@ -43,15 +43,21 @@ namespace GCodeClean.Processing
 
         public static async IAsyncEnumerable<string> JoinTokens(this IAsyncEnumerable<List<string>> tokenizedLines, string minimisationStrategy) {
             var isFirstLine = true;
+            var prevLine = "";
             var joiner = minimisationStrategy == "HARD" ? "" : " ";
             await foreach (var tokens in tokenizedLines) {
                 var joinedLine = string.Join(joiner, tokens);
-                if (String.IsNullOrWhiteSpace(joinedLine) && isFirstLine) {
+                if (string.IsNullOrWhiteSpace(joinedLine) && isFirstLine) {
                     continue;
                 }
                 isFirstLine = false;
 
-                yield return joinedLine;
+                if (!(string.IsNullOrWhiteSpace(prevLine) && string.IsNullOrWhiteSpace(joinedLine)))
+                {
+                    yield return joinedLine;
+                }
+
+                prevLine = joinedLine;
             }
         }
     }

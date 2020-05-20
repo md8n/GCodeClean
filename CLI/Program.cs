@@ -58,7 +58,9 @@ namespace GCodeClean.CLI
                 .DedupLinear(0.0005M)
                 .DedupLinear(0.0005M);
 
-            var minimisationStrategy = options.minimise.ToUpperInvariant();
+            var minimisationStrategy = string.IsNullOrWhiteSpace(options.minimise)
+                ? "SOFT"
+                : options.minimise.ToUpperInvariant();
             var dedupSelection = new List<char> { 'F', 'Z' };
             if (!string.IsNullOrWhiteSpace(options.minimise) && minimisationStrategy != "SOFT")
             {

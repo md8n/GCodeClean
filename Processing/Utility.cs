@@ -269,7 +269,7 @@ namespace GCodeClean.Processing
             var sqr_of_r = h * h + k * k - circ;
 
             radius = (decimal)Math.Round(Math.Sqrt(sqr_of_r), 5);
-            center = new Coord((decimal)h, (decimal)k, dropCoord);
+            center = new Coord((decimal)h, (decimal)k, b.X);
 
             isClockwise = DirectionOfPoint(pA, pB, center.ToPointF()) < 0;
 
