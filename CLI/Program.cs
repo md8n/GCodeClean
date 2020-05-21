@@ -44,7 +44,7 @@ namespace GCodeClean.CLI
             Console.WriteLine("Outputting to:" + outputFile);
 
             var inputLines = inputFile.ReadLinesAsync();
-            var outputLines = inputLines.Tokenize()
+            var outputLines = inputLines.TokenizeToLine()
                 .DedupRepeatedTokens()
                 .SingleCommandPerLine()
                 .Augment()

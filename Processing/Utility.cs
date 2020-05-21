@@ -10,149 +10,15 @@ namespace GCodeClean.Processing
 {
     public static class Utility
     {
-        public static char[] Commands = { 'G', 'M' };
-
-        public static char[] Codes = { 'F', 'S', 'T' };
-
-        public static char[] Arguments = { 'A', 'B', 'C', 'D', 'H', 'I', 'J', 'K', 'L', 'N', 'P', 'R', 'X', 'Y', 'Z' };
-
-        public static string[] MovementCommands = { "G0", "G1", "G2", "G3", "G00", "G01", "G02", "G03" };
-
-        public static string[] ArcCommands = { "G2", "G3", "G02", "G03" };
-
-
         /// <summary>
         /// Roughly equivalent to `IsNullOrWhiteSpace` this returns true if there are:
         /// * no tokens,
         /// * only a file terminator,
         /// * only one or more comments
         /// </summary>
-        public static Boolean IsNotCommandCodeOrArguments(this List<string> tokens)
+        public static Boolean IsNotCommandCodeOrArguments(this Line line)
         {
-            return tokens.Count == 0 || tokens.All(t => t[0] == '%') || tokens.All(t => t[0] == '(');
-        }
-
-        /// <summary>
-        /// This returns true if there are one or more Arguments but no Commands, comments and codes are ignored for this test
-        /// </summary>
-        public static Boolean IsArgumentsOnly(this List<string> tokens)
-        {
-            if (tokens.IsNotCommandCodeOrArguments())
-            {
-                return false;
-            }
-
-            return tokens.Any(t => Arguments.Any(a => a == t[0])) && !tokens.Any(t => Commands.Any(a => a == t[0]));
-        }
-
-        /// <summary>
-        /// This returns true if there are one or more Arguments but no Commands, comments are ignored for this test
-        /// </summary>
-        public static Boolean HasMovementCommand(this List<string> tokens)
-        {
-            if (tokens.IsArgumentsOnly())
-            {
-                return false;
-            }
-
-            return tokens.Any(t => MovementCommands.Contains(t));
-        }
-
-        /// <summary>
-        /// Compares two sets of tokens to ensure they are completely the same
-        /// </summary>
-        public static Boolean AreTokensEqual(this List<string> tokensA, List<string> tokensB)
-        {
-            if (tokensA.Count != tokensB.Count)
-            {
-                return false;
-            }
-            var isDuplicate = true;
-            for (var ix = 0; ix < tokensB.Count; ix++)
-            {
-                if (tokensA[ix] != tokensB[ix])
-                {
-                    isDuplicate = false;
-                    break;
-                }
-            }
-            return isDuplicate;
-        }
-
-        /// <sumary>
-        /// Compares two sets of tokens to ensure they are `compatible`
-        /// </summary>
-        public static Boolean AreTokensCompatible(this List<string> tokensA, List<string> tokensB)
-        {
-            if (tokensA.Count != tokensB.Count)
-            {
-                return false;
-            }
-            var isCompatible = true;
-            for (var ix = 0; ix < tokensB.Count; ix++)
-            {
-                if (tokensA[ix][0] != tokensB[ix][0])
-                {
-                    isCompatible = false;
-                    break;
-                }
-                if (tokensA[ix][0] == 'G' || tokensA[ix][0] == 'M')
-                {
-                    // For 'Commands' the whole thing must be the same
-                    if (tokensA[ix] != tokensB[ix])
-                    {
-                        isCompatible = false;
-                        break;
-                    }
-                }
-            }
-            return isCompatible;
-        }
-
-        public static Coord ExtractCoords(this List<string> tokens)
-        {
-            var coords = new Coord();
-            decimal? value = null;
-            foreach (var token in tokens)
-            {
-                value = token.ExtractCoord();
-                if (value.HasValue)
-                {
-                    if (token[0] == 'X')
-                    {
-                        coords.X = value.Value;
-                        coords.Set |= CoordSet.X;
-                    }
-                    if (token[0] == 'Y')
-                    {
-                        coords.Y = value.Value;
-                        coords.Set |= CoordSet.Y;
-                    }
-                    if (token[0] == 'Z')
-                    {
-                        coords.Z = value.Value;
-                        coords.Set |= CoordSet.Z;
-                    }
-                }
-            }
-
-            return coords;
-        }
-
-        public static decimal? ExtractCoord(this string token)
-        {
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                return null;
-            }
-
-            decimal value;
-            if (decimal.TryParse((string)token.Substring(1), out value))
-            {
-                return value;
-            }
-
-            return null;
+            return line.Tokens.Count == 0 || line.Tokens.All(t => t.IsFileTerminator) || line.Tokens.All(t => t.IsComment);
         }
 
         /// <summary>

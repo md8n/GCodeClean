@@ -12,7 +12,7 @@ namespace GCodeClean.Processing
 {
     public static class Processing
     {
-        public static async IAsyncEnumerable<List<string>> Clip(this IAsyncEnumerable<List<string>> tokenizedLines)
+        public static async IAsyncEnumerable<Line> Clip(this IAsyncEnumerable<Line> tokenizedLines)
         {
             JObject tokenDefinitions = JObject.Parse(File.ReadAllText("tokenDefinitions.json"));
 
@@ -20,17 +20,22 @@ namespace GCodeClean.Processing
             var tokenDefs = tokenDefinitions["tokenDefs"];
             var context = new Dictionary<string, string>();
 
-            await foreach (var tokens in tokenizedLines)
+            await foreach (var line in tokenizedLines)
             {
-                if (tokens.IsNotCommandCodeOrArguments())
+                if (line.IsNotCommandCodeOrArguments())
                 {
-                    yield return tokens;
+                    yield return line;
                     continue;
                 }
 
-                for (var ix = 0; ix < tokens.Count; ix++)
+                for (var ix = 0; ix < line.Tokens.Count; ix++)
                 {
-                    var replacement = (JObject)replacements[tokens[ix]];
+                    if (!line.Tokens[ix].IsValid)
+                    {
+                        continue;
+                    }
+
+                    var replacement = (JObject)replacements[line.Tokens[ix].Source];
                     if (replacement != null)
                     {
                         foreach (var contextToken in replacement)
@@ -39,120 +44,114 @@ namespace GCodeClean.Processing
                         }
                     }
 
-                    var wholeCode = (string)tokenDefs[tokens[ix]];
+                    var wholeCode = (string)tokenDefs[line.Tokens[ix].Source];
                     if (wholeCode != null)
                     {
                         continue;
                     }
-                    var subToken = "" + tokens[ix][0];
+                    var subToken = "" + line.Tokens[ix].Code;
                     var subCode = (string)tokenDefs[subToken];
                     if (subCode != null)
                     {
-                        decimal? value = tokens[ix].ExtractCoord();
+                        decimal? value = line.Tokens[ix].Number;
                         var hasUnits = context.ContainsKey("lengthUnits");
-                        var hasDP = tokens[ix].IndexOf(".") != -1;
-                        if (hasUnits && hasDP && value.HasValue)
+                        if (hasUnits && value.HasValue)
                         {
                             // Round to 3dp for mm and 4dp for inch
                             var clip = (context["lengthUnits"] == "mm") ? 3 : 4;
                             var clipFormat = clip == 1 ? "{0}{1:0.###}" : "{0}{1:0.####}";
                             value = Math.Round(value.Value, clip);
-                            tokens[ix] = String.Format(clipFormat, subToken, value);
+                            line.Tokens[ix].Source = String.Format(clipFormat, subToken, value);
                         }
                     }
                 }
 
-                yield return tokens;
+                yield return line;
             }
         }
 
-        public static async IAsyncEnumerable<List<string>> Augment(this IAsyncEnumerable<List<string>> tokenizedLines)
+        public static async IAsyncEnumerable<Line> Augment(this IAsyncEnumerable<Line> tokenizedLines)
         {
-            var previousCommand = "";
-            var previousXYZCoords = new List<string>() { "X", "Y", "Z" };
-            var previousIJKCoords = new List<string>() { "I", "J" };
+            var previousCommand = new Token("");
+            var previousXYZCoords = new List<Token>() { new Token("X"), new Token("Y"), new Token("Z") };
+            var previousIJKCoords = new List<Token>() { new Token("I"), new Token("J") };
 
-            await foreach (var tokens in tokenizedLines)
+            await foreach (var line in tokenizedLines)
             {
-                if (tokens.IsNotCommandCodeOrArguments())
+                if (line.IsNotCommandCodeOrArguments())
                 {
-                    yield return tokens;
+                    yield return line;
                     continue;
                 }
 
-                var hasXY = tokens.Any(t => new[] { 'X', 'Y' }.Contains(t[0]));
-                var hasZ = tokens.Any(t => t[0] == 'Z');
-                var hasIJ = tokens.Any(t => new[] { 'I', 'J' }.Contains(t[0]));
-                var hasK = tokens.Any(t => t[0] == 'K');
+                var hasXY = line.HasTokens(new List<char> { 'X', 'Y' });
+                var hasZ = line.HasTokens(new List<char> { 'Z' });
+                var hasIJ = line.HasTokens(new List<char> { 'I', 'J' });
+                var hasK = line.HasTokens(new List<char> { 'K' });
                 if (hasK)
                 {
-                    previousIJKCoords.Add("K");
+                    previousIJKCoords.Add(new Token("K"));
                 }
 
                 if (hasXY || hasZ || hasIJ || hasK)
                 {
-                    if (tokens.HasMovementCommand())
+                    if (line.HasMovementCommand())
                     {
-                        foreach (var token in tokens)
+                        foreach (var token in line.Tokens)
                         {
-                            if (Utility.MovementCommands.Contains(token))
+                            if (Token.MovementCommands.Contains(token.Source))
                             {
                                 previousCommand = token;
                                 break;
                             }
                         }
                     }
-                    else if (!string.IsNullOrWhiteSpace(previousCommand))
+                    else if (previousCommand.IsCommand)
                     {
-                        tokens.Insert(0, previousCommand);
+                        line.Tokens.Insert(0, previousCommand);
                     }
                 }
 
                 for (var ix = 0; ix < previousXYZCoords.Count; ix++)
                 {
-                    var newCoord = tokens.FirstOrDefault(t => t[0] == previousXYZCoords[ix][0]);
-                    if (newCoord == null)
+                    var newCoord = line.Tokens.FirstOrDefault(t => t.Code == previousXYZCoords[ix].Code);
+                    if (newCoord is null)
                     {
                         newCoord = previousXYZCoords[ix];
                     }
-                    previousXYZCoords[ix] = newCoord;
+                    else
+                    {
+                        previousXYZCoords[ix] = newCoord;
+                    }
                 }
 
                 for (var ix = 0; ix < previousIJKCoords.Count; ix++)
                 {
-                    var newCoord = tokens.FirstOrDefault(t => t[0] == previousIJKCoords[ix][0]);
-                    if (newCoord == null)
+                    var newCoord = line.Tokens.FirstOrDefault(t => t.Code == previousIJKCoords[ix].Code);
+                    if (newCoord is null)
                     {
                         newCoord = previousIJKCoords[ix];
                     }
-                    previousIJKCoords[ix] = newCoord;
+                    else
+                    {
+                        previousIJKCoords[ix] = newCoord;
+                    }
                 }
 
+                // Remove and then add back in the arguments - ensures consistency
                 if (hasXY || hasZ)
                 {
-                    for (var ix = tokens.Count - 1; ix >= 0; ix--)
-                    {
-                        if (tokens[ix][0] == 'X' || tokens[ix][0] == 'Y' || tokens[ix][0] == 'Z')
-                        {
-                            tokens.RemoveAt(ix);
-                        }
-                    }
-                    tokens.AddRange(previousXYZCoords.Where(pc => pc.Length > 1));
+                    line.RemoveTokens(new List<char> { 'X', 'Y', 'Z' });
+                    line.Tokens.AddRange(previousXYZCoords.Where(pc => pc.IsArgument));
                 }
 
                 if (hasIJ || hasK)
                 {
-                    for (var ix = tokens.Count - 1; ix >= 0; ix--)
-                    {
-                        if (tokens[ix][0] == 'I' || tokens[ix][0] == 'J' || tokens[ix][0] == 'K')
-                        {
-                            tokens.RemoveAt(ix);
-                        }
-                    }
-                    tokens.AddRange(previousIJKCoords.Where(pc => pc.Length > 1));
+                    line.RemoveTokens(new List<char> { 'I', 'J', 'K' });
+                    line.Tokens.AddRange(previousIJKCoords.Where(pc => pc.IsArgument));
                 }
 
-                yield return tokens;
+                yield return line;
 
                 // Keep this for later but it requires understanding plane selection
                 // if (hasZ) {
@@ -165,35 +164,37 @@ namespace GCodeClean.Processing
             }
         }
 
-        public static async IAsyncEnumerable<List<string>> ConvertArcRadiusToCenter(this IAsyncEnumerable<List<string>> tokenizedLines)
+        public static async IAsyncEnumerable<Line> ConvertArcRadiusToCenter(this IAsyncEnumerable<Line> tokenizedLines)
         {
-            var previousCoords = new List<string>() { "X", "Y", "Z" }.ExtractCoords();
+            var previousCoords = new Coord();
 
-            await foreach (var tokens in tokenizedLines)
+            var clockwiseMovementToken = new Token("G2");
+
+            await foreach (var line in tokenizedLines)
             {
-                var hasMovement = tokens.HasMovementCommand();
+                var hasMovement = line.HasMovementCommand();
                 if (!hasMovement)
                 {
-                    yield return tokens;
+                    yield return line;
                     continue;
                 }
 
-                var coords = tokens.ExtractCoords();
+                Coord coords = line;
                 if (!previousCoords.HasCoordPair())
                 {
                     // Some movement command, and we're at a 'start'
                     previousCoords = Coord.Merge(previousCoords, coords, true);
 
-                    yield return tokens;
+                    yield return line;
                     continue;
                 }
 
-                var radius = tokens.FirstOrDefault(t => t[0] == 'R').ExtractCoord();
+                var radius = line.Tokens.FirstOrDefault(t => t.Code == 'R')?.Number;
                 if (!radius.HasValue || !coords.HasCoordPair())
                 {
                     previousCoords = Coord.Merge(previousCoords, coords, true);
 
-                    yield return tokens;
+                    yield return line;
                     continue;
                 }
 
@@ -203,43 +204,43 @@ namespace GCodeClean.Processing
                     // malformed Arc Radius
                     previousCoords = Coord.Merge(previousCoords, coords, true);
 
-                    yield return tokens;
+                    yield return line;
                     continue;
                 }
 
                 if (intersections.Count == 2)
                 {
-                    var isClockwise = tokens.Any(t => t == "G2" || t == "G02");
+                    var isClockwise = line.Tokens.Contains(clockwiseMovementToken);
                     var isClockwiseIntersection = Utility.DirectionOfPoint(previousCoords.ToPointF(), coords.ToPointF(), intersections[0].ToPointF()) < 0;
 
                     intersections.RemoveAt((isClockwise != isClockwiseIntersection) ? 0 : 1);
                 }
 
                 previousCoords = Coord.Merge(previousCoords, coords, true);
-                yield return tokens.ArcRadiusToCenter(previousCoords, intersections[0]);
+                yield return line.ArcRadiusToCenter(previousCoords, intersections[0]);
             }
         }
 
-        private static List<string> ArcRadiusToCenter(this List<string> tokensB, Coord coordsA, Coord center) {
-            tokensB = tokensB.Where(t => t[0] != 'R').ToList();
+        private static Line ArcRadiusToCenter(this Line lineB, Coord coordsA, Coord center) {
+            lineB.RemoveTokens(new List<char>() { 'R'});
 
             if ((center.Set & CoordSet.X) == CoordSet.X && (coordsA.Set & CoordSet.X) == CoordSet.X)
             {
-                tokensB.Add($"I{center.X - coordsA.X:0.####}");
+                lineB.Tokens.Add(new Token($"I{center.X - coordsA.X:0.####}"));
             }
             if ((center.Set & CoordSet.Y) == CoordSet.Y && (coordsA.Set & CoordSet.Y) == CoordSet.Y)
             {
-                tokensB.Add($"J{center.Y - coordsA.Y:0.####}");
+                lineB.Tokens.Add(new Token($"J{center.Y - coordsA.Y:0.####}"));
             }
             if ((center.Set & CoordSet.Z) == CoordSet.Z && (coordsA.Set & CoordSet.Z) == CoordSet.Z)
             {
-                tokensB.Add($"K{center.Z - coordsA.Z:0.####}");
+                lineB.Tokens.Add(new Token($"K{center.Z - coordsA.Z:0.####}"));
             }
 
-            return tokensB;
+            return lineB;
         }
 
-        public static async IAsyncEnumerable<List<string>> Annotate(this IAsyncEnumerable<List<string>> tokenizedLines)
+        public static async IAsyncEnumerable<Line> Annotate(this IAsyncEnumerable<Line> tokenizedLines)
         {
             JObject tokenDefinitions = JObject.Parse(File.ReadAllText("tokenDefinitions.json"));
 
@@ -249,17 +250,17 @@ namespace GCodeClean.Processing
 
             var previousTokenCodes = new List<string>();
 
-            await foreach (var tokens in tokenizedLines)
+            await foreach (var line in tokenizedLines)
             {
-                if (tokens.IsNotCommandCodeOrArguments())
+                if (line.IsNotCommandCodeOrArguments())
                 {
-                    yield return tokens;
+                    yield return line;
                     continue;
                 }
 
                 var annotationTokens = new List<string>();
                 var tokenCodes = new List<string>();
-                foreach (var token in tokens)
+                foreach (var token in line.Tokens)
                 {
                     var replacement = (JObject)replacements[token];
                     if (replacement != null)
@@ -271,16 +272,16 @@ namespace GCodeClean.Processing
                     }
 
                     var annotation = (string)tokenDefs[token];
-                    if (annotation == null)
+                    if (annotation is null && token.Number.HasValue)
                     {
-                        var subToken = "" + token[0];
+                        var subToken = "" + token.Code;
                         tokenCodes.Add(subToken);
                         annotation = (string)tokenDefs[subToken];
-                        context[token[0] + "value"] = (string)token.Substring(1);
+                        context[token.Code + "value"] = token.Number.Value.ToString();
                     }
                     else
                     {
-                        tokenCodes.Add(token);
+                        tokenCodes.Add(token.ToString());
                     }
                     if (annotation != null)
                     {
@@ -310,11 +311,11 @@ namespace GCodeClean.Processing
 
                 if (!isDuplicate && annotationTokens.Count > 0)
                 {
-                    tokens.Add($"({string.Join(", ", annotationTokens)})");
+                    line.Tokens.Add(new Token($"({string.Join(", ", annotationTokens)})"));
                     previousTokenCodes = tokenCodes;
                 }
 
-                yield return tokens;
+                yield return line;
             }
         }
     }

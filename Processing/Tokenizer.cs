@@ -1,7 +1,6 @@
 // Copyright (c) 2020 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
-using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
@@ -13,9 +12,9 @@ namespace GCodeClean.Processing
         /// </summary>
         public const string pattern = @"((\%)|((?<linenumber>N\s*\d{1,5})?\s*(?<word>[ABCDFGHIJKLMNPRSTXYZ]\s*[+-]?(\d|\s)*\.?(\d|\s)*\s*)|(?<comment>\(.*?\)\s*)))";
 
-        public static async IAsyncEnumerable<List<string>> Tokenize(this IAsyncEnumerable<string> lines) {
+        public static async IAsyncEnumerable<Line> TokenizeToLine(this IAsyncEnumerable<string> lines) {
             await foreach (var line in lines) {
-                yield return line.Tokenize();
+                yield return new Line(line);
             }
         }
 
@@ -41,12 +40,12 @@ namespace GCodeClean.Processing
             return tokens;
         }
 
-        public static async IAsyncEnumerable<string> JoinTokens(this IAsyncEnumerable<List<string>> tokenizedLines, string minimisationStrategy) {
+        public static async IAsyncEnumerable<string> JoinTokens(this IAsyncEnumerable<Line> tokenizedLines, string minimisationStrategy) {
             var isFirstLine = true;
             var prevLine = "";
             var joiner = minimisationStrategy == "HARD" ? "" : " ";
-            await foreach (var tokens in tokenizedLines) {
-                var joinedLine = string.Join(joiner, tokens);
+            await foreach (var line in tokenizedLines) {
+                var joinedLine = string.Join(joiner, line);
                 if (string.IsNullOrWhiteSpace(joinedLine) && isFirstLine) {
                     continue;
                 }

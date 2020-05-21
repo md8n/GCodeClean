@@ -1,6 +1,7 @@
 // Copyright (c) 2020 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
+using System;
 using System.Linq;
 
 public class Token {
@@ -8,7 +9,7 @@ public class Token {
 
     private char _code;
 
-    private decimal _number;
+    private decimal? _number;
 
     public string Source {
         get => _source;
@@ -19,6 +20,7 @@ public class Token {
             IsFileTerminator = false;
             IsComment = false;
             IsCommand = false;
+            IsCode = false;
             IsArgument = false;
 
             if (string.IsNullOrWhiteSpace(_source)) {
@@ -55,19 +57,24 @@ public class Token {
             IsFileTerminator = false;
             IsComment = false;
             IsCommand = false;
+            IsCode = false;
             IsArgument = false;
 
-            if (_code == FileTerminators[0])
+            if (FileTerminators.Contains(_code))
             {
                 IsFileTerminator = true;
             }
-            else if (_code == Comments[0])
+            else if (Comments.Contains(_code))
             {
                 IsComment = true;
             }
             else if (Commands.Any(c => c == _code))
             {
                 IsCommand = true;
+            } 
+            else if (Codes.Any(c => c == _code))
+            {
+                IsCode = true;
             } 
             else if (Arguments.Any(a => a == _code))
             {
@@ -76,7 +83,7 @@ public class Token {
         }
     }
 
-    public decimal Number { 
+    public decimal? Number { 
         get => _number;
         set {
             _number = value;
@@ -88,11 +95,11 @@ public class Token {
             if (IsCommand)
             {
                 if (Code == 'G') {
-                    IsValid = GCodes.Contains(_number);
+                    IsValid = _number.HasValue && GCodes.Contains(_number.Value);
                     return;
                 }
                 if (Code == 'M') {
-                    IsValid = MCodes.Contains(_number);
+                    IsValid = _number.HasValue && MCodes.Contains(_number.Value);
                     return;
                 }
                 IsValid = false;
@@ -108,6 +115,8 @@ public class Token {
 
     public bool IsCommand { get; private set; }
 
+    public bool IsCode { get; private set; }
+
     public bool IsComment { get; private set; }
 
     public bool IsArgument { get; private set; }
@@ -118,9 +127,13 @@ public class Token {
 
     public static char[] Comments = { '(' };
 
-    public static char[] Commands = { 'C', 'M' };
+    public static char[] Commands = { 'G', 'M' };
 
-    public static char[] Arguments = { 'A', 'B', 'D', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'N', 'P', 'R', 'S', 'T', 'X', 'Y', 'Z' };
+    public static char[] Codes = { 'F', 'S', 'T' };    
+
+    public static char[] Arguments = { 'A', 'B', 'C', 'D', 'H', 'I', 'J', 'K', 'L', 'N', 'P', 'R', 'X', 'Y', 'Z' };
+
+    public static string[] MovementCommands = { "G0", "G1", "G2", "G3", "G00", "G01", "G02", "G03" };
 
     public static decimal[] GCodes = {
         0, 1, 2, 3, 4, 10, 17, 18, 19, 20, 21, 28, 30, 38.2M, 
@@ -135,5 +148,54 @@ public class Token {
 
     public Token (string token) {
         this.Source = token;
+    }
+
+    public static Boolean operator == (Token a, Token b)
+    {
+        if (a is null || b is null)
+        {
+            return a is null && b is null;
+        }
+
+        if (a.Code != b.Code)
+        {
+            return false;
+        }
+
+        if (a.IsComment) {
+            return a.Source == b.Source;
+        }
+        if (a.IsFileTerminator) {
+            return true;
+        }
+
+        return a.Number == b.Number;
+    }
+
+    public static Boolean operator != (Token a, Token b)
+    {
+        return !(a == b);
+    }
+    
+    public override bool Equals(Object obj)
+    {
+        // Compare run-time types.
+        return (!this.GetType().Equals(obj.GetType()))
+            ? false : this == (Token)obj;
+    }
+
+    public override int GetHashCode()
+    {
+        if (this.IsComment || this.IsFileTerminator)
+        {
+            return (this.Source).GetHashCode();
+        }
+
+        return (this.Code, this.Number).GetHashCode();
+    }
+
+    public override string ToString()
+    {
+        return this.Source;
     }
 }

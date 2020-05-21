@@ -8,15 +8,15 @@ using System.Linq;
 namespace GCodeClean.Processing
 {
     public static class Dedup {
-        public static async IAsyncEnumerable<List<string>> DedupLine(this IAsyncEnumerable<List<string>> tokenizedLines) {
-            var previousTokens = new List<string>();
-            await foreach (var tokens in tokenizedLines) {
-                if (!previousTokens.AreTokensEqual(tokens)) {
-                    if (!tokens.IsNotCommandCodeOrArguments()) {
-                        previousTokens = tokens;
+        public static async IAsyncEnumerable<Line> DedupLine(this IAsyncEnumerable<Line> tokenizedLines) {
+            var previousLine = new Line();
+            await foreach (var line in tokenizedLines) {
+                if (previousLine != line) {
+                    if (!line.IsNotCommandCodeOrArguments()) {
+                        previousLine = line;
                     }
 
-                    yield return tokens;
+                    yield return line;
                 }
 
                 // Silently drop the duplicate
@@ -26,76 +26,77 @@ namespace GCodeClean.Processing
         /// <summary>
         /// Eliminates repeated tokens within the same line
         /// </summary>
-        public static async IAsyncEnumerable<List<string>> DedupRepeatedTokens(this IAsyncEnumerable<List<string>> tokenizedLines) {
-            await foreach (var tokens in tokenizedLines) {
-                var distinctTokens = tokens.Distinct().ToList();
-                yield return distinctTokens;
+        public static async IAsyncEnumerable<Line> DedupRepeatedTokens(this IAsyncEnumerable<Line> tokenizedLines) {
+            await foreach (var line in tokenizedLines) {
+                line.Tokens = line.Tokens.Distinct().ToList();
+                yield return line;
             }
         }
-
 
         /// <summary>
         /// Testing whether A -> B -> C is a straight line
         /// and eliminating B if that's the case
         /// </summary>
-        public static async IAsyncEnumerable<List<string>> DedupLinear(this IAsyncEnumerable<List<string>> tokenizedLines, decimal tolerance) {
-            var tokensA = new List<string>();
-            var tokensB = new List<string>();
-            var areTokensASet = false;
-            var areTokensBSet = false;
+        public static async IAsyncEnumerable<Line> DedupLinear(this IAsyncEnumerable<Line> tokenizedLines, decimal tolerance) {
+            var lineA = new Line();
+            var lineB = new Line();
+            var isLineASet = false;
+            var isLineBSet = false;
 
-            await foreach (var tokensC in tokenizedLines) {
-                var hasMovement = tokensC.HasMovementCommand();
-                var hasLinearMovement = tokensC.Any(tc => new []{"G1", "G01"}.Contains(tc));
-                if (hasMovement && !areTokensASet && !areTokensBSet) {
+            var linearMovementToken = new Token("G1");
+
+            await foreach (var lineC in tokenizedLines) {
+                var hasMovement = lineC.HasMovementCommand();
+                var hasLinearMovement = lineC.Tokens.Contains(linearMovementToken);
+                if (hasMovement && !isLineASet && !isLineBSet) {
                     // Some movement command, and we're at a 'start'
-                    tokensA = tokensC;
-                    areTokensASet = true;
+                    lineA = lineC;
+                    isLineASet = true;
                     continue;
                 }
                 if (!hasLinearMovement) {
                     // Not a linear movement command
-                    if (areTokensASet)
+                    if (isLineASet)
                     {
-                        yield return tokensA;
-                        tokensA = new List<string>();
-                        areTokensASet = false;
+                        yield return lineA;
+                        lineA = new Line();
+                        isLineASet = false;
                     }
-                    if (areTokensBSet)
+                    if (isLineBSet)
                     {
-                        yield return tokensB;
-                        tokensB = new List<string>();
-                        areTokensBSet = false;
+                        yield return lineB;
+                        lineB = new Line();
+                        isLineBSet = false;
                     }
-                    yield return tokensC;
+                    yield return lineC;
                     continue;
                 }
-                if (!tokensA.AreTokensCompatible(tokensC)) {
+                if (!lineA.IsCompatible(lineC)) {
                     // A linear movement command but A -> C are not of compatible 'form'
-                    if (areTokensASet)
+                    if (isLineASet)
                     {
-                        yield return tokensA;
+                        yield return lineA;
                     }
-                    if (areTokensBSet) {
-                        yield return tokensB;
-                        tokensB = new List<string>();
-                        areTokensBSet = false;
+                    if (isLineBSet) {
+                        yield return lineB;
+                        lineB = new Line();
+                        isLineBSet = false;
                     }
-                    tokensA = tokensC;
-                    areTokensASet = true;
+                    lineA = lineC;
+                    isLineASet = true;
                     continue;
                 }
 
-                if (!areTokensBSet) {
+                if (!isLineBSet) {
                     // Set up the B token
-                    tokensB = tokensC;
-                    areTokensBSet = true;
+                    lineB = lineC;
+                    isLineBSet = true;
                     continue;
                 }
 
-                var coordsA = tokensA.ExtractCoords();
-                var coordsB = tokensB.ExtractCoords();
-                var coordsC = tokensC.ExtractCoords();
+                Coord coordsA = lineA;
+                Coord coordsB = lineB;
+                Coord coordsC = lineC;
 
                 // Check we've got a full set of coords for the three token sets
                 var hasCoords = (coordsA.Set & coordsB.Set & coordsC.Set) == CoordSet.All;
@@ -155,103 +156,104 @@ namespace GCodeClean.Processing
                     isSignificant = xyIsSignificant || xzIsSignificant || yzIsSignificant;
                 }
 
-                yield return tokensA;
+                yield return lineA;
                 if (!hasCoords || !withinBounds || !isSignificant) {
-                    yield return tokensB;
+                    yield return lineB;
                 }
                 // else - They are colinear! so move things along and silently drop tokenB
 
-                tokensA = tokensC;
-                areTokensASet = true;
-                tokensB = new List<string>();
-                areTokensBSet = false;
+                lineA = lineC;
+                isLineASet = true;
+                lineB = new Line();
+                isLineBSet = false;
             }
         }
-
 
         /// <summary>
         /// Testing whether A -> B -> C can be fitted to an arc
         /// and eliminating B if that's the case
         /// </summary>
-        public static async IAsyncEnumerable<List<string>> DedupLinearToArc(this IAsyncEnumerable<List<string>> tokenizedLines, decimal tolerance) {
-            var tokensA = new List<string>();
-            var tokensB = new List<string>();
-            var areTokensASet = false;
-            var areTokensBSet = false;
+        public static async IAsyncEnumerable<Line> DedupLinearToArc(this IAsyncEnumerable<Line> tokenizedLines, decimal tolerance) {
+            var lineA = new Line();
+            var lineB = new Line();
+            var isLineASet = false;
+            var isLineBSet = false;
             var inArc = false;
 
             var prevCenter = new Coord();
             var prevRadius = 0M;
             var prevIsClockwise = false;
 
-            await foreach (var tokensC in tokenizedLines) {
-                var hasMovement = tokensC.HasMovementCommand();
-                var hasLinearMovement = tokensC.Any(tc => new []{"G1", "G01"}.Contains(tc));
-                if (hasMovement && !areTokensASet && !areTokensBSet) {
+            var linearMovementToken = new Token("G1");
+
+            await foreach (var lineC in tokenizedLines) {
+                var hasMovement = lineC.HasMovementCommand();
+                var hasLinearMovement = lineC.Tokens.Contains(linearMovementToken);
+                if (hasMovement && !isLineASet && !isLineBSet) {
                     // Some movement command, and we're at a 'start'
-                    tokensA = tokensC;
-                    areTokensASet = true;
+                    lineA = lineC;
+                    isLineASet = true;
                     continue;
                 }
 
-                var coordsA = tokensA.ExtractCoords();
-                var coordsB = areTokensBSet ? tokensB.ExtractCoords() : new Coord();
-                var coordsC = tokensC.ExtractCoords();
+                Coord coordsA = lineA;
+                Coord coordsB = isLineBSet ? lineB : new Coord();
+                Coord coordsC = lineC;
 
                 if (!hasLinearMovement) {
                     // Not a linear movement command
-                    if (areTokensASet)
+                    if (isLineASet)
                     {
-                        yield return tokensA;
-                        tokensA = new List<string>();
-                        areTokensASet = false;
+                        yield return lineA;
+                        lineA = new Line();
+                        isLineASet = false;
                     }
-                    if (areTokensBSet)
+                    if (isLineBSet)
                     {
                         if (inArc) {
-                            tokensB = tokensB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise);
+                            lineB = lineB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise);
 
                             prevCenter = new Coord();
                             prevRadius = 0M;
                             prevIsClockwise = false;
                         }
 
-                        yield return tokensB;
-                        tokensB = new List<string>();
-                        areTokensBSet = false;
+                        yield return lineB;
+                        lineB = new Line();
+                        isLineBSet = false;
                     }
-                    yield return tokensC;
+                    yield return lineC;
                     continue;
                 }
 
-                if (!tokensA.AreTokensCompatible(tokensC)) {
+                if (!lineA.IsCompatible(lineC)) {
                     // A movement command but A -> C are not of compatible 'form'
-                    if (areTokensASet)
+                    if (isLineASet)
                     {
-                        yield return tokensA;
+                        yield return lineA;
                     }
-                    if (areTokensBSet) {
+                    if (isLineBSet) {
                         if (inArc) {
-                            tokensB = tokensB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise);
+                            lineB = lineB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise);
 
                             prevCenter = new Coord();
                             prevRadius = 0M;
                             prevIsClockwise = false;
                         }
 
-                        yield return tokensB;
-                        tokensB = new List<string>();
-                        areTokensBSet = false;
+                        yield return lineB;
+                        lineB = new Line();
+                        isLineBSet = false;
                     }
-                    tokensA = tokensC;
-                    areTokensASet = true;
+                    lineA = lineC;
+                    isLineASet = true;
                     continue;
                 }
 
-                if (!areTokensBSet) {
+                if (!isLineBSet) {
                     // Set up the B token
-                    tokensB = tokensC;
-                    areTokensBSet = true;
+                    lineB = lineC;
+                    isLineBSet = true;
                     continue;
                 }
 
@@ -328,29 +330,29 @@ namespace GCodeClean.Processing
                 }
 
                 if (!hasCoords || !withinBounds || !isSignificant) {
-                    yield return tokensA;
+                    yield return lineA;
                     if (!inArc) {
-                        tokensA = tokensB;
-                        tokensB = tokensC;
+                        lineA = lineB;
+                        lineB = lineC;
 
-                        areTokensASet = true;
-                        areTokensBSet = true;
+                        isLineASet = true;
+                        isLineBSet = true;
                     }
                     else
                     {
                         // Finish the arc manipulation we were doing,
-                        // the new arc end point will be tokensB
-                        tokensB = tokensB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise);
+                        // the new arc end point will be lineB
+                        lineB = lineB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise);
 
                         prevCenter = new Coord();
                         prevRadius = 0M;
                         prevIsClockwise = false;
 
-                        yield return tokensB;
-                        tokensA = tokensC;
-                        areTokensASet = true;
-                        tokensB = new List<string>();
-                        areTokensBSet = false;
+                        yield return lineB;
+                        lineA = lineC;
+                        isLineASet = true;
+                        lineB = new Line();
+                        isLineBSet = false;
 
                         inArc = false;
                     }
@@ -362,63 +364,59 @@ namespace GCodeClean.Processing
                     prevRadius = radius;
                     prevIsClockwise = isClockwise;
 
-                    tokensB = tokensC;
-                    areTokensBSet = true;
+                    lineB = lineC;
+                    isLineBSet = true;
 
                     inArc = true;
                 }
             }
         }
 
-        private static List<string> ConvertLinearToArc(this List<string> tokensB, Coord coordsA, Coord prevCenter, bool prevIsClockwise) {
-            for (var ix = 0; ix < tokensB.Count; ix++)
+        private static Line ConvertLinearToArc(this Line lineB, Coord coordsA, Coord prevCenter, bool prevIsClockwise) {
+            var linearMovementToken = new Token("G1");
+            for (var ix = 0; ix < lineB.Tokens.Count; ix++)
             {
-                if (tokensB[ix] == "G1" || tokensB[ix] == "G01")
+                if (lineB.Tokens[ix] == linearMovementToken)
                 {
-                    tokensB[ix] = prevIsClockwise ? "G2" : "G3";
+                    lineB.Tokens[ix] = new Token(prevIsClockwise ? "G2" : "G3");
                     break;
                 }
             }
             if ((prevCenter.Set & CoordSet.X) == CoordSet.X && (coordsA.Set & CoordSet.X) == CoordSet.X)
             {
-                tokensB.Add($"I{prevCenter.X - coordsA.X:0.####}");
+                lineB.Tokens.Add(new Token($"I{prevCenter.X - coordsA.X:0.####}"));
             }
             if ((prevCenter.Set & CoordSet.Y) == CoordSet.Y && (coordsA.Set & CoordSet.Y) == CoordSet.Y)
             {
-                tokensB.Add($"J{prevCenter.Y - coordsA.Y:0.####}");
+                lineB.Tokens.Add(new Token($"J{prevCenter.Y - coordsA.Y:0.####}"));
             }
             if ((prevCenter.Set & CoordSet.Z) == CoordSet.Z && (coordsA.Set & CoordSet.Z) == CoordSet.Z)
             {
-                tokensB.Add($"K{prevCenter.Z - coordsA.Z:0.####}");
+                lineB.Tokens.Add(new Token($"K{prevCenter.Z - coordsA.Z:0.####}"));
             }
 
-            return tokensB;
+            return lineB;
         }
 
+        public static async IAsyncEnumerable<Line> DedupSelectTokens(this IAsyncEnumerable<Line> tokenizedLines, List<char> selectedTokens) {
+            var previousSelectedTokens = selectedTokens.Select(st => new Token($"{st}")).ToList();
 
-        public static async IAsyncEnumerable<List<string>> DedupSelectTokens(this IAsyncEnumerable<List<string>> tokenizedLines, List<char> selectedTokens) {
-            var previousSelectedTokens = selectedTokens.Select(st => $"{st}0.####").ToList();
-
-            await foreach (var tokens in tokenizedLines) {
-                if (tokens.IsNotCommandCodeOrArguments()) {
-                    yield return tokens;
+            await foreach (var line in tokenizedLines) {
+                if (line.IsNotCommandCodeOrArguments()) {
+                    yield return line;
                     continue;
                 }
 
-                for (var ix = tokens.Count - 1; ix >= 0; ix--) {
-                    if (previousSelectedTokens.Any(c => c == tokens[ix])) {
-                        tokens.RemoveAt(ix);
-                    }
-                }
+                line.RemoveTokens(previousSelectedTokens);
 
                 for (var ix = 0; ix < previousSelectedTokens.Count; ix++) {
-                    var newToken = tokens.FirstOrDefault(t => t[0] == previousSelectedTokens[ix][0]);
+                    var newToken = line.Tokens.FirstOrDefault(t => t.Code == previousSelectedTokens[ix].Code);
                     if (newToken != null) {
                         previousSelectedTokens[ix] = newToken;
                     }
                 }
 
-                yield return tokens;
+                yield return line;
             }
         }
     }
