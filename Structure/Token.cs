@@ -196,6 +196,10 @@ public class Token {
 
     public override string ToString()
     {
-        return this.Source;
+        if (this.IsFileTerminator || this.IsComment || !this.IsValid) {
+            return this.Source;
+        }
+
+        return $"{this.Code}{this.Number:0.####}";
     }
 }

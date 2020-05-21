@@ -45,7 +45,7 @@ namespace GCodeClean.Processing
             var prevLine = "";
             var joiner = minimisationStrategy == "HARD" ? "" : " ";
             await foreach (var line in tokenizedLines) {
-                var joinedLine = string.Join(joiner, line);
+                var joinedLine = string.Join(joiner, line.Tokens);
                 if (string.IsNullOrWhiteSpace(joinedLine) && isFirstLine) {
                     continue;
                 }
