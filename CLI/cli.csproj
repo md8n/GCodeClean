@@ -12,7 +12,7 @@
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageProjectUrl>https://github.com/md8n/GCodeClean/</PackageProjectUrl>
     <PackageTags></PackageTags>
-    <AssemblyName>GCodeClean</AssemblyName>
+    <AssemblyName>GCodeClean.CLI</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
