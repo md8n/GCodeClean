@@ -6,6 +6,7 @@
     <IsPackable>false</IsPackable>
 
     <OutputType>Library</OutputType>
+    <IsPublishable>false</IsPublishable>
   </PropertyGroup>
 
   <ItemGroup>
