@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <RuntimeIdentifiers>win10-x64;linux-x64;osx-x64</RuntimeIdentifiers>
   </PropertyGroup>
@@ -9,6 +9,12 @@
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.8.0" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="tokenDefinitions.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

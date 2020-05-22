@@ -4,34 +4,24 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
+
+using GCodeClean.Structure;
 
 namespace GCodeClean.Processing
 {
     public static class Utility
     {
         /// <summary>
-        /// Roughly equivalent to `IsNullOrWhiteSpace` this returns true if there are:
-        /// * no tokens,
-        /// * only a file terminator,
-        /// * only one or more comments
-        /// </summary>
-        public static Boolean IsNotCommandCodeOrArguments(this Line line)
-        {
-            return line.Tokens.Count == 0 || line.Tokens.All(t => t.IsFileTerminator) || line.Tokens.All(t => t.IsComment);
-        }
-
-        /// <summary>
         /// Is B between A and C, inclusive
         /// </summary>
-        public static Boolean WithinRange(this decimal B, decimal A, decimal C)
+        public static bool WithinRange(this decimal B, decimal A, decimal C)
         {
-            return (A >= B && B >= C) || (A <= B && B <= C);
+            return A >= B && B >= C || A <= B && B <= C;
         }
 
-        public static Double Angle(this Double da, Double db)
+        public static double Angle(this double da, double db)
         {
-            var theta = Math.Atan2((Double)da, (Double)db); // range (-PI, PI]
+            var theta = Math.Atan2(da, db); // range (-PI, PI]
             theta *= 180 / Math.PI; // rads to degs, range (-180, 180]
 
             return theta;
@@ -49,7 +39,7 @@ namespace GCodeClean.Processing
 
         public static decimal Angle(this (decimal A, decimal B) d)
         {
-            var theta = Math.Atan2((Double)d.A, (Double)d.B); // range (-PI, PI]
+            var theta = Math.Atan2((double)d.A, (double)d.B); // range (-PI, PI]
             theta *= 180 / Math.PI; // rads to degs, range (-180, 180]
 
             return (decimal)theta;
@@ -107,20 +97,20 @@ namespace GCodeClean.Processing
 
             var syBA = Math.Pow(pB.Y, 2) - Math.Pow(pA.Y, 2);
 
-            var f = ((sxAC) * (xAB)
-                    + (syAC) * (xAB)
-                    + (sxBA) * (xAC)
-                    + (syBA) * (xAC))
-                    / (2 * ((yCA) * (xAB) - (yBA) * (xAC)));
-            var g = ((sxAC) * (yAB)
-                    + (syAC) * (yAB)
-                    + (sxBA) * (yAC)
-                    + (syBA) * (yAC))
-                    / (2 * ((xCA) * (yAB) - (xBA) * (yAC)));
+            var f = (sxAC * xAB
+                    + syAC * xAB
+                    + sxBA * xAC
+                    + syBA * xAC)
+                    / (2 * (yCA * xAB - yBA * xAC));
+            var g = (sxAC * yAB
+                    + syAC * yAB
+                    + sxBA * yAC
+                    + syBA * yAC)
+                    / (2 * (xCA * yAB - xBA * yAC));
 
             if (double.IsInfinity(f) || double.IsInfinity(g))
             {
-                // lines are parallel / colinear
+                // lines are parallel / co-linear
                 return (center, radius, isClockwise);
             }
 
@@ -132,9 +122,9 @@ namespace GCodeClean.Processing
             // as r^2 = h^2 + k^2 - c 
             var h = -g;
             var k = -f;
-            var sqr_of_r = h * h + k * k - circ;
+            var sqrOfR = h * h + k * k - circ;
 
-            radius = (decimal)Math.Round(Math.Sqrt(sqr_of_r), 5);
+            radius = (decimal)Math.Round(Math.Sqrt(sqrOfR), 5);
             center = new Coord((decimal)h, (decimal)k, b.X);
 
             isClockwise = DirectionOfPoint(pA, pB, center.ToPointF()) < 0;
@@ -152,14 +142,14 @@ namespace GCodeClean.Processing
             pC.Y -= pA.Y;
 
             // Determining cross product 
-            var cross_product = (pB.X * pC.Y) - (pB.Y * pC.X);
+            var crossProduct = pB.X * pC.Y - pB.Y * pC.X;
 
             // return the sign of the cross product 
-            if (cross_product > 0)
+            if (crossProduct > 0)
             {
                 return 1;
             }
-            if (cross_product < 0)
+            if (crossProduct < 0)
             {
                 return -1;
             }
@@ -172,7 +162,7 @@ namespace GCodeClean.Processing
 
             // We only calculate a circle through one orthogonal plane,
             // therefore at least one of the dimensions must be the same for both coords
-            var ortho = Coord.Ortho(new List<Coord>() { cA, cB });
+            var ortho = Coord.Ortho(new List<Coord> { cA, cB });
             if (ortho == CoordSet.None)
             {
                 return intersections;
@@ -194,7 +184,7 @@ namespace GCodeClean.Processing
             // Find the distance between the centers.
             var dx = pA.X - pB.X;
             var dy = pA.Y - pB.Y;
-            double dist = Math.Sqrt(dx * dx + dy * dy);
+            var dist = Math.Sqrt(dx * dx + dy * dy);
 
             // See how many solutions there are.
             if (dist > (double)(radius * 2) || dist == 0)
@@ -204,7 +194,7 @@ namespace GCodeClean.Processing
             }
 
             // Find a and h.
-            var a = (dist * dist) / (2 * dist);
+            var a = dist * dist / (2 * dist);
             var h = Math.Sqrt((double)radius.Sqr() - a * a);
 
             // Find pC.

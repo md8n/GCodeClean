@@ -5,21 +5,25 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+using GCodeClean.Structure;
+
 namespace GCodeClean.Processing
 {
     public static class Dedup {
         public static async IAsyncEnumerable<Line> DedupLine(this IAsyncEnumerable<Line> tokenizedLines) {
             var previousLine = new Line();
             await foreach (var line in tokenizedLines) {
-                if (previousLine != line) {
-                    if (!line.IsNotCommandCodeOrArguments()) {
-                        previousLine = line;
-                    }
-
-                    yield return line;
+                if (previousLine == line)
+                {
+                    // Silently drop the duplicate
+                    continue;
                 }
 
-                // Silently drop the duplicate
+                if (!line.IsNotCommandCodeOrArguments()) {
+                    previousLine = line;
+                }
+
+                yield return line;
             }
         }
 
@@ -119,9 +123,9 @@ namespace GCodeClean.Processing
                     var coordsAB = coordsA - coordsB;
                     var coordsBC = coordsB - coordsC;
 
-                    var xIsRelevant = (coordsAC.X >= tolerance && coordsAB.X >= tolerance && coordsBC.X >= tolerance) ? 1 : 0;
-                    var yIsRelevant = (coordsAC.Y >= tolerance && coordsAB.Y >= tolerance && coordsBC.Y >= tolerance) ? 1 : 0;
-                    var zIsRelevant = (coordsAC.Z >= tolerance && coordsAB.Z >= tolerance && coordsBC.Z >= tolerance) ? 1 : 0;
+                    var xIsRelevant = coordsAC.X >= tolerance && coordsAB.X >= tolerance && coordsBC.X >= tolerance ? 1 : 0;
+                    var yIsRelevant = coordsAC.Y >= tolerance && coordsAB.Y >= tolerance && coordsBC.Y >= tolerance ? 1 : 0;
+                    var zIsRelevant = coordsAC.Z >= tolerance && coordsAB.Z >= tolerance && coordsBC.Z >= tolerance ? 1 : 0;
 
                     isSignificant = xIsRelevant + yIsRelevant + zIsRelevant < 2;
 
@@ -160,7 +164,7 @@ namespace GCodeClean.Processing
                 if (!hasCoords || !withinBounds || !isSignificant) {
                     yield return lineB;
                 }
-                // else - They are colinear! so move things along and silently drop tokenB
+                // else - They are co-linear! so move things along and silently drop tokenB
 
                 lineA = lineC;
                 isLineASet = true;
@@ -197,7 +201,7 @@ namespace GCodeClean.Processing
                 }
 
                 Coord coordsA = lineA;
-                Coord coordsB = isLineBSet ? lineB : new Coord();
+                var coordsB = isLineBSet ? lineB : new Coord();
                 Coord coordsC = lineC;
 
                 if (!hasLinearMovement) {
@@ -283,9 +287,9 @@ namespace GCodeClean.Processing
                     var coordsAB = coordsA - coordsB;
                     var coordsBC = coordsB - coordsC;
 
-                    var xIsRelevant = (coordsAC.X >= tolerance && coordsAB.X >= tolerance && coordsBC.X >= tolerance) ? 1 : 0;
-                    var yIsRelevant = (coordsAC.Y >= tolerance && coordsAB.Y >= tolerance && coordsBC.Y >= tolerance) ? 1 : 0;
-                    var zIsRelevant = (coordsAC.Z >= tolerance && coordsAB.Z >= tolerance && coordsBC.Z >= tolerance) ? 1 : 0;
+                    var xIsRelevant = coordsAC.X >= tolerance && coordsAB.X >= tolerance && coordsBC.X >= tolerance ? 1 : 0;
+                    var yIsRelevant = coordsAC.Y >= tolerance && coordsAB.Y >= tolerance && coordsBC.Y >= tolerance ? 1 : 0;
+                    var zIsRelevant = coordsAC.Z >= tolerance && coordsAB.Z >= tolerance && coordsBC.Z >= tolerance ? 1 : 0;
 
                     isSignificant = xIsRelevant + yIsRelevant + zIsRelevant < 2;
 
@@ -376,11 +380,13 @@ namespace GCodeClean.Processing
             var linearMovementToken = new Token("G1");
             for (var ix = 0; ix < lineB.Tokens.Count; ix++)
             {
-                if (lineB.Tokens[ix] == linearMovementToken)
+                if (lineB.Tokens[ix] != linearMovementToken)
                 {
-                    lineB.Tokens[ix] = new Token(prevIsClockwise ? "G2" : "G3");
-                    break;
+                    continue;
                 }
+
+                lineB.Tokens[ix] = new Token(prevIsClockwise ? "G2" : "G3");
+                break;
             }
             if ((prevCenter.Set & CoordSet.X) == CoordSet.X && (coordsA.Set & CoordSet.X) == CoordSet.X)
             {

@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using CommandLine;
 using CommandLine.Text;
 
-namespace GCodeClean.CLI
+namespace CLI
 {
-    class Options
-{
+    internal class Options
+    {
         [Option("filename", Required = true, HelpText = "Full path to the input filename.")]
         public string filename { get; set; }
 
@@ -17,14 +17,8 @@ namespace GCodeClean.CLI
         public string minimise { get; set; }
 
         [Usage(ApplicationAlias = "GCodeClean")]
-        public static IEnumerable<Example> Examples
-        {
-            get
-            {
-                return new List<Example>() {
-                    new Example("Clean GCode file", new Options { filename = "facade.nc" })
-                };
-            }
-        }
+        public static IEnumerable<Example> Examples => new List<Example> {
+            new Example("Clean GCode file", new Options { filename = "facade.nc" })
+        };
     }
 }

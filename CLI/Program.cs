@@ -12,34 +12,34 @@ using CommandLine;
 using GCodeClean.IO;
 using GCodeClean.Processing;
 
-namespace GCodeClean.CLI
+namespace CLI
 {
-    class Program
+    static class Program
     {
         public static async Task Main(string[] args)
         {
             if (args.Length == 0)
             {
-                args = new string[] { "--help" };
+                args = new [] { "--help" };
             }
             await Parser.Default.ParseArguments<Options>(args)
-                .WithParsedAsync(RunAsync);
+                .WithParsedAsync(RunAsync).ConfigureAwait(true);
             Console.WriteLine($"Exit code= {Environment.ExitCode}");
         }
 
-        static async Task RunAsync(Options options)
+        private static async Task RunAsync(Options options)
         {
             var inputFile = options.filename;
             var outputFile = inputFile;
             var inputExtension = Path.GetExtension(inputFile);
             Console.WriteLine(inputExtension);
-            if (String.IsNullOrEmpty(inputExtension))
+            if (string.IsNullOrEmpty(inputExtension))
             {
                 outputFile += "-gcc.nc";
             }
             else
             {
-                outputFile = outputFile.Replace(inputExtension, "-gcc" + inputExtension);
+                outputFile = outputFile.Replace(inputExtension, "-gcc" + inputExtension, StringComparison.InvariantCultureIgnoreCase);
             }
             Console.WriteLine("Outputting to:" + outputFile);
 
@@ -65,14 +65,9 @@ namespace GCodeClean.CLI
             if (!string.IsNullOrWhiteSpace(options.minimise) && minimisationStrategy != "SOFT")
             {
                 var hardList = new List<char> { 'A', 'B', 'C', 'D', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'P', 'R', 'S', 'T', 'X', 'Y', 'Z' };
-                if (minimisationStrategy == "HARD")
-                {
-                    dedupSelection = hardList;
-                }
-                else
-                {
-                    dedupSelection = new List<char>(minimisationStrategy).Intersect(hardList).ToList();
-                }
+                dedupSelection = minimisationStrategy == "HARD"
+                    ? hardList
+                    : new List<char>(minimisationStrategy).Intersect(hardList).ToList();
             }
 
             var minimisedLines = outputLines.DedupSelectTokens(dedupSelection);

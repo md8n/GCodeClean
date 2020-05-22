@@ -14,26 +14,24 @@ namespace GCodeClean.IO
 
         public static async IAsyncEnumerable<string> ReadLinesAsync(this string path)
         {
-            Encoding encoding = Encoding.UTF8;
+            var encoding = Encoding.UTF8;
 
-            using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, DefaultBufferSize, DefaultOptions))
-            using (var reader = new StreamReader(stream, encoding))
+            await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, DefaultBufferSize, DefaultOptions);
+            using var reader = new StreamReader(stream, encoding);
+            string line;
+            while ((line = await reader.ReadLineAsync()) != null)
             {
-                string line;
-                while ((line = await reader.ReadLineAsync()) != null)
-                {
-                    yield return line;
-                }
+                yield return line;
             }
         }
 
         public static async IAsyncEnumerable<int> WriteLinesAsync(this string path, IAsyncEnumerable<string> lines)
         {
-            Encoding encoding = Encoding.UTF8;
+            var encoding = Encoding.UTF8;
             var counter = 0;
 
-            using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite, DefaultBufferSize, DefaultOptions))
-            using (var writer = new StreamWriter(stream, encoding))
+            await using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite, DefaultBufferSize, DefaultOptions))
+            await using (var writer = new StreamWriter(stream, encoding))
             {
                 await foreach (var line in lines)
                 {

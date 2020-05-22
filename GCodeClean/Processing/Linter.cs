@@ -1,9 +1,10 @@
 // Copyright (c) 2020 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
+
+using GCodeClean.Structure;
 
 namespace GCodeClean.Processing
 {
@@ -14,14 +15,14 @@ namespace GCodeClean.Processing
             await foreach (var line in tokenizedLines)
             {
                 if (line.IsNotCommandCodeOrArguments() 
-                    || (line.Tokens.Count(t => t.IsCommand) + line.Tokens.Count(t => t.IsCode)) <= 1)
+                    || line.Tokens.Count(t => t.IsCommand) + line.Tokens.Count(t => t.IsCode) <= 1)
                 {
                     yield return line;
                     continue;
                 }
 
                 var currentLine = line;
-                var yieldableLines = new List<Line>();
+                List<Line> yieldableLines;
                 var yieldingLines = new List<Line>();
 
                 // Keep splitting out tokens into individual lines according to execution order until the line has been 'appropriately' simplified
@@ -57,7 +58,7 @@ namespace GCodeClean.Processing
                 (yieldingLines, lineNumberToken) = yieldingLines.BuildYieldingLines(yieldableLines, lineNumberToken);
 
                 // 8. coolant on or off (M7, M8, M9).
-                (currentLine, yieldableLines) = currentLine.SplitOutSelectedCommands(new List<string> { "M7", "M8", "M9", "M07", "M08", "M09" }, true);
+                (currentLine, yieldableLines) = currentLine.SplitOutSelectedCommands(new List<string> { "M7", "M8", "M9", "M07", "M08", "M09" });
                 (yieldingLines, lineNumberToken) = yieldingLines.BuildYieldingLines(yieldableLines, lineNumberToken);
 
                 // 9. enable or disable overrides (M48, M49).
@@ -110,7 +111,7 @@ namespace GCodeClean.Processing
 
                 // 20. perform motion (G0 to G3, G80 to G89), as modified (possibly) by G53.
                 (currentLine, yieldableLines) = currentLine.SplitOutSelectedCommands(new List<string> { "G53" });
-                (yieldingLines, lineNumberToken) = yieldingLines.BuildYieldingLines(yieldableLines, lineNumberToken);
+                (yieldingLines, _) = yieldingLines.BuildYieldingLines(yieldableLines, lineNumberToken);
 
                 // But now we extract the 'last' tokens first
                 // 21. stop (M0, M1, M2, M30, M60).
@@ -134,12 +135,12 @@ namespace GCodeClean.Processing
         }
 
         private static (List<Line> yieldingLines, Token lineNumberToken) BuildYieldingLines(
-            this List<Line> yieldingLines, List<Line> yieldableLines, Token lineNumberToken)
+            this List<Line> yieldingLines, IReadOnlyList<Line> yieldableLines, Token lineNumberToken)
         {
             if (yieldableLines.Count > 0)
             {
                 if (lineNumberToken.IsValid) {
-                    yieldableLines[0].Tokens.Prepend(lineNumberToken);
+                    yieldableLines[0].Tokens = yieldableLines[0].Tokens.Prepend(lineNumberToken).ToList();
                     lineNumberToken.Source = "";
                 }
                 yieldingLines = yieldingLines.Concat(yieldableLines).ToList();
@@ -152,27 +153,31 @@ namespace GCodeClean.Processing
         {
             var yieldableLines = new List<Line>();
             var selectedTokens = line.Tokens.Where(t => t.Code == code).ToList();
-            if (selectedTokens.Count > 0)
+            if (selectedTokens.Count <= 0)
             {
-                yieldableLines.Add(new Line ( selectedTokens.Last().ToString() ));
-                line.Tokens = line.Tokens.Where(t => t.Code != code).ToList();
+                return (line, yieldableLines);
             }
+
+            yieldableLines.Add(new Line ( selectedTokens.Last().ToString() ));
+            line.Tokens = line.Tokens.Where(t => t.Code != code).ToList();
 
             return (line, yieldableLines);
         }
 
-        private static (Line line, List<Line> yieldableLines) SplitOutSelectedCommands(this Line line, List<string> commands, bool takeLast = true)
+        private static (Line line, List<Line> yieldableLines) SplitOutSelectedCommands(this Line line, ICollection<string> commands)
         {
             var yieldableLines = new List<Line>();
             var selectedTokens = line.Tokens.Where(t => commands.Contains(t.Source)).ToList();
-            if (selectedTokens.Count > 0)
+            if (selectedTokens.Count <= 0)
             {
-                foreach (var selectedToken in selectedTokens)
-                {
-                    yieldableLines.Add(new Line (selectedToken.ToString()));
-                }
-                line.Tokens = line.Tokens.Where(t => !commands.Contains(t.Source)).ToList();
+                return (line, yieldableLines);
             }
+
+            foreach (var selectedToken in selectedTokens)
+            {
+                yieldableLines.Add(new Line (selectedToken.ToString()));
+            }
+            line.Tokens = line.Tokens.Where(t => !commands.Contains(t.Source)).ToList();
 
             return (line, yieldableLines);
         }

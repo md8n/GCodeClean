@@ -3,10 +3,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 
 using Newtonsoft.Json.Linq;
+
+using GCodeClean.Structure;
 
 namespace GCodeClean.Processing
 {
@@ -14,7 +17,7 @@ namespace GCodeClean.Processing
     {
         public static async IAsyncEnumerable<Line> Clip(this IAsyncEnumerable<Line> tokenizedLines)
         {
-            JObject tokenDefinitions = JObject.Parse(File.ReadAllText("tokenDefinitions.json"));
+            var tokenDefinitions = JObject.Parse(File.ReadAllText("tokenDefinitions.json"));
 
             var replacements = tokenDefinitions["replacements"];
             var tokenDefs = tokenDefinitions["tokenDefs"];
@@ -28,42 +31,46 @@ namespace GCodeClean.Processing
                     continue;
                 }
 
-                for (var ix = 0; ix < line.Tokens.Count; ix++)
+                foreach (var token in line.Tokens)
                 {
-                    if (!line.Tokens[ix].IsValid)
+                    if (!token.IsValid)
                     {
                         continue;
                     }
 
-                    var replacement = (JObject)replacements[line.Tokens[ix].Source];
+                    var replacement = (JObject)replacements[token.Source];
                     if (replacement != null)
                     {
-                        foreach (var contextToken in replacement)
+                        foreach (var (ctkey, ctvalue) in replacement)
                         {
-                            context[contextToken.Key] = (string)contextToken.Value;
+                            context[ctkey] = (string)ctvalue;
                         }
                     }
 
-                    var wholeCode = (string)tokenDefs[line.Tokens[ix].Source];
+                    var wholeCode = (string)tokenDefs[token.Source];
                     if (wholeCode != null)
                     {
                         continue;
                     }
-                    var subToken = "" + line.Tokens[ix].Code;
+                    var subToken = "" + token.Code;
                     var subCode = (string)tokenDefs[subToken];
-                    if (subCode != null)
+                    if (subCode == null)
                     {
-                        decimal? value = line.Tokens[ix].Number;
-                        var hasUnits = context.ContainsKey("lengthUnits");
-                        if (hasUnits && value.HasValue)
-                        {
-                            // Round to 3dp for mm and 4dp for inch
-                            var clip = (context["lengthUnits"] == "mm") ? 3 : 4;
-                            var clipFormat = clip == 1 ? "{0}{1:0.###}" : "{0}{1:0.####}";
-                            value = Math.Round(value.Value, clip);
-                            line.Tokens[ix].Source = String.Format(clipFormat, subToken, value);
-                        }
+                        continue;
                     }
+
+                    var value = token.Number;
+                    var hasUnits = context.ContainsKey("lengthUnits");
+                    if (!(hasUnits && value.HasValue))
+                    {
+                        continue;
+                    }
+
+                    // Round to 3dp for mm and 4dp for inch
+                    var clip = context["lengthUnits"] == "mm" ? 3 : 4;
+                    var clipFormat = clip == 1 ? "{0}{1:0.###}" : "{0}{1:0.####}";
+                    value = Math.Round(value.Value, clip);
+                    token.Source = string.Format(clipFormat, subToken, value);
                 }
 
                 yield return line;
@@ -73,8 +80,8 @@ namespace GCodeClean.Processing
         public static async IAsyncEnumerable<Line> Augment(this IAsyncEnumerable<Line> tokenizedLines)
         {
             var previousCommand = new Token("");
-            var previousXYZCoords = new List<Token>() { new Token("X"), new Token("Y"), new Token("Z") };
-            var previousIJKCoords = new List<Token>() { new Token("I"), new Token("J") };
+            var previousXYZCoords = new List<Token> { new Token("X"), new Token("Y"), new Token("Z") };
+            var previousIJKCoords = new List<Token> { new Token("I"), new Token("J") };
 
             await foreach (var line in tokenizedLines)
             {
@@ -99,11 +106,13 @@ namespace GCodeClean.Processing
                     {
                         foreach (var token in line.Tokens)
                         {
-                            if (Token.MovementCommands.Contains(token.Source))
+                            if (!Token.MovementCommands.Contains(token.Source))
                             {
-                                previousCommand = token;
-                                break;
+                                continue;
                             }
+
+                            previousCommand = token;
+                            break;
                         }
                     }
                     else if (previousCommand.IsCommand)
@@ -114,28 +123,12 @@ namespace GCodeClean.Processing
 
                 for (var ix = 0; ix < previousXYZCoords.Count; ix++)
                 {
-                    var newCoord = line.Tokens.FirstOrDefault(t => t.Code == previousXYZCoords[ix].Code);
-                    if (newCoord is null)
-                    {
-                        newCoord = previousXYZCoords[ix];
-                    }
-                    else
-                    {
-                        previousXYZCoords[ix] = newCoord;
-                    }
+                    previousXYZCoords[ix] = line.Tokens.FirstOrDefault(t => t.Code == previousXYZCoords[ix].Code) ?? previousXYZCoords[ix];
                 }
 
                 for (var ix = 0; ix < previousIJKCoords.Count; ix++)
                 {
-                    var newCoord = line.Tokens.FirstOrDefault(t => t.Code == previousIJKCoords[ix].Code);
-                    if (newCoord is null)
-                    {
-                        newCoord = previousIJKCoords[ix];
-                    }
-                    else
-                    {
-                        previousIJKCoords[ix] = newCoord;
-                    }
+                    previousIJKCoords[ix] = line.Tokens.FirstOrDefault(t => t.Code == previousIJKCoords[ix].Code) ?? previousIJKCoords[ix];
                 }
 
                 // Remove and then add back in the arguments - ensures consistency
@@ -199,21 +192,22 @@ namespace GCodeClean.Processing
                 }
 
                 var intersections = Utility.FindIntersections(coords, previousCoords, radius.Value);
-                if (intersections.Count == 0)
+                switch (intersections.Count)
                 {
-                    // malformed Arc Radius
-                    previousCoords = Coord.Merge(previousCoords, coords, true);
+                    case 0:
+                        // malformed Arc Radius
+                        previousCoords = Coord.Merge(previousCoords, coords, true);
 
-                    yield return line;
-                    continue;
-                }
+                        yield return line;
+                        continue;
+                    case 2:
+                    {
+                        var isClockwise = line.Tokens.Contains(clockwiseMovementToken);
+                        var isClockwiseIntersection = Utility.DirectionOfPoint(previousCoords.ToPointF(), coords.ToPointF(), intersections[0].ToPointF()) < 0;
 
-                if (intersections.Count == 2)
-                {
-                    var isClockwise = line.Tokens.Contains(clockwiseMovementToken);
-                    var isClockwiseIntersection = Utility.DirectionOfPoint(previousCoords.ToPointF(), coords.ToPointF(), intersections[0].ToPointF()) < 0;
-
-                    intersections.RemoveAt((isClockwise != isClockwiseIntersection) ? 0 : 1);
+                        intersections.RemoveAt(isClockwise != isClockwiseIntersection ? 0 : 1);
+                        break;
+                    }
                 }
 
                 previousCoords = Coord.Merge(previousCoords, coords, true);
@@ -242,7 +236,7 @@ namespace GCodeClean.Processing
 
         public static async IAsyncEnumerable<Line> Annotate(this IAsyncEnumerable<Line> tokenizedLines)
         {
-            JObject tokenDefinitions = JObject.Parse(File.ReadAllText("tokenDefinitions.json"));
+            var tokenDefinitions = JObject.Parse(File.ReadAllText("tokenDefinitions.json"));
 
             var replacements = tokenDefinitions["replacements"];
             var tokenDefs = tokenDefinitions["tokenDefs"];
@@ -265,9 +259,9 @@ namespace GCodeClean.Processing
                     var replacement = (JObject)replacements[token];
                     if (replacement != null)
                     {
-                        foreach (var contextToken in replacement)
+                        foreach (var (key, value) in replacement)
                         {
-                            context[contextToken.Key] = (string)contextToken.Value;
+                            context[key] = (string)value;
                         }
                     }
 
@@ -277,20 +271,23 @@ namespace GCodeClean.Processing
                         var subToken = "" + token.Code;
                         tokenCodes.Add(subToken);
                         annotation = (string)tokenDefs[subToken];
-                        context[token.Code + "value"] = token.Number.Value.ToString();
+                        context[token.Code + "value"] = token.Number.Value.ToString(CultureInfo.InvariantCulture);
                     }
                     else
                     {
                         tokenCodes.Add(token.ToString());
                     }
-                    if (annotation != null)
+
+                    if (annotation == null)
                     {
-                        foreach (var contextToken in context)
-                        {
-                            annotation = annotation.Replace("{" + contextToken.Key + "}", contextToken.Value);
-                        }
-                        annotationTokens.Add(annotation);
+                        continue;
                     }
+
+                    foreach (var (key, value) in context)
+                    {
+                        annotation = annotation.Replace("{" + key + "}", value);
+                    }
+                    annotationTokens.Add(annotation);
                 }
                 var isDuplicate = true;
                 if (previousTokenCodes.Count != tokenCodes.Count)
@@ -299,13 +296,9 @@ namespace GCodeClean.Processing
                 }
                 else
                 {
-                    for (var ix = 0; ix < tokenCodes.Count; ix++)
+                    if (tokenCodes.Where((t, ix) => previousTokenCodes[ix] != t).Any())
                     {
-                        if (previousTokenCodes[ix] != tokenCodes[ix])
-                        {
-                            isDuplicate = false;
-                            break;
-                        }
+                        isDuplicate = false;
                     }
                 }
 
