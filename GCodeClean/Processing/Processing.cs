@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 
 using Newtonsoft.Json.Linq;
@@ -15,15 +14,13 @@ namespace GCodeClean.Processing
 {
     public static class Processing
     {
-        public static async IAsyncEnumerable<Line> Clip(this IAsyncEnumerable<Line> tokenizedLines)
+        public static async IAsyncEnumerable<Line> Clip(this IAsyncEnumerable<Line> tokenisedLines, JObject tokenDefinitions)
         {
-            var tokenDefinitions = JObject.Parse(File.ReadAllText("tokenDefinitions.json"));
-
             var replacements = tokenDefinitions["replacements"];
             var tokenDefs = tokenDefinitions["tokenDefs"];
             var context = new Dictionary<string, string>();
 
-            await foreach (var line in tokenizedLines)
+            await foreach (var line in tokenisedLines)
             {
                 if (line.IsNotCommandCodeOrArguments())
                 {
@@ -77,13 +74,13 @@ namespace GCodeClean.Processing
             }
         }
 
-        public static async IAsyncEnumerable<Line> Augment(this IAsyncEnumerable<Line> tokenizedLines)
+        public static async IAsyncEnumerable<Line> Augment(this IAsyncEnumerable<Line> tokenisedLines)
         {
             var previousCommand = new Token("");
             var previousXYZCoords = new List<Token> { new Token("X"), new Token("Y"), new Token("Z") };
             var previousIJKCoords = new List<Token> { new Token("I"), new Token("J") };
 
-            await foreach (var line in tokenizedLines)
+            await foreach (var line in tokenisedLines)
             {
                 if (line.IsNotCommandCodeOrArguments())
                 {
@@ -157,13 +154,13 @@ namespace GCodeClean.Processing
             }
         }
 
-        public static async IAsyncEnumerable<Line> ConvertArcRadiusToCenter(this IAsyncEnumerable<Line> tokenizedLines)
+        public static async IAsyncEnumerable<Line> ConvertArcRadiusToCenter(this IAsyncEnumerable<Line> tokenisedLines)
         {
             var previousCoords = new Coord();
 
             var clockwiseMovementToken = new Token("G2");
 
-            await foreach (var line in tokenizedLines)
+            await foreach (var line in tokenisedLines)
             {
                 var hasMovement = line.HasMovementCommand();
                 if (!hasMovement)
@@ -234,17 +231,15 @@ namespace GCodeClean.Processing
             return lineB;
         }
 
-        public static async IAsyncEnumerable<Line> Annotate(this IAsyncEnumerable<Line> tokenizedLines)
+        public static async IAsyncEnumerable<Line> Annotate(this IAsyncEnumerable<Line> tokenisedLines, JObject tokenDefinitions)
         {
-            var tokenDefinitions = JObject.Parse(File.ReadAllText("tokenDefinitions.json"));
-
             var replacements = tokenDefinitions["replacements"];
             var tokenDefs = tokenDefinitions["tokenDefs"];
             var context = new Dictionary<string, string>();
 
             var previousTokenCodes = new List<string>();
 
-            await foreach (var line in tokenizedLines)
+            await foreach (var line in tokenisedLines)
             {
                 if (line.IsNotCommandCodeOrArguments())
                 {
@@ -256,7 +251,7 @@ namespace GCodeClean.Processing
                 var tokenCodes = new List<string>();
                 foreach (var token in line.Tokens)
                 {
-                    var replacement = (JObject)replacements[token];
+                    var replacement = (JObject)replacements[token.ToString()];
                     if (replacement != null)
                     {
                         foreach (var (key, value) in replacement)
@@ -265,7 +260,7 @@ namespace GCodeClean.Processing
                         }
                     }
 
-                    var annotation = (string)tokenDefs[token];
+                    var annotation = (string)tokenDefs[token.ToString()];
                     if (annotation is null && token.Number.HasValue)
                     {
                         var subToken = "" + token.Code;

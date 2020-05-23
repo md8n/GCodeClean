@@ -10,9 +10,9 @@ namespace GCodeClean.Processing
 {
     public static class Linter
     {
-        public static async IAsyncEnumerable<Line> SingleCommandPerLine(this IAsyncEnumerable<Line> tokenizedLines)
+        public static async IAsyncEnumerable<Line> SingleCommandPerLine(this IAsyncEnumerable<Line> tokenisedLines)
         {
-            await foreach (var line in tokenizedLines)
+            await foreach (var line in tokenisedLines)
             {
                 if (line.IsNotCommandCodeOrArguments() 
                     || line.Tokens.Count(t => t.IsCommand) + line.Tokens.Count(t => t.IsCode) <= 1)

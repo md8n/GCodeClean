@@ -35,7 +35,7 @@ namespace GCodeClean.Structure
                     return;
                 }
 
-                var stringTokens = _source.Tokenize();
+                var stringTokens = _source.Tokenise();
                 foreach (var stringToken in stringTokens)
                 {
                     Tokens.Add(new Token(stringToken));

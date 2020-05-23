@@ -5,16 +5,18 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 using CommandLine;
+using Newtonsoft.Json.Linq;
 
 using GCodeClean.IO;
 using GCodeClean.Processing;
 
-namespace CLI
+namespace GCodeCleanCLI
 {
-    static class Program
+    internal static class Program
     {
         public static async Task Main(string[] args)
         {
@@ -29,10 +31,45 @@ namespace CLI
 
         private static async Task RunAsync(Options options)
         {
+            var tokenDefsPath = options.tokenDefs;
+            if (string.IsNullOrWhiteSpace(tokenDefsPath))
+            {
+                Console.WriteLine("The path to the token definitions JSON file is missing. Proper clipping and annotating of the GCode cannot be performed.");
+                return;
+            }
+            if (tokenDefsPath.ToUpperInvariant() == "TOKENDEFINITIONS.JSON")
+            {
+                var entryDir = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location)
+                               ?? Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+                tokenDefsPath = $"{entryDir}{Path.DirectorySeparatorChar}tokenDefinitions.json";
+            }
+
+            JObject tokenDefinitions;
+            try
+            {
+                var tokenDefsSource = File.ReadAllText(tokenDefsPath);
+                tokenDefinitions = JObject.Parse(tokenDefsSource);
+            }
+            catch (FileNotFoundException fileNotFoundEx)
+            {
+                Console.WriteLine($"No token definitions file was found at {tokenDefsPath}. {fileNotFoundEx.Message}");
+                return;
+            }
+            catch (Newtonsoft.Json.JsonReaderException jsonReaderEx)
+            {
+                Console.WriteLine($"The supplied file {tokenDefsPath} does not appear to be valid JSON. {jsonReaderEx.Message}");
+                return;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+
             var inputFile = options.filename;
             var outputFile = inputFile;
             var inputExtension = Path.GetExtension(inputFile);
-            Console.WriteLine(inputExtension);
             if (string.IsNullOrEmpty(inputExtension))
             {
                 outputFile += "-gcc.nc";
@@ -44,13 +81,13 @@ namespace CLI
             Console.WriteLine("Outputting to:" + outputFile);
 
             var inputLines = inputFile.ReadLinesAsync();
-            var outputLines = inputLines.TokenizeToLine()
+            var outputLines = inputLines.TokeniseToLine()
                 .DedupRepeatedTokens()
                 .SingleCommandPerLine()
                 .Augment()
                 .ConvertArcRadiusToCenter()
                 .DedupLinearToArc(0.005M)
-                .Clip()
+                .Clip(tokenDefinitions)
                 .DedupRepeatedTokens()
                 .DedupLine()
                 .DedupLinear(0.0005M)
@@ -72,7 +109,7 @@ namespace CLI
 
             var minimisedLines = outputLines.DedupSelectTokens(dedupSelection);
 
-            var annotatedLines = options.annotate ? minimisedLines.Annotate() : minimisedLines;
+            var annotatedLines = options.annotate ? minimisedLines.Annotate(tokenDefinitions) : minimisedLines;
             var reassembledLines = annotatedLines.JoinTokens(minimisationStrategy);
             var lineCount = outputFile.WriteLinesAsync(reassembledLines);
 
@@ -80,16 +117,6 @@ namespace CLI
             {
                 Console.WriteLine(line);
             }
-        }
-
-        static void RunOptions(Options opts)
-        {
-            //handle options
-        }
-
-        static void HandleParseError(IEnumerable<Error> errs)
-        {
-            //handle errors
         }
     }
 }

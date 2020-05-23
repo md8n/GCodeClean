@@ -1,12 +1,17 @@
 // Copyright (c) 2020 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 using GCodeClean.Processing;
 using GCodeClean.Structure;
+
+using Newtonsoft.Json.Linq;
 
 using Xunit;
 using Xunit.Abstractions;
@@ -38,7 +43,23 @@ namespace GCodeClean.Tests
             var testLines = sourceLines.ConvertAll(l => new Line(l));
             var lines = AsyncLines(testLines);
 
-            var clippedLines = await lines.Clip().ToListAsync();
+            var entryDir = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location)
+                           ?? Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+            var tokenDefsPath = $"{entryDir}{Path.DirectorySeparatorChar}gcodeclean.pdb";
+
+            JObject tokenDefinitions;
+            try
+            {
+                var tokenDefsSource = File.ReadAllText(tokenDefsPath);
+                tokenDefinitions = JObject.Parse(tokenDefsSource);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+
+            var clippedLines = await lines.Clip(tokenDefinitions).ToListAsync();
             Assert.False(sourceLines.SequenceEqual(clippedLines));
         }
     }

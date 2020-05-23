@@ -10,9 +10,9 @@ using GCodeClean.Structure;
 namespace GCodeClean.Processing
 {
     public static class Dedup {
-        public static async IAsyncEnumerable<Line> DedupLine(this IAsyncEnumerable<Line> tokenizedLines) {
+        public static async IAsyncEnumerable<Line> DedupLine(this IAsyncEnumerable<Line> tokenisedLines) {
             var previousLine = new Line();
-            await foreach (var line in tokenizedLines) {
+            await foreach (var line in tokenisedLines) {
                 if (previousLine == line)
                 {
                     // Silently drop the duplicate
@@ -30,8 +30,8 @@ namespace GCodeClean.Processing
         /// <summary>
         /// Eliminates repeated tokens within the same line
         /// </summary>
-        public static async IAsyncEnumerable<Line> DedupRepeatedTokens(this IAsyncEnumerable<Line> tokenizedLines) {
-            await foreach (var line in tokenizedLines) {
+        public static async IAsyncEnumerable<Line> DedupRepeatedTokens(this IAsyncEnumerable<Line> tokenisedLines) {
+            await foreach (var line in tokenisedLines) {
                 line.Tokens = line.Tokens.Distinct().ToList();
                 yield return line;
             }
@@ -41,7 +41,7 @@ namespace GCodeClean.Processing
         /// Testing whether A -> B -> C is a straight line
         /// and eliminating B if that's the case
         /// </summary>
-        public static async IAsyncEnumerable<Line> DedupLinear(this IAsyncEnumerable<Line> tokenizedLines, decimal tolerance) {
+        public static async IAsyncEnumerable<Line> DedupLinear(this IAsyncEnumerable<Line> tokenisedLines, decimal tolerance) {
             var lineA = new Line();
             var lineB = new Line();
             var isLineASet = false;
@@ -49,7 +49,7 @@ namespace GCodeClean.Processing
 
             var linearMovementToken = new Token("G1");
 
-            await foreach (var lineC in tokenizedLines) {
+            await foreach (var lineC in tokenisedLines) {
                 var hasMovement = lineC.HasMovementCommand();
                 var hasLinearMovement = lineC.Tokens.Contains(linearMovementToken);
                 if (hasMovement && !isLineASet && !isLineBSet) {
@@ -177,7 +177,7 @@ namespace GCodeClean.Processing
         /// Testing whether A -> B -> C can be fitted to an arc
         /// and eliminating B if that's the case
         /// </summary>
-        public static async IAsyncEnumerable<Line> DedupLinearToArc(this IAsyncEnumerable<Line> tokenizedLines, decimal tolerance) {
+        public static async IAsyncEnumerable<Line> DedupLinearToArc(this IAsyncEnumerable<Line> tokenisedLines, decimal tolerance) {
             var lineA = new Line();
             var lineB = new Line();
             var isLineASet = false;
@@ -190,7 +190,7 @@ namespace GCodeClean.Processing
 
             var linearMovementToken = new Token("G1");
 
-            await foreach (var lineC in tokenizedLines) {
+            await foreach (var lineC in tokenisedLines) {
                 var hasMovement = lineC.HasMovementCommand();
                 var hasLinearMovement = lineC.Tokens.Contains(linearMovementToken);
                 if (hasMovement && !isLineASet && !isLineBSet) {
@@ -404,10 +404,10 @@ namespace GCodeClean.Processing
             return lineB;
         }
 
-        public static async IAsyncEnumerable<Line> DedupSelectTokens(this IAsyncEnumerable<Line> tokenizedLines, List<char> selectedTokens) {
+        public static async IAsyncEnumerable<Line> DedupSelectTokens(this IAsyncEnumerable<Line> tokenisedLines, List<char> selectedTokens) {
             var previousSelectedTokens = selectedTokens.Select(st => new Token($"{st}")).ToList();
 
-            await foreach (var line in tokenizedLines) {
+            await foreach (var line in tokenisedLines) {
                 if (line.IsNotCommandCodeOrArguments()) {
                     yield return line;
                     continue;

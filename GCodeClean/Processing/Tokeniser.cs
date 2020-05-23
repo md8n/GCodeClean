@@ -8,19 +8,19 @@ using GCodeClean.Structure;
 
 namespace GCodeClean.Processing
 {
-    public static class Tokenizer {
+    public static class Tokeniser {
         /// <summary>
         /// A 'basic' GCode parser pattern, this does not support expressions that equate to numbers
         /// </summary>
         private const string Pattern = @"((\%)|((?<linenumber>N\s*\d{1,5})?\s*(?<word>[ABCDFGHIJKLMNPRSTXYZ]\s*[+-]?(\d|\s)*\.?(\d|\s)*\s*)|(?<comment>\(.*?\)\s*)))";
 
-        public static async IAsyncEnumerable<Line> TokenizeToLine(this IAsyncEnumerable<string> lines) {
+        public static async IAsyncEnumerable<Line> TokeniseToLine(this IAsyncEnumerable<string> lines) {
             await foreach (var line in lines) {
                 yield return new Line(line);
             }
         }
 
-        public static List<string> Tokenize(this string line) {
+        public static List<string> Tokenise(this string line) {
             var tokens = new List<string>();
 
             foreach (Match match in Regex.Matches(line, Pattern, RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture))
@@ -42,11 +42,11 @@ namespace GCodeClean.Processing
             return tokens;
         }
 
-        public static async IAsyncEnumerable<string> JoinTokens(this IAsyncEnumerable<Line> tokenizedLines, string minimisationStrategy) {
+        public static async IAsyncEnumerable<string> JoinTokens(this IAsyncEnumerable<Line> tokenisedLines, string minimisationStrategy) {
             var isFirstLine = true;
             var prevLine = "";
             var joiner = minimisationStrategy == "HARD" ? "" : " ";
-            await foreach (var line in tokenizedLines) {
+            await foreach (var line in tokenisedLines) {
                 var joinedLine = string.Join(joiner, line.Tokens);
                 if (string.IsNullOrWhiteSpace(joinedLine) && isFirstLine) {
                     continue;
