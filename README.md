@@ -1,6 +1,6 @@
 # GCodeClean
 
-A command line utility to do some 'cleaning' of a gcode (an `.nc`, `.gcode`) file.
+A library and command line utility to do some 'cleaning' of a gcode (an `.nc`, `.gcode`) file.
 The primary objective is to be a `GCode Linter`, `per line` linting of gcode is already done.
 
 We also have:
@@ -47,7 +47,7 @@ Clean GCode file:
 
   --version     Display version information.
 ```
-Please note that the version number is currently incorrect, but all the rest of it is correct.
+Please note that the version number may be incorrect (still working on correctly automating it per release), but all the rest of it is correct.
 
 `--annotate` is a simple switch, include it on its own to have your GCode annotated with inline comments (even if you specify hard minimisation).
 
@@ -61,21 +61,21 @@ And replace `<filename>` with the full path to your gcode file (as per what your
 
 `GCodeClean` will require Read access to that file, and Write access to the folder where that file is located.
 
-And then run the `GCodeClean` executable.
+And then run the `GCodeCleanCLI` executable.
 e.g. for Windows that might look like:
 ```
-.\gcodeclean --filename FacadeFullAlternate.nc --minimise soft --annotate
+.\gcodecleancli --filename FacadeFullAlternate.nc --minimise soft --annotate
 ```
 
 or for Linux (Ubuntu 18.04)
 ```
-./GCodeClean --filename FacadeFullAlternate.nc --minimise hard --annotate
+./GCodeCleanCLI --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
 
-After processing `GCodeClean` will report the number of lines that it output.
+After processing `GCodeCleanCLI` will report the number of lines that it output.
 The output file will have `-gcc` appended to name of the input file (but before the file extension) that you provided on the command line.
 
-Note: If the input file does not exist (or can't be found, i.e. your typo) then `GCodeClean` will fail, but it won't do any harm.
+Note: If the input file does not exist (or can't be found, i.e. your typo) then `GCodeCleanCLI` will fail, but it won't do any harm.
 
 ### Prerequisites for Building it Yourself
 
@@ -87,7 +87,7 @@ A text editor if you want to change something.
 
 Once you've got the .NET Core SDK installed.
 
-Get yourself to a command line prompt, change to the folder where you've cloned this repository to, and enter:
+Get yourself to a command line prompt, change to the folder where you've cloned this repository to, and then to the CLI folder, and enter:
 ```
 dotnet restore
 ```
@@ -98,36 +98,30 @@ dotnet restore
 dotnet run
 ```
 
-and ... it will probably break because you haven't specified a filename.
+and ... it will probably give you the help text because you haven't specified a filename.
 
-So to start with you can try:
-```
-dotnet run -- --help
-```
 
-And get some help info, as described above.
-
-Then you can process it with the command:
+To get it to process a file try the following command:
 ```
 dotnet run -- --filename <filename>
 ```
 Obviously replacing `<filename>` with your file's name (and path if needed).
 
-Or you can build `GCodeClean` and run it with these two steps:
+Or you can build `GCodeCleanCLI` and run it with these two steps:
 ```
 dotnet publish
 ```
-Take a note of the `publish` folder, the `GCodeClean` executable will be located there.
+Take a note of the `publish` folder, the `GCodeCleanCLI` executable will be located there.
 
-And then run the `GCodeClean` executable.
+And then run the `GCodeCleanCLI` executable.
 e.g. for Windows that might look like:
 ```
-.\bin\Debug\netcoreapp3.1\publish\gcodeclean --filename FacadeFullAlternate.nc --minimise hard --annotate
+.\bin\Debug\netcoreapp3.1\publish\gcodecleancli --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
 
 or for Linux (Ubuntu 18.04)
 ```
-./bin/Debug/netcoreapp3.1/publish/GCodeClean --filename FacadeFullAlternate.nc --minimise hard --annotate
+./bin/Debug/netcoreapp3.1/publish/GCodeCleanCLI --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
 
 ## What's Special about GCodeClean?
