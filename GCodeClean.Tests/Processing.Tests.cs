@@ -46,7 +46,7 @@ namespace GCodeClean.Tests
             var entryDir = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location)
                            ?? Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
-            var tokenDefsPath = $"{entryDir}{Path.DirectorySeparatorChar}gcodeclean.pdb";
+            var tokenDefsPath = $"{entryDir}{Path.DirectorySeparatorChar}tokenDefinitions.json";
 
             JObject tokenDefinitions;
             try
