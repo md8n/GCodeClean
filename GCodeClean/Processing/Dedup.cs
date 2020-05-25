@@ -422,6 +422,12 @@ namespace GCodeClean.Processing
                     }
                 }
 
+                if (line.Tokens.Count == 0)
+                {
+                    // The whole line was eliminated as a duplicate - silently drop it
+                    continue;
+                }
+
                 yield return line;
             }
         }

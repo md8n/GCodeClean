@@ -14,6 +14,36 @@ namespace GCodeClean.Processing
 {
     public static class Processing
     {
+        public static async IAsyncEnumerable<Line> InjectPreamble(this IAsyncEnumerable<Line> tokenisedLines,
+            Context preamble)
+        {
+            var preambleOutput = false;
+            await foreach (var line in tokenisedLines) {
+                if (line.HasTokens(preamble.ModalMotion))
+                {
+                    var linesToOutput = preamble.NonOutputLines();
+                    if (linesToOutput.Count > 0)
+                    {
+                        linesToOutput.Insert(0, new Line("(Preamble completed by GCodeClean)"));
+                        linesToOutput.Add(new Line("(Preamble completed by GCodeClean)"));
+                        foreach (var preambleLine in linesToOutput)
+                        {
+                            yield return preambleLine;
+                        }
+                    }
+                    preamble.FlagAllLinesAsOutput();
+                    preambleOutput = true;
+                }
+
+                if (!preambleOutput)
+                {
+                    preamble.Update(line, true);
+                }
+
+                yield return line;
+            }
+        }
+
         public static async IAsyncEnumerable<Line> Clip(this IAsyncEnumerable<Line> tokenisedLines, JObject tokenDefinitions)
         {
             var replacements = tokenDefinitions["replacements"];
@@ -89,9 +119,9 @@ namespace GCodeClean.Processing
                 }
 
                 var hasXY = line.HasTokens(new List<char> { 'X', 'Y' });
-                var hasZ = line.HasTokens(new List<char> { 'Z' });
+                var hasZ = line.HasToken('Z');
                 var hasIJ = line.HasTokens(new List<char> { 'I', 'J' });
-                var hasK = line.HasTokens(new List<char> { 'K' });
+                var hasK = line.HasToken('K');
                 if (hasK)
                 {
                     previousIJKCoords.Add(new Token("K"));
@@ -132,13 +162,13 @@ namespace GCodeClean.Processing
                 if (hasXY || hasZ)
                 {
                     line.RemoveTokens(new List<char> { 'X', 'Y', 'Z' });
-                    line.Tokens.AddRange(previousXYZCoords.Where(pc => pc.IsArgument));
+                    line.Tokens.AddRange(previousXYZCoords.Where(pc => pc.IsArgument && pc.IsValid));
                 }
 
                 if (hasIJ || hasK)
                 {
                     line.RemoveTokens(new List<char> { 'I', 'J', 'K' });
-                    line.Tokens.AddRange(previousIJKCoords.Where(pc => pc.IsArgument));
+                    line.Tokens.AddRange(previousIJKCoords.Where(pc => pc.IsArgument && pc.IsValid));
                 }
 
                 yield return line;

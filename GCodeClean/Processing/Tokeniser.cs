@@ -42,7 +42,7 @@ namespace GCodeClean.Processing
             return tokens;
         }
 
-        public static async IAsyncEnumerable<string> JoinTokens(this IAsyncEnumerable<Line> tokenisedLines, string minimisationStrategy) {
+        public static async IAsyncEnumerable<string> JoinLines(this IAsyncEnumerable<Line> tokenisedLines, string minimisationStrategy) {
             var isFirstLine = true;
             var prevLine = "";
             var joiner = minimisationStrategy == "HARD" ? "" : " ";

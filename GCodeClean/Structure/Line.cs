@@ -70,9 +70,31 @@ namespace GCodeClean.Structure
             return Tokens.Any(t => codes.Contains(t.Code));
         }
 
-        public bool HasTokens(List<string> tokens)
+        public bool HasTokens(IEnumerable<string> tokens)
         {
-            return Tokens.Any(t => tokens.Contains(t.Source));
+            var parsedTokens = tokens.Select(t => new Token(t));
+            return HasTokens(parsedTokens);
+        }
+
+        public bool HasTokens(IEnumerable<Token> tokens)
+        {
+            return Tokens.Any(tokens.Contains);
+        }
+
+        public bool HasToken(char code)
+        {
+            return Tokens.Any(t => t.Code == code);
+        }
+
+        public bool HasToken(string token)
+        {
+            var parsedToken = new Token(token);
+            return HasToken(parsedToken);
+        }
+
+        public bool HasToken(Token token)
+        {
+            return Tokens.Any(t => t == token);
         }
 
         /// <summary>
@@ -122,6 +144,11 @@ namespace GCodeClean.Structure
             Source = line.Source;
         }
 
+        public Line(Token token)
+        {
+            Source = token.ToString();
+        }
+
         public Line(IEnumerable<Token> tokens)
         {
             Source = string.Join(' ', tokens);
@@ -133,11 +160,13 @@ namespace GCodeClean.Structure
 
             for (var ix = Tokens.Count - 1; ix >= 0; ix--)
             {
-                if (codes.Contains(Tokens[ix].Code))
+                if (!codes.Contains(Tokens[ix].Code))
                 {
-                    removedTokens.Add(Tokens[ix]);
-                    Tokens.RemoveAt(ix);
+                    continue;
                 }
+
+                removedTokens.Add(Tokens[ix]);
+                Tokens.RemoveAt(ix);
             }
 
             return removedTokens;

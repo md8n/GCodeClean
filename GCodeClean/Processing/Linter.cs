@@ -109,28 +109,32 @@ namespace GCodeClean.Processing
                 (currentLine, yieldableLines) = currentLine.SplitOutSelectedCommands(new List<string> { "G92", "G92.1", "G92.2", "G94" });
                 (yieldingLines, lineNumberToken) = yieldingLines.BuildYieldingLines(yieldableLines, lineNumberToken);
 
-                // 20. perform motion (G0 to G3, G80 to G89), as modified (possibly) by G53.
-                (currentLine, yieldableLines) = currentLine.SplitOutSelectedCommands(new List<string> { "G53" });
-                (yieldingLines, _) = yieldingLines.BuildYieldingLines(yieldableLines, lineNumberToken);
-
                 // But now we extract the 'last' tokens first
                 // 21. stop (M0, M1, M2, M30, M60).
                 (currentLine, yieldableLines) = currentLine.SplitOutSelectedCommands(new List<string> { "M0", "M1", "M2", "M00", "M01", "M02", "M30", "M60" });
                 var stopTokens = yieldableLines.Count > 0 ? yieldableLines[0] : new Line();
 
-                // And then get the motion tokens
-                (currentLine, yieldableLines) = currentLine.SplitOutSelectedCommands(new List<string> { "G0", "G1", "G2", "G3", "G00", "G01", "G02", "G03", "G80", "G81", "G82", "G83", "G84", "G85", "G86", "G87", "G88", "G89" });
+                // 20. perform motion (G0 to G3, G38.2, G80 to G89), as modified (possibly) by G53.
+                (currentLine, yieldableLines) = currentLine.SplitOutSelectedCommands(new List<string> { "G0", "G1", "G2", "G3", "G00", "G01", "G02", "G03", "G38.2", "G80", "G81", "G82", "G83", "G84", "G85", "G86", "G87", "G88", "G89" });
                 if (yieldableLines.Count > 0)
                 {
+                    // Note that any G53 will be appended here
                     currentLine.Tokens = yieldableLines[0].Tokens.Concat(currentLine.Tokens).ToList();
                 }
 
                 foreach (var yieldingToken in yieldingLines)
                 {
+                    if (yieldingToken.IsNotCommandCodeOrArguments())
+                    {
+                        continue;
+                    }
                     yield return yieldingToken;
                 }
                 yield return currentLine;
-                yield return stopTokens;
+                if (!stopTokens.IsNotCommandCodeOrArguments())
+                {
+                    yield return stopTokens;
+                }
             }
         }
 
@@ -140,7 +144,7 @@ namespace GCodeClean.Processing
             if (yieldableLines.Count > 0)
             {
                 if (lineNumberToken.IsValid) {
-                    yieldableLines[0].Tokens = yieldableLines[0].Tokens.Prepend(lineNumberToken).ToList();
+                    yieldableLines[0].Tokens.Insert(0, lineNumberToken);
                     lineNumberToken.Source = "";
                 }
                 yieldingLines = yieldingLines.Concat(yieldableLines).ToList();
