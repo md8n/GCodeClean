@@ -19,7 +19,7 @@ namespace GCodeClean.Processing
         {
             var preambleOutput = false;
             await foreach (var line in tokenisedLines) {
-                if (line.HasTokens(preamble.ModalMotion))
+                if (line.HasTokens(ModalGroup.ModalAllMotion))
                 {
                     var linesToOutput = preamble.NonOutputLines();
                     if (linesToOutput.Count > 0)

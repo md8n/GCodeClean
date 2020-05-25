@@ -11,97 +11,6 @@ namespace GCodeClean.Structure
     /// </summary>
     public class Context
     {
-        // Non-modal group 0
-        // These describe actions that have no effect (G4), or that affect offsets only
-        // Officially this includes G28, G30 and G53 - but these are actually special motion commands
-        public readonly List<Token> ModalNon = new List<Token> {
-            new Token("G4"),
-            new Token("G10"),
-            new Token("G92"), new Token("G92.1"), new Token("G92.2"), new Token("G92.3")
-        };
-
-        // G Modal group 1 - motion
-        public readonly List<Token> ModalMotion = new List<Token> {
-            new Token("G0"), new Token("G1"), new Token("G2"), new Token(" G3"),
-            new Token("G28"), new Token("G30"), new Token("G53"), // For our purposes these are motion commands
-            new Token("G38.2"),
-            new Token("G80"), new Token("G81"), new Token("G82"), new Token("G83"), new Token("G84"),
-            new Token("G85"), new Token("G86"), new Token("G87"), new Token("G88"), new Token("G89")
-        };
-
-        // G Modal group 2 - plane selection
-        public readonly List<Token> ModalPlane = new List<Token> {
-            new Token("G17"), new Token("G18"), new Token("G19")
-        };
-
-        // G Modal group 3 - distance mode
-        public readonly List<Token> ModalDistance = new List<Token> {
-            new Token("G90"), new Token("G91")
-        };
-
-        // G Modal group 5 - feed rate mode
-        public readonly List<Token> ModalFeedRate = new List<Token> {
-            new Token("G93"), new Token("G94")
-        };
-
-        // G Modal group 6 - units
-        public readonly List<Token> ModalUnits = new List<Token> {
-            new Token("G20"), new Token("G21")
-        };
-        
-        // G Modal group 7 - cutter radius compensation
-        public readonly List<Token> ModalCutterRadiusCompensation = new List<Token> {
-            new Token("G40"), new Token("G41"), new Token("G42")
-        };
-
-        // G Modal group 8 - tool length offset
-        public readonly List<Token> ModalToolLengthOffset = new List<Token> {
-            new Token("G43"), new Token("G49")
-        };
-        
-        // G Modal group 10 - return mode in canned cycles
-        public readonly List<Token> ModalReturnMode = new List<Token> {
-            new Token("G98"), new Token("G99")
-        };
-
-        // G Modal group 12 - coordinate system selection
-        public readonly List<Token> ModalCoordinateSystem = new List<Token> {
-            new Token("G54"), new Token("G55"), new Token("G56"),
-            new Token("G57"), new Token("G58"), new Token("G59"),
-            new Token("G59.1"), new Token("G59.2"), new Token("G59.3")
-        };
-
-        // Modal group 13 - path control mode
-        public readonly List<Token> ModalPathControl = new List<Token> {
-            new Token("G61"), new Token("G61.1"), new Token("G64")
-        };
-        
-        // M Modal group 4 - stopping
-        public readonly List<Token> ModalStopping = new List<Token> {
-            new Token("M0"), new Token("M1"), new Token("M60"), // Temporary (i.e. pause)
-            new Token("M2"), new Token("M30") // Actually Stopping
-        };
-
-        // M Modal group - tool change
-        public readonly List<Token> ModalToolChange = new List<Token> {
-            new Token("M6")
-        };
-
-        // M Modal group 7 - spindle turning
-        public readonly List<Token> ModalSpindleTurning = new List<Token> {
-            new Token("M3"), new Token("M4"), new Token("M5")
-        };
-
-        // M Modal group 8 - coolant (special case: M7 and M8 may be active at the same time)
-        public readonly List<Token> ModalCoolant = new List<Token> {
-            new Token("M7"), new Token("M8"), new Token("M9")
-        };
-
-        // M Modal group 9 - enable/disable feed and speed override switches
-        public readonly List<Token> ModalOverrideEnabling = new List<Token> {
-            new Token("M48"), new Token("M49")
-        };
-
         private List<(Line line, bool isOutput)> _lines;
 
         public List<(Line line, bool isOutput)> Lines
@@ -136,26 +45,26 @@ namespace GCodeClean.Structure
 
         public void Update(Line line, bool isOutput = false)
         {
-            UpdateModal(line, isOutput, ModalFeedRate);
+            UpdateModal(line, isOutput, ModalGroup.ModalFeedRate);
             UpdateModal(line, isOutput, 'F');
             UpdateModal(line, isOutput, 'S');
             UpdateModal(line, isOutput, 'T');
-            UpdateModal(line, isOutput, ModalToolChange);
-            UpdateModal(line, isOutput, ModalSpindleTurning);
+            UpdateModal(line, isOutput, ModalGroup.ModalToolChange);
+            UpdateModal(line, isOutput, ModalGroup.ModalSpindleTurning);
             // No support for Coolants in the context yet
-            UpdateModal(line, isOutput, ModalOverrideEnabling);
+            UpdateModal(line, isOutput, ModalGroup.ModalOverrideEnabling);
             // Dwell (G4) - we don't care about here
-            UpdateModal(line, isOutput, ModalPlane);
-            UpdateModal(line, isOutput, ModalUnits);
-            UpdateModal(line, isOutput, ModalCutterRadiusCompensation);
-            UpdateModal(line, isOutput, ModalToolLengthOffset);
-            UpdateModal(line, isOutput, ModalCoordinateSystem);
-            UpdateModal(line, isOutput, ModalPathControl);
-            UpdateModal(line, isOutput, ModalDistance);
-            UpdateModal(line, isOutput, ModalReturnMode);
-            UpdateModal(line, isOutput, ModalNon);
-            UpdateModal(line, isOutput, ModalToolChange);
-            UpdateModal(line, isOutput, ModalCoolant);
+            UpdateModal(line, isOutput, ModalGroup.ModalPlane);
+            UpdateModal(line, isOutput, ModalGroup.ModalUnits);
+            UpdateModal(line, isOutput, ModalGroup.ModalCutterRadiusCompensation);
+            UpdateModal(line, isOutput, ModalGroup.ModalToolLengthOffset);
+            UpdateModal(line, isOutput, ModalGroup.ModalCoordinateSystem);
+            UpdateModal(line, isOutput, ModalGroup.ModalPathControl);
+            UpdateModal(line, isOutput, ModalGroup.ModalDistance);
+            UpdateModal(line, isOutput, ModalGroup.ModalReturnMode);
+            UpdateModal(line, isOutput, ModalGroup.ModalNon);
+            UpdateModal(line, isOutput, ModalGroup.ModalToolChange);
+            UpdateModal(line, isOutput, ModalGroup.ModalCoolant);
         }
 
         /// <summary>
