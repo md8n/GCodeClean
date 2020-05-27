@@ -54,7 +54,7 @@ Please note that the version number may be incorrect (still working on correctly
 `--minimise` accepts 'soft', 'hard', or a selection you choose of codes to be deduplicated.
 - soft = 'F', 'Z' only - this is also the default.
 - hard = All codes, and spaces between 'words' are eliminated also.
-- Or a custom selection of codes from the official list of `ABCDFGHIJKLMNPRSTXYZ`.
+- Or a custom selection of codes from the official list of `ABCDFGHIJKLMNPRSTXYZ` and the 'others' `EOQUV`.
 
 Now find yourself a gcode (`.nc`, `.gcode`, etc.) file to use for the option `--filename <filename>`.
 And replace `<filename>` with the full path to your gcode file (as per what your OS requires).
@@ -124,9 +124,69 @@ or for Linux (Ubuntu 18.04)
 ./bin/Debug/netcoreapp3.1/publish/GCodeCleanCLI --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
 
+## GCodeClean Solution Organisation
+
+GCodeClean is organised into 3 projects:
+1. GCodeClean - A library that contains most of the code
+2. GCodeCleanCLI - An executable to call the above library - this also handles the command line arguments and does the actual file handling
+3. CodeClean.Test - A test suite - which will be 'grown' over time.
+
 ## What's Special about GCodeClean?
 
 GCodeClean uses async streaming throughout from input to output.  Hopefully this should keep memory consumption and the number of threads to a minimum regardless of what OS / Architecture you use.
+
+### GCode Linting
+
+The GCode specification allows a lot of flexibility, for example the single letter 'codes' at the start of each 'word' can be upper or lower case, and spaces are allowable after the 'code' and before the number.  The specification also allows for a lot of assumptions about the 'state' of a machine when it starts processing a given GCode file.
+
+However, certain conventions have arisen in how GCode should be presented.  There are also strict guidelines within the GCode specification as regards the execution order of various commands when they appear on the same line.
+
+GCodeClean's linting approach is to respect those conventions while prioritising the execution order, and deliberately injecting commands to turn the implicit assumptions about the state of the machine into explicit assertions about what state is desired.
+
+This means that any line that has multiple commands on it (G, M, F, S, T) will be split into multiple lines, and those line will appear in execution order.
+Also GCodeClean defines a set of GCode commands as a 'preamble'. When the first movement command is detected, any of these 'preamble' codes that have not yet been seen are injected into the GCode above that movement command.
+This also adds the concept of a 'Context' (i.e. the state as identified by the various commands seen so far, or the state that is desired), the preamble is the first such 'Context'.
+
+For example, it's common to see a Feed Rate command (F) at the end of a movement command, such as:
+```
+G01 Z -4.0000 F 800.0000
+G03 X 109.5488 Y 450.7407 Z -4.0000 I -229.6457 J 52.6435 F 550.0000
+```
+The linting function splits these lines according to the execution order of the various parts to give:
+```
+F800
+G01 Z-4
+
+F550
+G03 X109.549 Y450.741 I-229.646 J52.644
+```
+
+The start of a GCode file may appear as follows:
+```
+G0 G40 G90 G17
+G21
+
+T1 M6
+M3 S5000
+G0 X39.29 Y-105.937
+```
+The linting function will split the line with multiple GCodes according to their execution order, and it will also 'inject' any 'missing' commands that should reasonably be present at the start of the file to define the machine's desired state at the start of processing.
+```
+G17
+G40
+G90
+
+T1
+M6
+(Preamble completed by GCodeClean)
+G94
+G49
+(Preamble completed by GCodeClean)
+S5000
+M3
+
+G0 X39.29 Y-105.937 (Linear motion: Rapid, X39.29mm, Y-105.937mm)
+```
 
 ## Deployment
 
