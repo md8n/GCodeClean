@@ -136,7 +136,7 @@ namespace GCodeCleanCLI
             var minimisedLines = outputLines.DedupSelectTokens(dedupSelection);
 
             var annotatedLines = options.annotate ? minimisedLines.Annotate(tokenDefinitions) : minimisedLines;
-            var reassembledLines = minimisedLines.JoinLines(minimisationStrategy);
+            var reassembledLines = annotatedLines.JoinLines(minimisationStrategy);
             var lineCount = outputFile.WriteLinesAsync(reassembledLines);
 
             await foreach (var line in lineCount)
