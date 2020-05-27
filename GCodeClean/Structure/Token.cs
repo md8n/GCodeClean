@@ -41,7 +41,7 @@ namespace GCodeClean.Structure
                     return;
                 }
 
-                if (token.EndsWith(')'))
+                if (Code == ';' || token.EndsWith(')'))
                 {
                     IsValid = IsComment;
                     return;
@@ -89,6 +89,10 @@ namespace GCodeClean.Structure
                 else if (Arguments.Any(a => a == _code))
                 {
                     IsArgument = true;
+                }
+                else if (Other.Any(a => a == _code))
+                {
+                    IsOther = true;
                 }
             }
         }
@@ -140,21 +144,25 @@ namespace GCodeClean.Structure
 
         public bool IsArgument { get; private set; }
 
+        public bool IsOther { get; private set; }
+
         public bool IsValid { get; private set; }
 
-        public static char[] FileTerminators = {'%'};
+        public static readonly char[] FileTerminators = {'%'};
 
-        public static char[] Comments = {'('};
+        public static readonly char[] Comments = {'(', ';'};
 
-        public static char[] Commands = {'G', 'M'};
+        public static readonly char[] Commands = {'G', 'M'};
 
-        public static char[] Codes = {'F', 'S', 'T'};
+        public static readonly char[] Codes = {'F', 'S', 'T'};
 
-        public static char[] Arguments = {'A', 'B', 'C', 'D', 'H', 'I', 'J', 'K', 'L', 'N', 'P', 'R', 'X', 'Y', 'Z'};
+        public static readonly char[] Arguments = {'A', 'B', 'C', 'D', 'H', 'I', 'J', 'K', 'L', 'N', 'P', 'R', 'X', 'Y', 'Z'};
 
-        public static string[] MovementCommands = {"G0", "G1", "G2", "G3", "G00", "G01", "G02", "G03"};
+        public static readonly char[] Other = {'E', 'O', 'Q', 'U', 'V'};
 
-        public static decimal[] GCodes =
+        public static readonly string[] MovementCommands = {"G0", "G1", "G2", "G3", "G00", "G01", "G02", "G03"};
+
+        public static readonly decimal[] GCodes =
         {
             0, 1, 2, 3, 4, 10, 17, 18, 19, 20, 21, 28, 30, 38.2M,
             40, 41, 42, 43, 49, 53, 54, 55, 56, 57, 58, 59, 59.1M, 59.2M, 59.3M,
@@ -162,7 +170,7 @@ namespace GCodeClean.Structure
             90, 91, 92, 92.1M, 92.2M, 92.3M, 93, 94, 98, 99
         };
 
-        public static decimal[] MCodes =
+        public static readonly decimal[] MCodes =
         {
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 30, 48, 49, 60
         };

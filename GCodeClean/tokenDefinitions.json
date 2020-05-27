@@ -71,6 +71,7 @@
 		"G94": "Set Feed Rate Mode: {lengthUnits} or degrees, per minute",
 		"G98": "Set Canned Cycle Return Level: R Word",
 		"G99": "Set Canned Cycle Return Level: Before Cycle Started",
+
 		"M0": "Program Stop",
 		"M1": "Optional Program Stop",
 		"M2": "Program End",
@@ -95,7 +96,9 @@
 		"M48": "Speed and Feed Overrides: Enable",
 		"M49": "Speed and Feed Overrides: Disable",
 		"M60": "Pallet Shuttle and Program Stop",
+
 		"D": "Tool Radius Compensation",
+		"E": "Extrude Filament",
 		"F": "Set Feed Rate to {feedRateMode}",
 		"H": "Tool Length Offset Index",
 		"L": "Canned Cycle: Number of Repetitions",
@@ -104,6 +107,12 @@
 		"R": "Arc Radius",
 		"S": "Set Spindle Speed {Svalue} rpm",
 		"T": "Select Tool",
+
+		"O": "Other - O",
+		"Q": "Other - Q",
+		"U": "Other - U",
+		"V": "Other - V",
+
 		"A": "A-Axis",
 		"B": "B-Axis",
 		"C": "C-Axis",

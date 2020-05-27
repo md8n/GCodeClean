@@ -12,7 +12,7 @@ namespace GCodeClean.Processing
         /// <summary>
         /// A 'basic' GCode parser pattern, this does not support expressions that equate to numbers
         /// </summary>
-        private const string Pattern = @"((\%)|((?<linenumber>N\s*\d{1,5})?\s*(?<word>[ABCDFGHIJKLMNPRSTXYZ]\s*[+-]?(\d|\s)*\.?(\d|\s)*\s*)|(?<comment>\(.*?\)\s*)))";
+        private const string Pattern = @"((\%)|((?<linenumber>N\s*\d{1,5})?\s*(?<word>[A-Z]\s*[+-]?(\d|\s)*\.?(\d|\s)*\s*)|(?<comment>\(.*?\)\s*)|(?<fullcomment>\;.*$)))";
 
         public static async IAsyncEnumerable<Line> TokeniseToLine(this IAsyncEnumerable<string> lines) {
             await foreach (var line in lines) {
@@ -27,7 +27,7 @@ namespace GCodeClean.Processing
             {
                 var token = match.Value.Trim();
                 // if this isn't a comment or file terminator then strip out all spaces
-                if (!token.StartsWith('(') && !token.StartsWith('%')) {
+                if (!token.StartsWith('(') && !token.StartsWith('%') && !token.StartsWith(';')) {
                     token = token.Replace(" ", "");
                     if (token.Length == 1 || !decimal.TryParse(token.Substring(1), out var _))
                     {
