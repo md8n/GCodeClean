@@ -176,16 +176,19 @@ G17
 G40
 G90
 
+G21
+
 T1
 M6
+
+S5000
+M3
+
 (Preamble completed by GCodeClean)
 G94
 G49
 (Preamble completed by GCodeClean)
-S5000
-M3
-
-G0 X39.29 Y-105.937 (Linear motion: Rapid, X39.29mm, Y-105.937mm)
+G0 X39.29 Y-105.937
 ```
 
 ## Deployment
