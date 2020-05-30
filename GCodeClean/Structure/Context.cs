@@ -67,6 +67,22 @@ namespace GCodeClean.Structure
             UpdateModal(line, isOutput, ModalGroup.ModalCoolant);
         }
 
+        public Token GetModalState(IReadOnlyCollection<Token> modal)
+        {
+            foreach (var (line, _) in Lines)
+            {
+                var lineTokens = line.Tokens.Intersect(modal).LastOrDefault();
+                if (lineTokens == null)
+                {
+                    continue;
+                }
+
+                return lineTokens;
+            }
+
+            return null;
+        }
+
         /// <summary>
         /// Output all lines flagged as not yet output (isOutput == false)
         /// </summary>
@@ -102,17 +118,19 @@ namespace GCodeClean.Structure
             for (var ix = Lines.Count - 1; ix >= 0; ix--)
             {
                 var inContext = _lines[ix].line.Tokens.Intersect(modal).ToList();
-                if (inContext.Count > 0)
+                if (inContext.Count <= 0)
                 {
-                    if (!hasReplaced)
-                    {
-                        _lines[ix] = (line, isOutput);
-                        hasReplaced = true;
-                    }
-                    else
-                    {
-                        _lines.RemoveAt(ix);
-                    }
+                    continue;
+                }
+
+                if (!hasReplaced)
+                {
+                    _lines[ix] = (line, isOutput);
+                    hasReplaced = true;
+                }
+                else
+                {
+                    _lines.RemoveAt(ix);
                 }
             }
             if (!hasReplaced)
@@ -133,17 +151,19 @@ namespace GCodeClean.Structure
             for (var ix = Lines.Count - 1; ix >= 0; ix--)
             {
                 var inContext = _lines[ix].line.Tokens.Where(t => t.Code == code).ToList();
-                if (inContext.Count > 0)
+                if (inContext.Count <= 0)
                 {
-                    if (!hasReplaced)
-                    {
-                        _lines[ix] = (line, isOutput);
-                        hasReplaced = true;
-                    }
-                    else
-                    {
-                        _lines.RemoveAt(ix);
-                    }
+                    continue;
+                }
+
+                if (!hasReplaced)
+                {
+                    _lines[ix] = (line, isOutput);
+                    hasReplaced = true;
+                }
+                else
+                {
+                    _lines.RemoveAt(ix);
                 }
             }
             if (!hasReplaced)
