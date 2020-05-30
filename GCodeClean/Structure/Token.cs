@@ -26,6 +26,7 @@ namespace GCodeClean.Structure
                 IsCommand = false;
                 IsCode = false;
                 IsArgument = false;
+                IsOther = false;
 
                 if (string.IsNullOrWhiteSpace(_source))
                 {
@@ -69,6 +70,7 @@ namespace GCodeClean.Structure
                 IsCommand = false;
                 IsCode = false;
                 IsArgument = false;
+                IsOther = false;
 
                 if (FileTerminators.Contains(_code))
                 {
