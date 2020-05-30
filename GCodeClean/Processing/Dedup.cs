@@ -188,11 +188,16 @@ namespace GCodeClean.Processing
             var prevRadius = 0M;
             var prevIsClockwise = false;
 
+            var context = Default.Preamble();
+
             var linearMovementToken = new Token("G1");
 
             await foreach (var lineC in tokenisedLines) {
                 var hasMovement = lineC.HasMovementCommand();
                 var hasLinearMovement = lineC.Tokens.Contains(linearMovementToken);
+
+                context.Update(lineC, true);
+
                 if (hasMovement && !isLineASet && !isLineBSet) {
                     // Some movement command, and we're at a 'start'
                     lineA = lineC;
@@ -215,7 +220,7 @@ namespace GCodeClean.Processing
                     if (isLineBSet)
                     {
                         if (inArc) {
-                            lineB = lineB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise);
+                            lineB = lineB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise, context);
 
                             prevCenter = new Coord();
                             prevRadius = 0M;
@@ -238,7 +243,7 @@ namespace GCodeClean.Processing
                     }
                     if (isLineBSet) {
                         if (inArc) {
-                            lineB = lineB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise);
+                            lineB = lineB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise, context);
 
                             prevCenter = new Coord();
                             prevRadius = 0M;
@@ -269,11 +274,11 @@ namespace GCodeClean.Processing
                 if (hasCoords)
                 {
                     // basic check that B is roughly between A and C
-                    // curves just off some orthogonal plane will fail this test - but I'm OK with that
                     var xOK = coordsB.X.WithinRange(coordsA.X, coordsC.X);
                     var yOK = coordsB.Y.WithinRange(coordsA.Y, coordsC.Y);
                     var zOK = coordsB.Z.WithinRange(coordsA.Z, coordsC.Z);
-                    withinBounds = xOK && yOK && zOK;                 
+
+                    withinBounds = xOK && yOK && zOK;
                 }
 
                 var center = new Coord();
@@ -291,11 +296,17 @@ namespace GCodeClean.Processing
                     var yIsRelevant = coordsAC.Y >= tolerance && coordsAB.Y >= tolerance && coordsBC.Y >= tolerance ? 1 : 0;
                     var zIsRelevant = coordsAC.Z >= tolerance && coordsAB.Z >= tolerance && coordsBC.Z >= tolerance ? 1 : 0;
 
-                    isSignificant = xIsRelevant + yIsRelevant + zIsRelevant < 2;
+                    isSignificant = context.GetModalState(ModalGroup.ModalPlane).ToString() switch
+                    {
+                        "G17" => xIsRelevant + yIsRelevant < 2,
+                        "G18" => xIsRelevant + zIsRelevant < 2,
+                        "G19" => yIsRelevant + zIsRelevant < 2,
+                        _ => xIsRelevant + yIsRelevant + zIsRelevant < 2,
+                    };
 
                     if (isSignificant)
                     {
-                        (center, radius, isClockwise) = Utility.FindCircle(coordsA, coordsB, coordsC);
+                        (center, radius, isClockwise) = Utility.FindCircle(coordsA, coordsB, coordsC, context);
 
                         if (radius > tolerance)
                         {
@@ -309,7 +320,15 @@ namespace GCodeClean.Processing
                                 var centerDiff = Coord.Difference(center, prevCenter);
                                 var radiusDiff = Math.Abs(radius - prevRadius);
 
-                                if (centerDiff.X <= tolerance && centerDiff.Y <= tolerance && centerDiff.Z <= tolerance && radiusDiff <= tolerance)
+                                var centerWithinTolerance = context.GetModalState(ModalGroup.ModalPlane).ToString() switch
+                                {
+                                    "G17" => centerDiff.X <= tolerance && centerDiff.Y <= tolerance,
+                                    "G18" => centerDiff.X <= tolerance && centerDiff.Z <= tolerance,
+                                    "G19" => centerDiff.Y <= tolerance && centerDiff.Z <= tolerance,
+                                    _ => centerDiff.X <= tolerance && centerDiff.Y <= tolerance && centerDiff.Z <= tolerance,
+                                };
+
+                                if (centerWithinTolerance && radiusDiff <= tolerance)
                                 {
                                     isSignificant = bcr <= (double)tolerance;
                                 }
@@ -346,7 +365,7 @@ namespace GCodeClean.Processing
                     {
                         // Finish the arc manipulation we were doing,
                         // the new arc end point will be lineB
-                        lineB = lineB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise);
+                        lineB = lineB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise, context);
 
                         prevCenter = new Coord();
                         prevRadius = 0M;
@@ -376,7 +395,24 @@ namespace GCodeClean.Processing
             }
         }
 
-        private static Line ConvertLinearToArc(this Line lineB, Coord coordsA, Coord prevCenter, bool prevIsClockwise) {
+        private static Line ConvertLinearToArc(this Line lineB, Coord coordsA, Coord prevCenter, bool prevIsClockwise, Context context) {
+            var addI = (prevCenter.Set & CoordSet.X) == CoordSet.X && (coordsA.Set & CoordSet.X) == CoordSet.X;
+            var addJ = (prevCenter.Set & CoordSet.Y) == CoordSet.Y && (coordsA.Set & CoordSet.Y) == CoordSet.Y;
+            var addK = (prevCenter.Set & CoordSet.Z) == CoordSet.Z && (coordsA.Set & CoordSet.Z) == CoordSet.Z;
+
+            var haveCoordPair = context.GetModalState(ModalGroup.ModalPlane).ToString() switch
+            {
+                "G17" => addI && addJ,
+                "G18" => addI && addK,
+                "G19" => addJ && addK,
+                _ => addI && addJ && addK,
+            };
+
+            if (!haveCoordPair)
+            {
+                return lineB;
+            }
+
             var linearMovementToken = new Token("G1");
             for (var ix = 0; ix < lineB.Tokens.Count; ix++)
             {
@@ -388,17 +424,38 @@ namespace GCodeClean.Processing
                 lineB.Tokens[ix] = new Token(prevIsClockwise ? "G2" : "G3");
                 break;
             }
-            if ((prevCenter.Set & CoordSet.X) == CoordSet.X && (coordsA.Set & CoordSet.X) == CoordSet.X)
+
+            switch (context.GetModalState(ModalGroup.ModalPlane).ToString())
             {
-                lineB.Tokens.Add(new Token($"I{prevCenter.X - coordsA.X:0.####}"));
-            }
-            if ((prevCenter.Set & CoordSet.Y) == CoordSet.Y && (coordsA.Set & CoordSet.Y) == CoordSet.Y)
-            {
-                lineB.Tokens.Add(new Token($"J{prevCenter.Y - coordsA.Y:0.####}"));
-            }
-            if ((prevCenter.Set & CoordSet.Z) == CoordSet.Z && (coordsA.Set & CoordSet.Z) == CoordSet.Z)
-            {
-                lineB.Tokens.Add(new Token($"K{prevCenter.Z - coordsA.Z:0.####}"));
+                case "G17":
+                    lineB.Tokens.Add(new Token($"I{prevCenter.X - coordsA.X:0.####}"));
+                    lineB.Tokens.Add(new Token($"J{prevCenter.Y - coordsA.Y:0.####}"));
+                    if (addK)
+                    {
+                        lineB.Tokens.Add(new Token($"K{prevCenter.Z - coordsA.Z:0.####}"));
+                    }
+                    break;
+                case "G18":
+                    lineB.Tokens.Add(new Token($"I{prevCenter.X - coordsA.X:0.####}"));
+                    if (addJ)
+                    {
+                        lineB.Tokens.Add(new Token($"J{prevCenter.Y - coordsA.Y:0.####}"));
+                    }
+                    lineB.Tokens.Add(new Token($"K{prevCenter.Z - coordsA.Z:0.####}"));
+                    break;
+                case "G19":
+                    if (addI)
+                    {
+                        lineB.Tokens.Add(new Token($"I{prevCenter.X - coordsA.X:0.####}"));
+                    }
+                    lineB.Tokens.Add(new Token($"J{prevCenter.Y - coordsA.Y:0.####}"));
+                    lineB.Tokens.Add(new Token($"K{prevCenter.Z - coordsA.Z:0.####}"));
+                    break;
+                default:
+                    lineB.Tokens.Add(new Token($"I{prevCenter.X - coordsA.X:0.####}"));
+                    lineB.Tokens.Add(new Token($"J{prevCenter.Y - coordsA.Y:0.####}"));
+                    lineB.Tokens.Add(new Token($"K{prevCenter.Z - coordsA.Z:0.####}"));
+                    break;
             }
 
             return lineB;

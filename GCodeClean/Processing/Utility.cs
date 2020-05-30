@@ -45,23 +45,37 @@ namespace GCodeClean.Processing
             return (decimal)theta;
         }
 
-        // Function to find the circle on 
-        // which the given three points lie 
-        public static (Coord center, decimal radius, bool isClockwise) FindCircle(Coord a, Coord b, Coord c)
+        /// <summary>
+        /// Function to find the circle on which the given three points lie
+        /// </summary>
+        /// <param name="a"></param>
+        /// <param name="b"></param>
+        /// <param name="c"></param>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public static (Coord center, decimal radius, bool isClockwise) FindCircle(Coord a, Coord b, Coord c, Context context)
         {
             var center = new Coord();
             var radius = 0M;
             var isClockwise = false;
 
-            // We only calculate a circle through one orthogonal plane,
-            // therefore at least one of the dimensions must be the same for all 3 coords
-            var ortho = Coord.Ortho(new List<Coord>() { a, b, c });
+            var ortho = context.GetModalState(ModalGroup.ModalPlane).ToString() switch
+            {
+                "G17" => CoordSet.Z,
+                "G18" => CoordSet.Y,
+                "G19" => CoordSet.X,
+                _ => CoordSet.None,
+            };
+            if (ortho == CoordSet.None)
+            {
+                ortho = Coord.Ortho(new List<Coord> { a, b, c });
+            }
             if (ortho == CoordSet.None)
             {
                 return (center, radius, isClockwise);
             }
 
-            // Convert to points in 2 dimensions
+            // Determine which coordinate we're dropping
             var dropCoord = CoordSet.Z;
             if ((ortho & CoordSet.X) == CoordSet.X)
             {
@@ -71,6 +85,19 @@ namespace GCodeClean.Processing
             {
                 dropCoord = CoordSet.Y;
             }
+            var droppedCoordOK = dropCoord switch
+            {
+                CoordSet.Z => a.Z == b.Z && b.Z == c.Z,
+                CoordSet.Y => a.Y == b.Y && b.Y == c.Y,
+                CoordSet.X => a.X == b.X && b.X == c.X,
+                _ => false,
+            };
+            if (!droppedCoordOK)
+            {
+                return (center, radius, isClockwise);
+            }
+
+            // Convert to points in 2 dimensions
             var pA = a.ToPointF(dropCoord);
             var pB = b.ToPointF(dropCoord);
             var pC = c.ToPointF(dropCoord);
@@ -156,19 +183,29 @@ namespace GCodeClean.Processing
             return 0;
         }
 
-        public static List<Coord> FindIntersections(Coord cA, Coord cB, decimal radius)
+        public static List<Coord> FindIntersections(Coord cA, Coord cB, decimal radius, Context context)
         {
             var intersections = new List<Coord>();
 
             // We only calculate a circle through one orthogonal plane,
             // therefore at least one of the dimensions must be the same for both coords
-            var ortho = Coord.Ortho(new List<Coord> { cA, cB });
+            var ortho = context.GetModalState(ModalGroup.ModalPlane).ToString() switch
+                {
+                "G17" => CoordSet.Z,
+                "G18" => CoordSet.Y,
+                "G19" => CoordSet.X,
+                _ => CoordSet.None,
+                };
+            if (ortho == CoordSet.None)
+            {
+                ortho = Coord.Ortho(new List<Coord> { cA, cB });
+            }
             if (ortho == CoordSet.None)
             {
                 return intersections;
             }
 
-            // Convert to points in 2 dimensions
+            // Determine which coordinate we're dropping
             var dropCoord = CoordSet.Z;
             if ((ortho & CoordSet.X) == CoordSet.X)
             {
@@ -178,6 +215,19 @@ namespace GCodeClean.Processing
             {
                 dropCoord = CoordSet.Y;
             }
+            var droppedCoordOK = dropCoord switch
+            {
+                CoordSet.Z => cA.Z == cB.Z,
+                CoordSet.Y => cA.Y == cB.Y,
+                CoordSet.X => cA.X == cB.X,
+                _ => false,
+            };
+            if (!droppedCoordOK)
+            {
+                return intersections;
+            }
+
+            // Convert to points in 2 dimensions
             var pA = cA.ToPointF(dropCoord);
             var pB = cB.ToPointF(dropCoord);
 

@@ -33,25 +33,25 @@ namespace GCodeClean.Structure
             Set = CoordSet.None;
         }
 
-        public Coord(decimal A, decimal B, CoordSet addCoord = CoordSet.Z)
+        public Coord(decimal a, decimal b, CoordSet addCoord = CoordSet.Z)
         {
             switch (addCoord)
             {
                 case CoordSet.X:
                     X = 0M;
-                    Y = A;
-                    Z = B;
+                    Y = a;
+                    Z = b;
                     Set = CoordSet.Y | CoordSet.Z;
                     break;
                 case CoordSet.Y:
-                    X = A;
+                    X = a;
                     Y = 0M;
-                    Z = B;
+                    Z = b;
                     Set = CoordSet.X | CoordSet.Z;
                     break;
                 default:
-                    X = A;
-                    Y = B;
+                    X = a;
+                    Y = b;
                     Z = 0M;
                     Set = CoordSet.X | CoordSet.Y;
                     break;

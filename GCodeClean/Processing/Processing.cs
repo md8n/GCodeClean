@@ -184,14 +184,21 @@ namespace GCodeClean.Processing
             }
         }
 
+        /// <summary>
+        /// Convert Arc movement commands from using R to using IJ
+        /// </summary>
+        /// <param name="tokenisedLines"></param>
+        /// <returns></returns>
         public static async IAsyncEnumerable<Line> ConvertArcRadiusToCenter(this IAsyncEnumerable<Line> tokenisedLines)
         {
             var previousCoords = new Coord();
+            var context = Default.Preamble();
 
             var clockwiseMovementToken = new Token("G2");
 
             await foreach (var line in tokenisedLines)
             {
+                context.Update(line, true);
                 var hasMovement = line.HasMovementCommand();
                 if (!hasMovement)
                 {
@@ -218,7 +225,7 @@ namespace GCodeClean.Processing
                     continue;
                 }
 
-                var intersections = Utility.FindIntersections(coords, previousCoords, radius.Value);
+                var intersections = Utility.FindIntersections(coords, previousCoords, radius.Value, context);
                 switch (intersections.Count)
                 {
                     case 0:
