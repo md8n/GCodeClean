@@ -8,11 +8,11 @@ We also have:
 * clipping decimal places on arguments to meaningful values,
 * `per line` linting: splitting lines to match the actual execution order as per the NIST gcode spec, and then reorganising the 'words' on a line to conform to some common practices (but not all),
 * `annotate` the GCode with explanatory comments (optional),
-* 'soft', 'hard' or custom removal of superfluous tokens (`minimise`).
+* 'soft', 'medium', 'hard' or custom removal of superfluous tokens (`minimise`).
+* `preamble linting`: Adding a 'standard' set of gcode declarations, i.e. converting the 'implicit' to 'explicit'.
 
 We'll also look at supporting:
 * injecting blank lines to highlight significant instructions (tool raising, tool changes),
-* `preamble linting`: Adding a 'standard' set of gcode declarations, i.e. converting the 'implicit' to 'explicit'.
 * `postamble linting`: Similar to the `peramble`, but at the end of the file (obviously).
 
 ## Getting Started
@@ -40,8 +40,8 @@ Clean GCode file:
 
   --annotate    Annotate the GCode with inline comments.
 
-  --minimise    Select preferred minimisation strategy, 'soft' - (default) FZ only, 'hard' - All codes, or list of codes
-                e.g. FGXYZIJK
+  --minimise    (Default: soft) Select preferred minimisation strategy, 'soft' - (default) FZ only, 'medium' - All
+                 codes (but leave spaces in place), 'hard' - All codes and remove spaces, or list of codes e.g. FGXYZIJK
 
   --help        Display this help screen.
 
@@ -53,7 +53,7 @@ Please note that the version number may be incorrect (still working on correctly
 
 `--minimise` accepts 'soft', 'hard', or a selection you choose of codes to be deduplicated.
 - soft = 'F', 'Z' only - this is also the default.
-- medium = All codes, but there is a space between each 'wrod'.
+- medium = All codes, but there is a space between each 'word'.
 - hard = All codes, and spaces between 'words' are eliminated also.
 - Or a custom selection of codes from the official list of `ABCDFGHIJKLMNPRSTXYZ` and the 'others' `EOQUV`.
 
