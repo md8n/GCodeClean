@@ -122,6 +122,11 @@ namespace GCodeClean.Processing
                     currentLine.Tokens = yieldableLines[0].Tokens.Concat(currentLine.Tokens).ToList();
                 }
 
+                // Motion commands without arguments are invalid (and should be discarded)
+                if (currentLine.Tokens.Count == 1 && ModalGroup.ModalSimpleMotion.Contains(currentLine.Tokens[0])) {
+                    currentLine.Tokens.Clear();
+                }
+
                 // Specifically not handled are the 'Home' commands G28 and G30
 
                 foreach (var yieldingToken in yieldingLines)
@@ -132,7 +137,9 @@ namespace GCodeClean.Processing
                     }
                     yield return yieldingToken;
                 }
-                yield return currentLine;
+                if (currentLine.Tokens.Count > 0) {
+                    yield return currentLine;
+                }
                 if (!stopTokens.IsNotCommandCodeOrArguments())
                 {
                     yield return stopTokens;

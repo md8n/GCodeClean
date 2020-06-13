@@ -133,7 +133,7 @@ namespace GCodeClean.Processing
                     {
                         foreach (var token in line.Tokens)
                         {
-                            if (!Token.MovementCommands.Contains(token.Source))
+                            if (!ModalGroup.ModalSimpleMotion.Contains(token))
                             {
                                 continue;
                             }
