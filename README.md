@@ -53,6 +53,7 @@ Please note that the version number may be incorrect (still working on correctly
 
 `--minimise` accepts 'soft', 'hard', or a selection you choose of codes to be deduplicated.
 - soft = 'F', 'Z' only - this is also the default.
+- medium = All codes, but there is a space between each 'wrod'.
 - hard = All codes, and spaces between 'words' are eliminated also.
 - Or a custom selection of codes from the official list of `ABCDFGHIJKLMNPRSTXYZ` and the 'others' `EOQUV`.
 

@@ -19,7 +19,7 @@ namespace GCodeCleanCLI
         [Option("annotate", Required = false, HelpText = "Annotate the GCode with inline comments.")]
         public bool annotate { get; set; }
 
-        [Option("minimise", Required = false, HelpText = "Select preferred minimisation strategy, 'soft' - (default) FZ only, 'hard' - All codes, or list of codes e.g. FGXYZIJK", Default = "soft")]
+        [Option("minimise", Required = false, HelpText = "Select preferred minimisation strategy, 'soft' - (default) FZ only, 'medium' - All codes (but leave spaces in place), 'hard' - All codes and remove spaces, or list of codes e.g. FGXYZIJK", Default = "soft")]
         public string minimise { get; set; }
 
         [Usage(ApplicationAlias = "GCodeClean")]
