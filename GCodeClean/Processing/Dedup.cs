@@ -221,16 +221,18 @@ namespace GCodeClean.Processing
                     {
                         if (inArc) {
                             lineB = lineB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise, context);
-
-                            prevCenter = new Coord();
-                            prevRadius = 0M;
-                            prevIsClockwise = false;
                         }
 
                         yield return lineB;
                         lineB = new Line();
                         isLineBSet = false;
                     }
+
+                    prevCenter = new Coord();
+                    prevRadius = 0M;
+                    prevIsClockwise = false;
+                    inArc = false;
+
                     yield return lineC;
                     continue;
                 }
@@ -244,16 +246,18 @@ namespace GCodeClean.Processing
                     if (isLineBSet) {
                         if (inArc) {
                             lineB = lineB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise, context);
-
-                            prevCenter = new Coord();
-                            prevRadius = 0M;
-                            prevIsClockwise = false;
                         }
 
                         yield return lineB;
                         lineB = new Line();
                         isLineBSet = false;
                     }
+                    
+                    prevCenter = new Coord();
+                    prevRadius = 0M;
+                    prevIsClockwise = false;
+                    inArc = false;
+
                     lineA = lineC;
                     isLineASet = true;
                     continue;
@@ -296,7 +300,9 @@ namespace GCodeClean.Processing
                     var yIsRelevant = coordsAC.Y >= tolerance && coordsAB.Y >= tolerance && coordsBC.Y >= tolerance ? 1 : 0;
                     var zIsRelevant = coordsAC.Z >= tolerance && coordsAB.Z >= tolerance && coordsBC.Z >= tolerance ? 1 : 0;
 
-                    isSignificant = context.GetModalState(ModalGroup.ModalPlane).ToString() switch
+                    var coordPlane = context.GetModalState(ModalGroup.ModalPlane).ToString();
+
+                    isSignificant = coordPlane switch
                     {
                         "G17" => xIsRelevant + yIsRelevant < 2,
                         "G18" => xIsRelevant + zIsRelevant < 2,
@@ -320,7 +326,7 @@ namespace GCodeClean.Processing
                                 var centerDiff = Coord.Difference(center, prevCenter);
                                 var radiusDiff = Math.Abs(radius - prevRadius);
 
-                                var centerWithinTolerance = context.GetModalState(ModalGroup.ModalPlane).ToString() switch
+                                var centerWithinTolerance = coordPlane switch
                                 {
                                     "G17" => centerDiff.X <= tolerance && centerDiff.Y <= tolerance,
                                     "G18" => centerDiff.X <= tolerance && centerDiff.Z <= tolerance,
@@ -400,7 +406,8 @@ namespace GCodeClean.Processing
             var addJ = (prevCenter.Set & CoordSet.Y) == CoordSet.Y && (coordsA.Set & CoordSet.Y) == CoordSet.Y;
             var addK = (prevCenter.Set & CoordSet.Z) == CoordSet.Z && (coordsA.Set & CoordSet.Z) == CoordSet.Z;
 
-            var haveCoordPair = context.GetModalState(ModalGroup.ModalPlane).ToString() switch
+            var modalPlace = context.GetModalState(ModalGroup.ModalPlane).ToString();
+            var haveCoordPair = modalPlace switch
             {
                 "G17" => addI && addJ,
                 "G18" => addI && addK,
@@ -425,26 +432,26 @@ namespace GCodeClean.Processing
                 break;
             }
 
-            switch (context.GetModalState(ModalGroup.ModalPlane).ToString())
+            switch (modalPlace)
             {
                 case "G17":
                     lineB.Tokens.Add(new Token($"I{prevCenter.X - coordsA.X:0.####}"));
                     lineB.Tokens.Add(new Token($"J{prevCenter.Y - coordsA.Y:0.####}"));
-                    if (addK)
+                    if (addK && prevCenter.Z - coordsA.Z != 0)
                     {
                         lineB.Tokens.Add(new Token($"K{prevCenter.Z - coordsA.Z:0.####}"));
                     }
                     break;
                 case "G18":
                     lineB.Tokens.Add(new Token($"I{prevCenter.X - coordsA.X:0.####}"));
-                    if (addJ)
+                    if (addJ && prevCenter.Y - coordsA.Y != 0)
                     {
                         lineB.Tokens.Add(new Token($"J{prevCenter.Y - coordsA.Y:0.####}"));
                     }
                     lineB.Tokens.Add(new Token($"K{prevCenter.Z - coordsA.Z:0.####}"));
                     break;
                 case "G19":
-                    if (addI)
+                    if (addI && prevCenter.X - coordsA.X != 0)
                     {
                         lineB.Tokens.Add(new Token($"I{prevCenter.X - coordsA.X:0.####}"));
                     }

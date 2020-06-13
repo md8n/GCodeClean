@@ -59,7 +59,8 @@ namespace GCodeClean.Processing
             var radius = 0M;
             var isClockwise = false;
 
-            var ortho = context.GetModalState(ModalGroup.ModalPlane).ToString() switch
+            var coordPlane = context.GetModalState(ModalGroup.ModalPlane).ToString();
+            var ortho = coordPlane switch
             {
                 "G17" => CoordSet.Z,
                 "G18" => CoordSet.Y,
@@ -152,7 +153,13 @@ namespace GCodeClean.Processing
             var sqrOfR = h * h + k * k - circ;
 
             radius = (decimal)Math.Round(Math.Sqrt(sqrOfR), 5);
-            center = new Coord((decimal)h, (decimal)k, b.X);
+            center = coordPlane switch
+            {
+                "G17" => new Coord((decimal)h, (decimal)k, b.Z),
+                "G18" => new Coord((decimal)h, b.Y, (decimal)k),
+                "G19" => new Coord(b.X, (decimal)h, (decimal)k),
+                _ => center,
+            };
 
             isClockwise = DirectionOfPoint(pA, pB, center.ToPointF()) < 0;
 
