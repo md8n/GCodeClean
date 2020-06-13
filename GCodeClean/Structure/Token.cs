@@ -162,8 +162,6 @@ namespace GCodeClean.Structure
 
         public static readonly char[] Other = {'E', 'O', 'Q', 'U', 'V'};
 
-        public static readonly string[] MovementCommands = {"G0", "G1", "G2", "G3", "G00", "G01", "G02", "G03"};
-
         public static readonly decimal[] GCodes =
         {
             0, 1, 2, 3, 4, 10, 17, 18, 19, 20, 21, 28, 30, 38.2M,

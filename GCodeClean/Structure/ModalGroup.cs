@@ -39,12 +39,17 @@ namespace GCodeClean.Structure
             .ToList();
 
         // G Modal group 1 - motion
-        public static readonly List<Token> ModalMotion = new List<Token> {
+        public static readonly List<Token> ModalSimpleMotion = new List<Token> {
                 new Token("G0"), new Token("G1"), new Token("G2"), new Token(" G3"),
-                new Token("G38.2"),
+                new Token("G38.2")
+            };
+
+        public static readonly List<Token> ModalCannedMotion = new List<Token> {
                 new Token("G80"), new Token("G81"), new Token("G82"), new Token("G83"), new Token("G84"),
                 new Token("G85"), new Token("G86"), new Token("G87"), new Token("G88"), new Token("G89")
             };
+
+        public static readonly List<Token> ModalMotion = ModalSimpleMotion.Concat(ModalCannedMotion).ToList();
 
         public static readonly List<Token> ModalAllMotion = ModalMotion
             .Concat(ModalHome) // For our purposes these and G53 are motion commands

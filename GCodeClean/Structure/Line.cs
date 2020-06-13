@@ -122,11 +122,11 @@ namespace GCodeClean.Structure
         }
 
         /// <summary>
-        /// This returns true if there are one or more Arguments but no Commands, comments are ignored for this test
+        /// This returns true if there are one or more Arguments and a movement Command, comments are ignored for this test
         /// </summary>
         public bool HasMovementCommand()
         {
-            return !IsArgumentsOnly() && HasTokens(Token.MovementCommands.ToList());
+            return !IsArgumentsOnly() && HasTokens(ModalGroup.ModalSimpleMotion);
         }
 
         public Line()
