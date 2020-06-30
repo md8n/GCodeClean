@@ -103,7 +103,7 @@ namespace GCodeCleanCLI
             var dedupSelection = new List<char> { 'F', 'Z' };
             if (!string.IsNullOrWhiteSpace(options.minimise) && minimisationStrategy != "SOFT")
             {
-                var hardList = new List<char> { 'A', 'B', 'C', 'D', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'P', 'R', 'S', 'T', 'X', 'Y', 'Z' };
+                var hardList = new List<char> { 'A', 'B', 'C', 'D', 'F', 'G', 'H', 'L', 'M', 'N', 'P', 'R', 'S', 'T', 'X', 'Y', 'Z' };
                 dedupSelection = minimisationStrategy == "HARD" || minimisationStrategy == "MEDIUM"
                     ? hardList
                     : new List<char>(minimisationStrategy).Intersect(hardList).ToList();

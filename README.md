@@ -53,9 +53,9 @@ Please note that the version number may be incorrect (still working on correctly
 
 `--minimise` accepts 'soft', 'hard', or a selection you choose of codes to be deduplicated.
 - soft = 'F', 'Z' only - this is also the default.
-- medium = All codes, but there is a space between each 'word'.
-- hard = All codes, and spaces between 'words' are eliminated also.
-- Or a custom selection of codes from the official list of `ABCDFGHIJKLMNPRSTXYZ` and the 'others' `EOQUV`.
+- medium = All codes excluding IJK, but there is a space between each 'word'.
+- hard = All codes excluding IJK, and spaces between 'words' are eliminated also.
+- Or a custom selection of codes from the official list of `ABCDFGHLMNPRSTXYZ` (i.e. excluding IJK) and the 'others' `EOQUV`.
 
 Now find yourself a gcode (`.nc`, `.gcode`, etc.) file to use for the option `--filename <filename>`.
 And replace `<filename>` with the full path to your gcode file (as per what your OS requires).

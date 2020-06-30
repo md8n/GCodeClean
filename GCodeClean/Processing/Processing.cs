@@ -108,7 +108,6 @@ namespace GCodeClean.Processing
         {
             var previousCommand = new Token("");
             var previousXYZCoords = new List<Token> { new Token("X"), new Token("Y"), new Token("Z") };
-            var previousIJKCoords = new List<Token> { new Token("I"), new Token("J") };
 
             await foreach (var line in tokenisedLines)
             {
@@ -120,14 +119,8 @@ namespace GCodeClean.Processing
 
                 var hasXY = line.HasTokens(new List<char> { 'X', 'Y' });
                 var hasZ = line.HasToken('Z');
-                var hasIJ = line.HasTokens(new List<char> { 'I', 'J' });
-                var hasK = line.HasToken('K');
-                if (hasK)
-                {
-                    previousIJKCoords.Add(new Token("K"));
-                }
 
-                if (hasXY || hasZ || hasIJ || hasK)
+                if (hasXY || hasZ)
                 {
                     if (line.HasMovementCommand())
                     {
@@ -153,22 +146,11 @@ namespace GCodeClean.Processing
                     previousXYZCoords[ix] = line.Tokens.FirstOrDefault(t => t.Code == previousXYZCoords[ix].Code) ?? previousXYZCoords[ix];
                 }
 
-                for (var ix = 0; ix < previousIJKCoords.Count; ix++)
-                {
-                    previousIJKCoords[ix] = line.Tokens.FirstOrDefault(t => t.Code == previousIJKCoords[ix].Code) ?? previousIJKCoords[ix];
-                }
-
                 // Remove and then add back in the arguments - ensures consistency
                 if (hasXY || hasZ)
                 {
                     line.RemoveTokens(new List<char> { 'X', 'Y', 'Z' });
                     line.Tokens.AddRange(previousXYZCoords.Where(pc => pc.IsArgument && pc.IsValid));
-                }
-
-                if (hasIJ || hasK)
-                {
-                    line.RemoveTokens(new List<char> { 'I', 'J', 'K' });
-                    line.Tokens.AddRange(previousIJKCoords.Where(pc => pc.IsArgument && pc.IsValid));
                 }
 
                 yield return line;
