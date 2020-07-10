@@ -30,24 +30,30 @@ There are a very large number of possible targets including 32bit, ARM, etc.
 Throw the `--help` command line option at GCodeClean and you'll get back the following:
 
 ```
-gcodeclean 1.0.0
 Copyright (C) 2020 gcodeclean
 USAGE:
 Clean GCode file:
   GCodeClean --filename facade.nc
 
-  --filename    Required. Full path to the input filename.
+  --filename      Required. Full path to the input filename.
 
-  --annotate    Annotate the GCode with inline comments.
+  --annotate      Annotate the GCode with inline comments.
 
-  --minimise    (Default: soft) Select preferred minimisation strategy, 'soft' - (default) FZ only, 'medium' - All
-                 codes (but leave spaces in place), 'hard' - All codes and remove spaces, or list of codes e.g. FGXYZIJK
+  --minimise      (Default: soft) Select preferred minimisation strategy, 'soft' - (default) FZ only, 'medium' - All
+                   codes excluding IJK (but leave spaces in place), 'hard' - All codes excluding IJK and remove spaces,
+                   or list of codes e.g. FGXYZ
 
-  --help        Display this help screen.
+  --tolerance     Enter a clipping tolerance for the various deduplication operations
 
-  --version     Display version information.
+  --arcTolerance  Enter a tolerance for the 'point-to-point' length of arcs (G2, G3) below which 
+                   they will be converted to lines (G1)
+
+  --help          Display this help screen.
+
+  --version       Display version information.
+
+  
 ```
-Please note that the version number may be incorrect (still working on correctly automating it per release), but all the rest of it is correct.
 
 `--annotate` is a simple switch, include it on its own to have your GCode annotated with inline comments (even if you specify hard minimisation).
 
@@ -56,6 +62,10 @@ Please note that the version number may be incorrect (still working on correctly
 - medium = All codes excluding IJK, but there is a space between each 'word'.
 - hard = All codes excluding IJK, and spaces between 'words' are eliminated also.
 - Or a custom selection of codes from the official list of `ABCDFGHLMNPRSTXYZ` (i.e. excluding IJK) and the 'others' `EOQUV`.
+
+`--tolerance` accepts values from 0.0005 to 0.05 for inches or 0.005 to 0.5 for millimeters and uses this value when 'clipping' all arguments with the exception of I, J or K.
+
+`--arcTolerance` accepts values from 0.0005 to 0.05 for inches or 0.005 to 0.5 for millimeters and uses this value to 'simplify' very short arcs to lines.
 
 Now find yourself a gcode (`.nc`, `.gcode`, etc.) file to use for the option `--filename <filename>`.
 And replace `<filename>` with the full path to your gcode file (as per what your OS requires).

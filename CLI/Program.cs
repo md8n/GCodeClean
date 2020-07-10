@@ -81,6 +81,22 @@ namespace GCodeCleanCLI
             }
             Console.WriteLine("Outputting to:" + outputFile);
 
+            if (options.tolerance < 0.0005M) {
+                options.tolerance = 0.0005M;
+            } else if (options.tolerance > 0.5M) {
+                options.tolerance = 0.5M;
+            }
+            Console.WriteLine("Clipping and general mathematical tolerance:" + options.tolerance);
+
+            if (options.arcTolerance < 0.0005M) {
+                options.arcTolerance = 0.0005M;
+            } else if (options.arcTolerance > 0.5M) {
+                options.arcTolerance = 0.5M;
+            }
+            Console.WriteLine("Arc simplification tolerance:" + options.arcTolerance);
+
+            var linearToArcTolerance = options.tolerance * 10;
+
             var inputLines = inputFile.ReadLinesAsync();
             var outputLines = inputLines.TokeniseToLine()
                 .DedupRepeatedTokens()
@@ -88,14 +104,15 @@ namespace GCodeCleanCLI
                 .InjectPreamble(Default.Preamble())
                 .Augment()
                 .ConvertArcRadiusToCenter()
-                .DedupLinearToArc(0.005M)
-                .Clip(tokenDefinitions)
+                .SimplifyShortArcs(options.arcTolerance)
+                .DedupLinearToArc(linearToArcTolerance)
+                .Clip(options.tolerance)
                 .DedupRepeatedTokens()
                 .DedupLine()
-                .DedupLinear(0.0005M)
-                .DedupLinear(0.0005M)
-                .DedupLinear(0.0005M)
-                .DedupLinear(0.0005M);
+                .DedupLinear(options.tolerance)
+                .DedupLinear(options.tolerance)
+                .DedupLinear(options.tolerance)
+                .DedupLinear(options.tolerance);
 
             var minimisationStrategy = string.IsNullOrWhiteSpace(options.minimise)
                 ? "SOFT"

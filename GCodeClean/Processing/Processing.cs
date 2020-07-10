@@ -44,19 +44,27 @@ namespace GCodeClean.Processing
             }
         }
 
-        public static async IAsyncEnumerable<Line> Clip(this IAsyncEnumerable<Line> tokenisedLines, JObject tokenDefinitions)
+        public static async IAsyncEnumerable<Line> Clip(this IAsyncEnumerable<Line> tokenisedLines, decimal tolerance = 0.0005M)
         {
-            var replacements = tokenDefinitions["replacements"];
-            var tokenDefs = tokenDefinitions["tokenDefs"];
-            var context = new Dictionary<string, string>();
+            var context = Default.Preamble();
+            var arcArguments = new [] { 'I', 'J', 'K' };
 
             await foreach (var line in tokenisedLines)
             {
+                context.Update(line, true);
+
                 if (line.IsNotCommandCodeOrArguments())
                 {
                     yield return line;
                     continue;
                 }
+
+                var unitsCommand = context.GetModalState(ModalGroup.ModalUnits);
+                if (unitsCommand == null) {
+                    yield return line;
+                    continue;
+                }
+                var lengthUnits = unitsCommand.ToString() == "G20" ? "inch" : "mm";
 
                 foreach (var token in line.Tokens)
                 {
@@ -65,39 +73,30 @@ namespace GCodeClean.Processing
                         continue;
                     }
 
-                    var replacement = (JObject)replacements[token.Source];
-                    if (replacement != null)
-                    {
-                        foreach (var (ctkey, ctvalue) in replacement)
-                        {
-                            context[ctkey] = (string)ctvalue;
-                        }
-                    }
-
-                    var wholeCode = (string)tokenDefs[token.Source];
-                    if (wholeCode != null)
-                    {
-                        continue;
-                    }
-                    var subToken = "" + token.Code;
-                    var subCode = (string)tokenDefs[subToken];
-                    if (subCode == null)
-                    {
-                        continue;
-                    }
-
                     var value = token.Number;
-                    var hasUnits = context.ContainsKey("lengthUnits");
-                    if (!(hasUnits && value.HasValue))
+                    if (!value.HasValue)
                     {
                         continue;
                     }
 
-                    // Round to 3dp for mm and 4dp for inch
-                    var clip = context["lengthUnits"] == "mm" ? 3 : 4;
-                    var clipFormat = clip == 1 ? "{0}{1:0.###}" : "{0}{1:0.####}";
+                    // Retweak tolerance to allow for lengthUnits
+                    tolerance = tolerance.ConstrainTolerance(lengthUnits);
+
+                    // Set the clipping for the token's value, based on the token's code, the tolerance and/or the lengthUnits
+                    var clip = arcArguments.Any(a => a == token.Code)
+                        ? lengthUnits == "mm" ? 3 : 4
+                        : tolerance.GetDecimalPlaces();
+
+                    var clipFormat = clip switch
+                    {
+                        3 => "{0}{1:0.###}",
+                        2 => "{0}{1:0.##}",
+                        1 => "{0}{1:0.#}",
+                        _ => "{0}{1:0.####}",
+                    };
+
                     value = Math.Round(value.Value, clip);
-                    token.Source = string.Format(clipFormat, subToken, value);
+                    token.Source = string.Format(clipFormat, token.Code, value);
                 }
 
                 yield return line;
@@ -151,6 +150,10 @@ namespace GCodeClean.Processing
                 {
                     line.RemoveTokens(new List<char> { 'X', 'Y', 'Z' });
                     line.Tokens.AddRange(previousXYZCoords.Where(pc => pc.IsArgument && pc.IsValid));
+
+                    line.Tokens.AddRange(line.RemoveTokens(new List<char> { 'I' }));
+                    line.Tokens.AddRange(line.RemoveTokens(new List<char> { 'J' }));
+                    line.Tokens.AddRange(line.RemoveTokens(new List<char> { 'K' }));
                 }
 
                 yield return line;
@@ -165,6 +168,88 @@ namespace GCodeClean.Processing
                 // }
             }
         }
+
+
+        public static async IAsyncEnumerable<Line> SimplifyShortArcs(this IAsyncEnumerable<Line> tokenisedLines, decimal arcTolerance = 0.0005M)
+        {
+            var context = Default.Preamble();
+            var previousCommand = new Token("");
+            var previousXYZCoords = new List<Token> { new Token("X"), new Token("Y"), new Token("Z") };
+            var arcArguments = new List<char> { 'I', 'J', 'K' };
+            var arcCommands = new List<Token> {
+                new Token("G2"), new Token("G3")
+            };
+
+            await foreach (var line in tokenisedLines)
+            {
+                context.Update(line, true);
+
+                if (line.IsNotCommandCodeOrArguments())
+                {
+                    yield return line;
+                    continue;
+                }
+                
+                var unitsCommand = context.GetModalState(ModalGroup.ModalUnits);
+                if (unitsCommand == null) {
+                    yield return line;
+                    continue;
+                }
+                var lengthUnits = unitsCommand.ToString() == "G20" ? "inch" : "mm";
+
+                var hasXY = line.HasTokens(new List<char> { 'X', 'Y' });
+                var hasZ = line.HasToken('Z');
+
+                if (hasXY || hasZ)
+                {
+                    if (line.HasMovementCommand())
+                    {
+                        foreach (var token in line.Tokens)
+                        {
+                            if (!ModalGroup.ModalSimpleMotion.Contains(token))
+                            {
+                                continue;
+                            }
+
+                            previousCommand = token;
+                            break;
+                        }
+                    }
+                    else if (previousCommand.IsCommand)
+                    {
+                        line.Tokens.Insert(0, previousCommand);
+                    }
+                }
+                
+                if (!line.HasTokens(arcCommands))
+                {
+                    for (var ix = 0; ix < previousXYZCoords.Count; ix++)
+                    {
+                        previousXYZCoords[ix] = line.Tokens.FirstOrDefault(t => t.Code == previousXYZCoords[ix].Code) ?? previousXYZCoords[ix];
+                    }
+
+                    yield return line;
+                    continue;
+                }
+
+                Coord coordsA = new Line(previousXYZCoords);
+                Coord coordsB = line;
+                var abDistance = (coordsA, coordsB).Distance();
+                if (abDistance <= arcTolerance) {
+                    line.RemoveTokens(arcArguments);
+                    line.RemoveTokens(arcCommands);
+                    line.Tokens.Insert(0, new Token("G1"));
+                }
+
+                for (var ix = 0; ix < previousXYZCoords.Count; ix++)
+                {
+                    previousXYZCoords[ix] = line.Tokens.FirstOrDefault(t => t.Code == previousXYZCoords[ix].Code) ?? previousXYZCoords[ix];
+                }
+
+                yield return line;
+            }
+        }
+
 
         /// <summary>
         /// Convert Arc movement commands from using R to using IJ
@@ -252,7 +337,6 @@ namespace GCodeClean.Processing
 
         public static async IAsyncEnumerable<Line> Annotate(this IAsyncEnumerable<Line> tokenisedLines, JObject tokenDefinitions)
         {
-            var replacements = tokenDefinitions["replacements"];
             var tokenDefs = tokenDefinitions["tokenDefs"];
             var context = new Dictionary<string, string>();
 
@@ -270,14 +354,7 @@ namespace GCodeClean.Processing
                 var tokenCodes = new List<string>();
                 foreach (var token in line.Tokens)
                 {
-                    var replacement = (JObject)replacements[token.ToString()];
-                    if (replacement != null)
-                    {
-                        foreach (var (key, value) in replacement)
-                        {
-                            context[key] = (string)value;
-                        }
-                    }
+                    context.BuildContext(tokenDefinitions, token);
 
                     var annotation = (string)tokenDefs[token.ToString()];
                     if (annotation is null && token.Number.HasValue)
@@ -323,6 +400,19 @@ namespace GCodeClean.Processing
                 }
 
                 yield return line;
+            }
+        }
+
+        private static void BuildContext(this Dictionary<string, string> context, JObject tokenDefinitions, Token token) {
+            var replacements = tokenDefinitions["replacements"];
+
+            var replacement = (JObject)replacements[token.Source];
+            if (replacement != null)
+            {
+                foreach (var (ctkey, ctvalue) in replacement)
+                {
+                    context[ctkey] = (string)ctvalue;
+                }
             }
         }
     }

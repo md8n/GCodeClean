@@ -46,6 +46,43 @@ namespace GCodeClean.Processing
         }
 
         /// <summary>
+        /// Get the number of decimal places in a decimal, igoring any 'significant' zeros at the end
+        /// </summary>
+        public static int GetDecimalPlaces(this decimal n)
+        {
+            n = Math.Abs(n); //make sure it is positive.
+            n -= (int)n;     //remove the integer part of the number.
+            var decimalPlaces = 0;
+            while (n > 0)
+            {
+                decimalPlaces++;
+                n *= 10;
+                n -= (int)n;
+            }
+
+            return decimalPlaces;
+        }
+
+        public static decimal ConstrainTolerance(this decimal tolerance, string lengthUnits = "mm") {
+            // Retweak tolerance to allow for lengthUnits
+            if (lengthUnits == "mm") {
+                if (tolerance < 0.005M) {
+                    tolerance = 0.005M;
+                } else if (tolerance > 0.5M) {
+                    tolerance = 0.5M;
+                }
+            } else {
+                if (tolerance < 0.0005M) {
+                    tolerance = 0.0005M;
+                } else if (tolerance > 0.05M) {
+                    tolerance = 0.05M;
+                }
+            }
+
+            return tolerance;
+        }
+
+        /// <summary>
         /// Function to find the circle on which the given three points lie
         /// </summary>
         /// <param name="a"></param>
@@ -197,12 +234,12 @@ namespace GCodeClean.Processing
             // We only calculate a circle through one orthogonal plane,
             // therefore at least one of the dimensions must be the same for both coords
             var ortho = context.GetModalState(ModalGroup.ModalPlane).ToString() switch
-                {
+            {
                 "G17" => CoordSet.Z,
                 "G18" => CoordSet.Y,
                 "G19" => CoordSet.X,
                 _ => CoordSet.None,
-                };
+            };
             if (ortho == CoordSet.None)
             {
                 ortho = Coord.Ortho(new List<Coord> { cA, cB });

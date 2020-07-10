@@ -59,7 +59,7 @@ namespace GCodeClean.Tests
                 throw;
             }
 
-            var clippedLines = await lines.Clip(tokenDefinitions).ToListAsync();
+            var clippedLines = await lines.Clip().ToListAsync();
             Assert.False(sourceLines.SequenceEqual(clippedLines));
         }
     }
