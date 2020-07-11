@@ -132,14 +132,18 @@ namespace GCodeClean.Processing
                 var lengthUnits = unitsCommand.ToString() == "G20" ? "inch" : "mm";
 
                 if (lengthUnits == "mm") {
-                    if (zClamp < 0.5M) {
+                    if (zClamp == 0M) {
+                        zClamp = 5.0M;
+                    } else if (zClamp < 0.5M) {
                         zClamp = 0.5M;
                     } else if (zClamp > 10.0M) {
                         zClamp = 10.0M;
                     }
                 } else {
-                    if (zClamp < 0.05M) {
-                        zClamp = 0.05M;
+                    if (zClamp == 0M) {
+                        zClamp = 0.2M;
+                    } else if (zClamp < 0.02M) {
+                        zClamp = 0.02M;
                     } else if (zClamp > 0.5M) {
                         zClamp = 0.5M;
                     }                    

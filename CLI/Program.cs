@@ -95,10 +95,10 @@ namespace GCodeCleanCLI
             }
             Console.WriteLine("Arc simplification tolerance:" + options.arcTolerance);
 
-            if (options.zClamp == 0M || options.zClamp > 10.0M) {
+            if (options.zClamp > 10.0M) {
                 options.zClamp = 10.0M;
-            } else if (options.zClamp < 0.05M) {
-                options.zClamp = 0.05M;
+            } else if (options.zClamp > 0 && options.zClamp < 0.02M) {
+                options.zClamp = 0.02M;
             }
             Console.WriteLine("Z-axis clamping value (max travelling height):" + options.zClamp);
 

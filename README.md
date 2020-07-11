@@ -72,9 +72,9 @@ Clean GCode file:
 
 `--arcTolerance` accepts values from 0.0005 to 0.05 for inches or 0.005 to 0.5 for millimeters and uses this value to 'simplify' very short arcs to lines.
 
-`--zClamp` accepts values from 0.05 to 0.5 for inches or 0.5 to 10.0 for millimeters and uses this value for all positive z-axis values.
+`--zClamp` accepts values from 0.02 to 0.5 for inches or 0.5 to 10.0 for millimeters and uses this value for all positive z-axis values.
 
-For the tolerance values, the smallest value (inch or mm specific) is used as the default value, whereas for clamping values the largest value is used as the default.
+For the tolerance values, the smallest value (inch or mm specific) is used as the default value, whereas for zClamp 0.2" or 5mm is used as the default.
 
 Now find yourself a gcode (`.nc`, `.gcode`, etc.) file to use for the option `--filename <filename>`.
 And replace `<filename>` with the full path to your gcode file (as per what your OS requires).
