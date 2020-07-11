@@ -5,6 +5,9 @@ The primary objective is to be a `GCode Linter`, `per line` linting of gcode is 
 
 We also have:
 * eliminating redundant lines (within tolerances),
+* converting very short arcs (G2, G3) to simple lines (G1), also within tolerances,
+* linear to arc deduplication, converting several simple lines to a single arc,
+* eliminate meaningless movement commands - especially G0 without any arguments,
 * clipping decimal places on arguments to meaningful values,
 * `per line` linting: splitting lines to match the actual execution order as per the NIST gcode spec, and then reorganising the 'words' on a line to conform to some common practices (but not all),
 * `annotate` the GCode with explanatory comments (optional),
@@ -48,6 +51,8 @@ Clean GCode file:
   --arcTolerance  Enter a tolerance for the 'point-to-point' length of arcs (G2, G3) below which 
                    they will be converted to lines (G1)
 
+  --zClamp        Restrict z-axis positive values to the supplied value
+
   --help          Display this help screen.
 
   --version       Display version information.
@@ -66,6 +71,10 @@ Clean GCode file:
 `--tolerance` accepts values from 0.0005 to 0.05 for inches or 0.005 to 0.5 for millimeters and uses this value when 'clipping' all arguments with the exception of I, J or K.
 
 `--arcTolerance` accepts values from 0.0005 to 0.05 for inches or 0.005 to 0.5 for millimeters and uses this value to 'simplify' very short arcs to lines.
+
+`--zClamp` accepts values from 0.05 to 0.5 for inches or 0.5 to 10.0 for millimeters and uses this value for all positive z-axis values.
+
+For the tolerance values, the smallest value (inch or mm specific) is used as the default value, whereas for clamping values the largest value is used as the default.
 
 Now find yourself a gcode (`.nc`, `.gcode`, etc.) file to use for the option `--filename <filename>`.
 And replace `<filename>` with the full path to your gcode file (as per what your OS requires).
@@ -226,4 +235,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgments
 
 * To all those comments I picked up out of different people's posts in Stack Overflow
-* The quality info on C# 8, and IAsyncEnumerable were invaluable.
+* The quality info on C# 8, and IAsyncEnumerable were invaluable
+* All the sample GCode files provided by the Maslow CNC community [Maslow CNC](https://forums.maslowcnc.com/)

@@ -43,66 +43,7 @@ namespace GCodeClean.Processing
                 yield return line;
             }
         }
-
-        public static async IAsyncEnumerable<Line> Clip(this IAsyncEnumerable<Line> tokenisedLines, decimal tolerance = 0.0005M)
-        {
-            var context = Default.Preamble();
-            var arcArguments = new [] { 'I', 'J', 'K' };
-
-            await foreach (var line in tokenisedLines)
-            {
-                context.Update(line, true);
-
-                if (line.IsNotCommandCodeOrArguments())
-                {
-                    yield return line;
-                    continue;
-                }
-
-                var unitsCommand = context.GetModalState(ModalGroup.ModalUnits);
-                if (unitsCommand == null) {
-                    yield return line;
-                    continue;
-                }
-                var lengthUnits = unitsCommand.ToString() == "G20" ? "inch" : "mm";
-
-                foreach (var token in line.Tokens)
-                {
-                    if (!token.IsValid)
-                    {
-                        continue;
-                    }
-
-                    var value = token.Number;
-                    if (!value.HasValue)
-                    {
-                        continue;
-                    }
-
-                    // Retweak tolerance to allow for lengthUnits
-                    tolerance = tolerance.ConstrainTolerance(lengthUnits);
-
-                    // Set the clipping for the token's value, based on the token's code, the tolerance and/or the lengthUnits
-                    var clip = arcArguments.Any(a => a == token.Code)
-                        ? lengthUnits == "mm" ? 3 : 4
-                        : tolerance.GetDecimalPlaces();
-
-                    var clipFormat = clip switch
-                    {
-                        3 => "{0}{1:0.###}",
-                        2 => "{0}{1:0.##}",
-                        1 => "{0}{1:0.#}",
-                        _ => "{0}{1:0.####}",
-                    };
-
-                    value = Math.Round(value.Value, clip);
-                    token.Source = string.Format(clipFormat, token.Code, value);
-                }
-
-                yield return line;
-            }
-        }
-
+        
         public static async IAsyncEnumerable<Line> Augment(this IAsyncEnumerable<Line> tokenisedLines)
         {
             var previousCommand = new Token("");
@@ -169,6 +110,121 @@ namespace GCodeClean.Processing
             }
         }
 
+        public static async IAsyncEnumerable<Line> ZClamp(this IAsyncEnumerable<Line> tokenisedLines, decimal zClamp = 10.0M)
+        {
+            var context = Default.Preamble();
+
+            await foreach (var line in tokenisedLines)
+            {
+                context.Update(line, true);
+
+                if (line.IsNotCommandCodeOrArguments())
+                {
+                    yield return line;
+                    continue;
+                }
+                
+                var unitsCommand = context.GetModalState(ModalGroup.ModalUnits);
+                if (unitsCommand == null) {
+                    yield return line;
+                    continue;
+                }
+                var lengthUnits = unitsCommand.ToString() == "G20" ? "inch" : "mm";
+
+                if (lengthUnits == "mm") {
+                    if (zClamp < 0.5M) {
+                        zClamp = 0.5M;
+                    } else if (zClamp > 10.0M) {
+                        zClamp = 10.0M;
+                    }
+                } else {
+                    if (zClamp < 0.05M) {
+                        zClamp = 0.05M;
+                    } else if (zClamp > 0.5M) {
+                        zClamp = 0.5M;
+                    }                    
+                }
+
+                var hasZ = line.HasToken('Z');
+                var hasTravelling = line.HasToken("G0");
+
+                if (hasZ && hasTravelling)
+                {
+                    var zTokenIndex = line.Tokens.FindIndex(t => t.Code == 'Z');
+
+                    if (line.Tokens[zTokenIndex].Number > 0) {
+                        line.Tokens[zTokenIndex].Number = zClamp;
+                    }
+                }
+
+                yield return line;
+            }
+        }
+
+        /// <summary>
+        /// Convert Arc movement commands from using R to using IJ
+        /// </summary>
+        /// <param name="tokenisedLines"></param>
+        /// <returns></returns>
+        public static async IAsyncEnumerable<Line> ConvertArcRadiusToCenter(this IAsyncEnumerable<Line> tokenisedLines)
+        {
+            var previousCoords = new Coord();
+            var context = Default.Preamble();
+
+            var clockwiseMovementToken = new Token("G2");
+
+            await foreach (var line in tokenisedLines)
+            {
+                context.Update(line, true);
+                var hasMovement = line.HasMovementCommand();
+                if (!hasMovement)
+                {
+                    yield return line;
+                    continue;
+                }
+
+                Coord coords = line;
+                if (!previousCoords.HasCoordPair())
+                {
+                    // Some movement command, and we're at a 'start'
+                    previousCoords = Coord.Merge(previousCoords, coords, true);
+
+                    yield return line;
+                    continue;
+                }
+
+                var radius = line.Tokens.FirstOrDefault(t => t.Code == 'R')?.Number;
+                if (!radius.HasValue || !coords.HasCoordPair())
+                {
+                    previousCoords = Coord.Merge(previousCoords, coords, true);
+
+                    yield return line;
+                    continue;
+                }
+
+                var intersections = Utility.FindIntersections(coords, previousCoords, radius.Value, context);
+                switch (intersections.Count)
+                {
+                    case 0:
+                        // malformed Arc Radius
+                        previousCoords = Coord.Merge(previousCoords, coords, true);
+
+                        yield return line;
+                        continue;
+                    case 2:
+                    {
+                        var isClockwise = line.Tokens.Contains(clockwiseMovementToken);
+                        var isClockwiseIntersection = Utility.DirectionOfPoint(previousCoords.ToPointF(), coords.ToPointF(), intersections[0].ToPointF()) < 0;
+
+                        intersections.RemoveAt(isClockwise != isClockwiseIntersection ? 0 : 1);
+                        break;
+                    }
+                }
+
+                previousCoords = Coord.Merge(previousCoords, coords, true);
+                yield return line.ArcRadiusToCenter(previousCoords, intersections[0]);
+            }
+        }
 
         public static async IAsyncEnumerable<Line> SimplifyShortArcs(this IAsyncEnumerable<Line> tokenisedLines, decimal arcTolerance = 0.0005M)
         {
@@ -250,89 +306,63 @@ namespace GCodeClean.Processing
             }
         }
 
-
-        /// <summary>
-        /// Convert Arc movement commands from using R to using IJ
-        /// </summary>
-        /// <param name="tokenisedLines"></param>
-        /// <returns></returns>
-        public static async IAsyncEnumerable<Line> ConvertArcRadiusToCenter(this IAsyncEnumerable<Line> tokenisedLines)
+        public static async IAsyncEnumerable<Line> Clip(this IAsyncEnumerable<Line> tokenisedLines, decimal tolerance = 0.0005M)
         {
-            var previousCoords = new Coord();
             var context = Default.Preamble();
-
-            var clockwiseMovementToken = new Token("G2");
+            var arcArguments = new [] { 'I', 'J', 'K' };
 
             await foreach (var line in tokenisedLines)
             {
                 context.Update(line, true);
-                var hasMovement = line.HasMovementCommand();
-                if (!hasMovement)
+
+                if (line.IsNotCommandCodeOrArguments())
                 {
                     yield return line;
                     continue;
                 }
 
-                Coord coords = line;
-                if (!previousCoords.HasCoordPair())
-                {
-                    // Some movement command, and we're at a 'start'
-                    previousCoords = Coord.Merge(previousCoords, coords, true);
-
+                var unitsCommand = context.GetModalState(ModalGroup.ModalUnits);
+                if (unitsCommand == null) {
                     yield return line;
                     continue;
                 }
+                var lengthUnits = unitsCommand.ToString() == "G20" ? "inch" : "mm";
 
-                var radius = line.Tokens.FirstOrDefault(t => t.Code == 'R')?.Number;
-                if (!radius.HasValue || !coords.HasCoordPair())
+                foreach (var token in line.Tokens)
                 {
-                    previousCoords = Coord.Merge(previousCoords, coords, true);
-
-                    yield return line;
-                    continue;
-                }
-
-                var intersections = Utility.FindIntersections(coords, previousCoords, radius.Value, context);
-                switch (intersections.Count)
-                {
-                    case 0:
-                        // malformed Arc Radius
-                        previousCoords = Coord.Merge(previousCoords, coords, true);
-
-                        yield return line;
-                        continue;
-                    case 2:
+                    if (!token.IsValid)
                     {
-                        var isClockwise = line.Tokens.Contains(clockwiseMovementToken);
-                        var isClockwiseIntersection = Utility.DirectionOfPoint(previousCoords.ToPointF(), coords.ToPointF(), intersections[0].ToPointF()) < 0;
-
-                        intersections.RemoveAt(isClockwise != isClockwiseIntersection ? 0 : 1);
-                        break;
+                        continue;
                     }
+
+                    var value = token.Number;
+                    if (!value.HasValue)
+                    {
+                        continue;
+                    }
+
+                    // Retweak tolerance to allow for lengthUnits
+                    tolerance = tolerance.ConstrainTolerance(lengthUnits);
+
+                    // Set the clipping for the token's value, based on the token's code, the tolerance and/or the lengthUnits
+                    var clip = arcArguments.Any(a => a == token.Code)
+                        ? lengthUnits == "mm" ? 3 : 4
+                        : tolerance.GetDecimalPlaces();
+
+                    var clipFormat = clip switch
+                    {
+                        3 => "{0}{1:0.###}",
+                        2 => "{0}{1:0.##}",
+                        1 => "{0}{1:0.#}",
+                        _ => "{0}{1:0.####}",
+                    };
+
+                    value = Math.Round(value.Value, clip);
+                    token.Source = string.Format(clipFormat, token.Code, value);
                 }
 
-                previousCoords = Coord.Merge(previousCoords, coords, true);
-                yield return line.ArcRadiusToCenter(previousCoords, intersections[0]);
+                yield return line;
             }
-        }
-
-        private static Line ArcRadiusToCenter(this Line lineB, Coord coordsA, Coord center) {
-            lineB.RemoveTokens(new List<char>() { 'R'});
-
-            if ((center.Set & CoordSet.X) == CoordSet.X && (coordsA.Set & CoordSet.X) == CoordSet.X)
-            {
-                lineB.Tokens.Add(new Token($"I{center.X - coordsA.X:0.####}"));
-            }
-            if ((center.Set & CoordSet.Y) == CoordSet.Y && (coordsA.Set & CoordSet.Y) == CoordSet.Y)
-            {
-                lineB.Tokens.Add(new Token($"J{center.Y - coordsA.Y:0.####}"));
-            }
-            if ((center.Set & CoordSet.Z) == CoordSet.Z && (coordsA.Set & CoordSet.Z) == CoordSet.Z)
-            {
-                lineB.Tokens.Add(new Token($"K{center.Z - coordsA.Z:0.####}"));
-            }
-
-            return lineB;
         }
 
         public static async IAsyncEnumerable<Line> Annotate(this IAsyncEnumerable<Line> tokenisedLines, JObject tokenDefinitions)
@@ -401,6 +431,25 @@ namespace GCodeClean.Processing
 
                 yield return line;
             }
+        }
+
+        private static Line ArcRadiusToCenter(this Line lineB, Coord coordsA, Coord center) {
+            lineB.RemoveTokens(new List<char>() { 'R'});
+
+            if ((center.Set & CoordSet.X) == CoordSet.X && (coordsA.Set & CoordSet.X) == CoordSet.X)
+            {
+                lineB.Tokens.Add(new Token($"I{center.X - coordsA.X:0.####}"));
+            }
+            if ((center.Set & CoordSet.Y) == CoordSet.Y && (coordsA.Set & CoordSet.Y) == CoordSet.Y)
+            {
+                lineB.Tokens.Add(new Token($"J{center.Y - coordsA.Y:0.####}"));
+            }
+            if ((center.Set & CoordSet.Z) == CoordSet.Z && (coordsA.Set & CoordSet.Z) == CoordSet.Z)
+            {
+                lineB.Tokens.Add(new Token($"K{center.Z - coordsA.Z:0.####}"));
+            }
+
+            return lineB;
         }
 
         private static void BuildContext(this Dictionary<string, string> context, JObject tokenDefinitions, Token token) {

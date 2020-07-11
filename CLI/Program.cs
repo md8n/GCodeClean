@@ -95,6 +95,15 @@ namespace GCodeCleanCLI
             }
             Console.WriteLine("Arc simplification tolerance:" + options.arcTolerance);
 
+            if (options.zClamp == 0M || options.zClamp > 10.0M) {
+                options.zClamp = 10.0M;
+            } else if (options.zClamp < 0.05M) {
+                options.zClamp = 0.05M;
+            }
+            Console.WriteLine("Z-axis clamping value (max travelling height):" + options.zClamp);
+
+            Console.WriteLine("All tolerance and clamping values may be further adjusted to allow for inches vs. millimeters");
+
             var linearToArcTolerance = options.tolerance * 10;
 
             var inputLines = inputFile.ReadLinesAsync();
@@ -103,6 +112,7 @@ namespace GCodeCleanCLI
                 .SingleCommandPerLine()
                 .InjectPreamble(Default.Preamble())
                 .Augment()
+                .ZClamp(options.zClamp)
                 .ConvertArcRadiusToCenter()
                 .SimplifyShortArcs(options.arcTolerance)
                 .DedupLinearToArc(linearToArcTolerance)

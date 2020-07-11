@@ -28,6 +28,9 @@ namespace GCodeCleanCLI
         [Option("arcTolerance", Required = false, HelpText = "Enter a tolerance for the 'point-to-point' length of arcs (G2, G3) below which they will be converted to lines (G1)")]
         public decimal arcTolerance { get; set; }
 
+        [Option("zClamp", Required = false, HelpText = "Restrict z-axis positive values to the supplied value")]
+        public decimal zClamp { get; set; }
+
         [Usage(ApplicationAlias = "GCodeClean")]
         public static IEnumerable<Example> Examples => new List<Example> {
             new Example("Clean GCode file", new Options { filename = "facade.nc" })
