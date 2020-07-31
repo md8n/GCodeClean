@@ -100,29 +100,33 @@ namespace GCodeCleanCLI
             } else if (options.zClamp > 0 && options.zClamp < 0.02M) {
                 options.zClamp = 0.02M;
             }
-            Console.WriteLine("Z-axis clamping value (max travelling height):" + options.zClamp);
+            Console.WriteLine("Z-axis clamping value (max traveling height):" + options.zClamp);
 
             Console.WriteLine("All tolerance and clamping values may be further adjusted to allow for inches vs. millimeters");
 
             var linearToArcTolerance = options.tolerance * 10;
+            var context = Default.Preamble();
 
             var inputLines = inputFile.ReadLinesAsync();
             var outputLines = inputLines.TokeniseToLine()
+                //.EliminateLineNumbers()
                 .DedupRepeatedTokens()
                 .SingleCommandPerLine()
-                .InjectPreamble(Default.Preamble())
+                .InjectPreamble(context)
                 .Augment()
-                .ZClamp(options.zClamp)
-                .ConvertArcRadiusToCenter()
-                .SimplifyShortArcs(options.arcTolerance)
-                .DedupLinearToArc(linearToArcTolerance)
-                .Clip(options.tolerance)
+                .ZClamp(context, options.zClamp)
+                .ConvertArcRadiusToCenter(context)
+                .DedupLine()
+                .SimplifyShortArcs(context, options.arcTolerance)
+                .DedupLinearToArc(context, linearToArcTolerance)
+                .Clip(context, options.tolerance)
                 .DedupRepeatedTokens()
                 .DedupLine()
                 .DedupLinear(options.tolerance)
                 .DedupLinear(options.tolerance)
                 .DedupLinear(options.tolerance)
-                .DedupLinear(options.tolerance);
+                .DedupLinear(options.tolerance)
+                ;
 
             var minimisationStrategy = string.IsNullOrWhiteSpace(options.minimise)
                 ? "SOFT"

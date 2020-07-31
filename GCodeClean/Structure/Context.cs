@@ -180,7 +180,7 @@ namespace GCodeClean.Structure
         //        return;
         //    }
 
-        //    // This is a bitflag: 0 = not set, 1 = M7, 2 = M8, 4 = M9
+        //    // This is a bit flag: 0 = not set, 1 = M7, 2 = M8, 4 = M9
         //    // It is determined by going backwards through the line
         //    var coolantState = 0;
         //    for (var ix = lineTokens.Count - 1; ix >= 0; ix--)

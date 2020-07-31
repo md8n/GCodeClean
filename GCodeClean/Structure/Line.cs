@@ -12,7 +12,34 @@ namespace GCodeClean.Structure
     {
         private string _source;
 
-        public List<Token> Tokens { get; set; }
+        private List<Token> _tokens;
+
+        /// <summary>
+        /// Get/Set  the current list of all Tokens, get includes any line number token
+        /// </summary>
+        public List<Token> AllTokens
+        {
+            get
+            {
+                // Always manipulate the returned list of tokens to put any line number first
+                // Even though we are doing this below in the set
+                return _tokens.Where(t => t.IsLineNumber).Take(1).Concat(_tokens.Where(t => !t.IsLineNumber)).ToList();
+            }
+            set
+            {
+                _tokens = value.Where(t => t.IsLineNumber).Take(1).Concat(value.Where(t => !t.IsLineNumber)).ToList();
+            }
+        }
+
+        /// <summary>
+        /// Gets the current list of Tokens, does not include any line number token.
+        /// </summary>
+        public List<Token> Tokens {
+            get
+            {
+                return _tokens.Where(t => !t.IsLineNumber).ToList();
+            }
+        }
 
         public string Source
         {
@@ -23,10 +50,11 @@ namespace GCodeClean.Structure
 
                 IsValid = true;
                 IsFileTerminator = false;
+                HasLineNumber = false;
 
-                if (Tokens is null)
+                if (_tokens is null)
                 {
-                    Tokens = new List<Token>();
+                    _tokens = new List<Token>();
                 }
 
                 if (string.IsNullOrWhiteSpace(_source))
@@ -35,27 +63,23 @@ namespace GCodeClean.Structure
                     return;
                 }
 
-                var stringTokens = _source.Tokenise();
-                foreach (var stringToken in stringTokens)
-                {
-                    Tokens.Add(new Token(stringToken));
-                }
+                AllTokens = _source.Tokenise().Select(s => new Token(s)).ToList();
 
                 if (Tokens.Any(t => t.IsFileTerminator))
                 {
                     // Check the file terminator character is the only thing on the line
                     IsFileTerminator = true;
-                    IsValid = Tokens.Count > 1;
+                    IsValid = Tokens.Count == 1;
                     return;
                 }
 
-                if (Tokens.All(t => t.Code != 'N') || Tokens[0].Code == 'N')
+                if (!AllTokens.Any(t => t.IsLineNumber))
                 {
                     return;
                 }
 
-                // If there's a line number, make sure it is the first token on the line
-                IsValid = false;
+                // We have a line number
+                HasLineNumber = true;
             }
         }
 
@@ -65,9 +89,11 @@ namespace GCodeClean.Structure
 
         public bool IsValid { get; private set; }
 
+        public bool HasLineNumber { get; private set; }
+
         public bool HasTokens(List<char> codes)
         {
-            return Tokens.Any(t => codes.Contains(t.Code));
+            return AllTokens.Any(t => codes.Contains(t.Code));
         }
 
         public bool HasTokens(IEnumerable<string> tokens)
@@ -78,12 +104,12 @@ namespace GCodeClean.Structure
 
         public bool HasTokens(IEnumerable<Token> tokens)
         {
-            return Tokens.Any(tokens.Contains);
+            return AllTokens.Any(tokens.Contains);
         }
 
         public bool HasToken(char code)
         {
-            return Tokens.Any(t => t.Code == code);
+            return AllTokens.Any(t => t.Code == code);
         }
 
         public bool HasToken(string token)
@@ -94,7 +120,7 @@ namespace GCodeClean.Structure
 
         public bool HasToken(Token token)
         {
-            return Tokens.Any(t => t == token);
+            return AllTokens.Any(t => t == token);
         }
 
         /// <summary>
@@ -105,15 +131,16 @@ namespace GCodeClean.Structure
         /// </summary>
         public bool IsNotCommandCodeOrArguments()
         {
-            return Tokens.Count == 0 || Tokens.All(t => t.IsFileTerminator) || Tokens.All(t => t.IsComment);
+            return AllTokens.Count == 0 || AllTokens.All(t => t.IsFileTerminator) || AllTokens.All(t => t.IsComment);
         }
 
         /// <summary>
-        /// This returns true if there are one or more Arguments but no Commands or Codes, comments and codes are ignored for this test
+        /// This returns true if there are one or more Arguments but no Commands or Codes.
+        /// Line numbers, comments, codes are ignored for this test
         /// </summary>
         public bool IsArgumentsOnly()
         {
-            if (this.IsNotCommandCodeOrArguments())
+            if (IsNotCommandCodeOrArguments())
             {
                 return false;
             }
@@ -154,19 +181,44 @@ namespace GCodeClean.Structure
             Source = string.Join(' ', tokens);
         }
 
+        public void ClearTokens()
+        {
+            _tokens.Clear();
+        }
+
+        public void PrependToken(Token token)
+        {
+            _tokens.Insert(0, token);
+
+            // This little hack handles situations where we have an existing line number
+            // If the supplied token is a line number, then the existing line number will be eliminated
+            // If the supplied toke is not a line number, then it will end up immediately after any line number
+            _tokens = AllTokens;
+        }
+
+        public void AppendToken(Token token)
+        {
+            _tokens.Add(token);
+        }
+
+        public void AppendTokens(IEnumerable<Token> tokens)
+        {
+            _tokens.AddRange(tokens);
+        }
+
         public List<Token> RemoveTokens(List<char> codes)
         {
             var removedTokens = new List<Token>();
 
-            for (var ix = Tokens.Count - 1; ix >= 0; ix--)
+            for (var ix = _tokens.Count - 1; ix >= 0; ix--)
             {
-                if (!codes.Contains(Tokens[ix].Code))
+                if (!codes.Contains(_tokens[ix].Code))
                 {
                     continue;
                 }
 
-                removedTokens.Add(Tokens[ix]);
-                Tokens.RemoveAt(ix);
+                removedTokens.Add(_tokens[ix]);
+                _tokens.RemoveAt(ix);
             }
 
             return removedTokens;
@@ -176,46 +228,49 @@ namespace GCodeClean.Structure
         {
             var removedTokens = new List<Token>();
 
-            for (var ix = Tokens.Count - 1; ix >= 0; ix--)
+            for (var ix = _tokens.Count - 1; ix >= 0; ix--)
             {
-                if (!tokens.Contains(Tokens[ix]))
+                if (!tokens.Contains(_tokens[ix]))
                 {
                     continue;
                 }
 
-                removedTokens.Add(Tokens[ix]);
-                Tokens.RemoveAt(ix);
+                removedTokens.Add(_tokens[ix]);
+                _tokens.RemoveAt(ix);
             }
 
             return removedTokens;
         }
 
         /// <summary>
-        /// Compares two lines to ensure they are `compatible`
+        /// Compares two lines to ensure they are `compatible`.
+        /// Ignores any line number tokens
         /// </summary>
         public bool IsCompatible(Line lineB)
         {
-            if (Tokens.Count != lineB.Tokens.Count)
+            var aTokens = Tokens;
+            var bTokens = lineB.Tokens;
+            if (aTokens.Count != bTokens.Count)
             {
                 return false;
             }
 
             var isCompatible = true;
-            for (var ix = 0; ix < lineB.Tokens.Count; ix++)
+            for (var ix = 0; ix < bTokens.Count; ix++)
             {
-                if (Tokens[ix].Code != lineB.Tokens[ix].Code)
+                if (aTokens[ix].Code != bTokens[ix].Code)
                 {
                     isCompatible = false;
                     break;
                 }
 
-                if (Tokens[ix].Code != 'G' && Tokens[ix].Code != 'M')
+                if (aTokens[ix].Code != 'G' && aTokens[ix].Code != 'M')
                 {
                     continue;
                 }
 
                 // For 'Commands' the whole thing must be the same
-                if (Tokens[ix] == lineB.Tokens[ix])
+                if (aTokens[ix] == bTokens[ix])
                 {
                     continue;
                 }
@@ -257,6 +312,13 @@ namespace GCodeClean.Structure
             return coords;
         }
 
+        /// <summary>
+        /// Compare two lines for equality.
+        /// Note that line numbers are not included in the comparison
+        /// </summary>
+        /// <param name="a"></param>
+        /// <param name="b"></param>
+        /// <returns></returns>
         public static bool operator ==(Line a, Line b)
         {
             if (a is null || b is null)
@@ -290,7 +352,7 @@ namespace GCodeClean.Structure
         
         public override string ToString()
         {
-            return string.Join(" ", Tokens);
+            return string.Join(" ", AllTokens).Trim();
         }
     }
 }

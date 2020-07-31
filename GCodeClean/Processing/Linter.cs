@@ -31,7 +31,7 @@ namespace GCodeClean.Processing
 
                 // 1A. line numbers - we'll prepend these to the first set of yieldableTokens we return
                 (currentLine, yieldableLines) = currentLine.SplitOutSelectedCode('N');
-                var lineNumberToken = yieldableLines.Count > 0 ? yieldableLines.First().Tokens.First() : new Token("");
+                var lineNumberToken = yieldableLines.Count > 0 ? yieldableLines.First().AllTokens.First() : new Token("");
 
                 // 2. set feed rate mode (G93, G94 — inverse time or per minute).
                 (currentLine, yieldableLines) = currentLine.SplitOutSelectedCommands(ModalGroup.ModalFeedRate);
@@ -119,12 +119,12 @@ namespace GCodeClean.Processing
                 if (yieldableLines.Count > 0)
                 {
                     // Note that any G53 will be appended here
-                    currentLine.Tokens = yieldableLines[0].Tokens.Concat(currentLine.Tokens).ToList();
+                    currentLine.AllTokens = yieldableLines[0].AllTokens.Concat(currentLine.Tokens).ToList();
                 }
 
                 // Motion commands without arguments are invalid (and should be discarded)
                 if (currentLine.Tokens.Count == 1 && ModalGroup.ModalSimpleMotion.Contains(currentLine.Tokens[0])) {
-                    currentLine.Tokens.Clear();
+                    currentLine.ClearTokens();
                 }
 
                 // Specifically not handled are the 'Home' commands G28 and G30
@@ -150,14 +150,16 @@ namespace GCodeClean.Processing
         private static (List<Line> yieldingLines, Token lineNumberToken) BuildYieldingLines(
             this List<Line> yieldingLines, IReadOnlyList<Line> yieldableLines, Token lineNumberToken)
         {
-            if (yieldableLines.Count > 0)
+            if (yieldableLines.Count <= 0)
             {
-                if (lineNumberToken.IsValid) {
-                    yieldableLines[0].Tokens.Insert(0, lineNumberToken);
-                    lineNumberToken.Source = "";
-                }
-                yieldingLines = yieldingLines.Concat(yieldableLines).ToList();
+                return (yieldingLines, lineNumberToken);
             }
+
+            if (lineNumberToken.IsValid) {
+                yieldableLines[0].PrependToken(lineNumberToken);
+                lineNumberToken.Source = "";
+            }
+            yieldingLines = yieldingLines.Concat(yieldableLines).ToList();
 
             return (yieldingLines, lineNumberToken);
         }
@@ -165,14 +167,14 @@ namespace GCodeClean.Processing
         private static (Line line, List<Line> yieldableLines) SplitOutSelectedCode(this Line line, char code)
         {
             var yieldableLines = new List<Line>();
-            var selectedTokens = line.Tokens.Where(t => t.Code == code).ToList();
+            var selectedTokens = line.AllTokens.Where(t => t.Code == code).ToList();
             if (selectedTokens.Count <= 0)
             {
                 return (line, yieldableLines);
             }
 
             yieldableLines.Add(new Line ( selectedTokens.Last().ToString() ));
-            line.Tokens = line.Tokens.Where(t => t.Code != code).ToList();
+            line.AllTokens = line.AllTokens.Where(t => t.Code != code).ToList();
 
             return (line, yieldableLines);
         }
@@ -187,7 +189,7 @@ namespace GCodeClean.Processing
         private static (Line line, List<Line> yieldableLines) SplitOutSelectedCommands(this Line line, ICollection<Token> commands)
         {
             var yieldableLines = new List<Line>();
-            var selectedTokens = line.Tokens.Intersect(commands).ToList();
+            var selectedTokens = line.AllTokens.Intersect(commands).ToList();
             if (selectedTokens.Count <= 0)
             {
                 return (line, yieldableLines);
@@ -197,7 +199,7 @@ namespace GCodeClean.Processing
             {
                 yieldableLines.Add(new Line (selectedToken));
             }
-            line.Tokens = line.Tokens.Except(commands).ToList();
+            line.AllTokens = line.AllTokens.Except(commands).ToList();
 
             return (line, yieldableLines);
         }

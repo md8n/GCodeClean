@@ -20,23 +20,39 @@ namespace GCodeClean.Processing
             }
         }
 
+        public static async IAsyncEnumerable<Line> EliminateLineNumbers(this IAsyncEnumerable<Line> tokenisedLines) {
+            await foreach (var line in tokenisedLines) {
+                line.RemoveTokens(new List<char>{'N'});
+                yield return line;
+            }
+        }
+
         public static List<string> Tokenise(this string line) {
             var tokens = new List<string>();
+            var matches = Regex.Matches(line, Pattern, RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture);
 
-            foreach (Match match in Regex.Matches(line, Pattern, RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture))
+            foreach (Match match in matches)
             {
-                var token = match.Value.Trim();
-                // if this isn't a comment or file terminator then strip out all spaces
-                if (!token.StartsWith('(') && !token.StartsWith('%') && !token.StartsWith(';')) {
-                    token = token.Replace(" ", "");
-                    if (token.Length == 1 || !decimal.TryParse(token.Substring(1), out var _))
-                    {
-                        // Invalid command or argument - doesn't have a valid number
+                var groupCtr = 0;
+                foreach(Group group in match.Groups) {
+                    if (group.Name == groupCtr.ToString() || !group.Success) {
                         continue;
                     }
-                    token = token.ToUpperInvariant();
+                    groupCtr++;
+
+                    var token = group.Value.Trim();
+                    // if this isn't a comment or file terminator then strip out all spaces
+                    if (!token.StartsWith('(') && !token.StartsWith('%') && !token.StartsWith(';')) {
+                        token = token.Replace(" ", "");
+                        if (token.Length == 1 || !decimal.TryParse(token.Substring(1), out var _))
+                        {
+                            // Invalid command or argument - doesn't have a valid number
+                            continue;
+                        }
+                        token = token.ToUpperInvariant();
+                    }
+                    tokens.Add(token);
                 }
-                tokens.Add(token);
             }
 
             return tokens;
@@ -47,7 +63,7 @@ namespace GCodeClean.Processing
             var prevLine = "";
             var joiner = minimisationStrategy == "HARD" ? "" : " ";
             await foreach (var line in tokenisedLines) {
-                var joinedLine = string.Join(joiner, line.Tokens);
+                var joinedLine = string.Join(joiner, line.AllTokens);
                 if (string.IsNullOrWhiteSpace(joinedLine) && isFirstLine) {
                     continue;
                 }

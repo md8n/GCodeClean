@@ -32,7 +32,7 @@ namespace GCodeClean.Processing
         /// </summary>
         public static async IAsyncEnumerable<Line> DedupRepeatedTokens(this IAsyncEnumerable<Line> tokenisedLines) {
             await foreach (var line in tokenisedLines) {
-                line.Tokens = line.Tokens.Distinct().ToList();
+                line.AllTokens = line.AllTokens.Distinct().ToList();
                 yield return line;
             }
         }
@@ -177,7 +177,7 @@ namespace GCodeClean.Processing
         /// Testing whether A -> B -> C can be fitted to an arc
         /// and eliminating B if that's the case
         /// </summary>
-        public static async IAsyncEnumerable<Line> DedupLinearToArc(this IAsyncEnumerable<Line> tokenisedLines, decimal tolerance) {
+        public static async IAsyncEnumerable<Line> DedupLinearToArc(this IAsyncEnumerable<Line> tokenisedLines, Context context, decimal tolerance) {
             var lineA = new Line();
             var lineB = new Line();
             var isLineASet = false;
@@ -187,8 +187,6 @@ namespace GCodeClean.Processing
             var prevCenter = new Coord();
             var prevRadius = 0M;
             var prevIsClockwise = false;
-
-            var context = Default.Preamble();
 
             var linearMovementToken = new Token("G1");
 
@@ -421,47 +419,47 @@ namespace GCodeClean.Processing
             }
 
             var linearMovementToken = new Token("G1");
-            for (var ix = 0; ix < lineB.Tokens.Count; ix++)
+            for (var ix = 0; ix < lineB.AllTokens.Count; ix++)
             {
-                if (lineB.Tokens[ix] != linearMovementToken)
+                if (lineB.AllTokens[ix] != linearMovementToken)
                 {
                     continue;
                 }
 
-                lineB.Tokens[ix] = new Token(prevIsClockwise ? "G2" : "G3");
+                lineB.AllTokens[ix] = new Token(prevIsClockwise ? "G2" : "G3");
                 break;
             }
 
             switch (modalPlace)
             {
                 case "G17":
-                    lineB.Tokens.Add(new Token($"I{prevCenter.X - coordsA.X:0.####}"));
-                    lineB.Tokens.Add(new Token($"J{prevCenter.Y - coordsA.Y:0.####}"));
+                    lineB.AppendToken(new Token($"I{prevCenter.X - coordsA.X:0.####}"));
+                    lineB.AppendToken(new Token($"J{prevCenter.Y - coordsA.Y:0.####}"));
                     if (addK && prevCenter.Z - coordsA.Z != 0)
                     {
-                        lineB.Tokens.Add(new Token($"K{prevCenter.Z - coordsA.Z:0.####}"));
+                        lineB.AppendToken(new Token($"K{prevCenter.Z - coordsA.Z:0.####}"));
                     }
                     break;
                 case "G18":
-                    lineB.Tokens.Add(new Token($"I{prevCenter.X - coordsA.X:0.####}"));
+                    lineB.AppendToken(new Token($"I{prevCenter.X - coordsA.X:0.####}"));
                     if (addJ && prevCenter.Y - coordsA.Y != 0)
                     {
-                        lineB.Tokens.Add(new Token($"J{prevCenter.Y - coordsA.Y:0.####}"));
+                        lineB.AppendToken(new Token($"J{prevCenter.Y - coordsA.Y:0.####}"));
                     }
-                    lineB.Tokens.Add(new Token($"K{prevCenter.Z - coordsA.Z:0.####}"));
+                    lineB.AppendToken(new Token($"K{prevCenter.Z - coordsA.Z:0.####}"));
                     break;
                 case "G19":
                     if (addI && prevCenter.X - coordsA.X != 0)
                     {
-                        lineB.Tokens.Add(new Token($"I{prevCenter.X - coordsA.X:0.####}"));
+                        lineB.AppendToken(new Token($"I{prevCenter.X - coordsA.X:0.####}"));
                     }
-                    lineB.Tokens.Add(new Token($"J{prevCenter.Y - coordsA.Y:0.####}"));
-                    lineB.Tokens.Add(new Token($"K{prevCenter.Z - coordsA.Z:0.####}"));
+                    lineB.AppendToken(new Token($"J{prevCenter.Y - coordsA.Y:0.####}"));
+                    lineB.AppendToken(new Token($"K{prevCenter.Z - coordsA.Z:0.####}"));
                     break;
                 default:
-                    lineB.Tokens.Add(new Token($"I{prevCenter.X - coordsA.X:0.####}"));
-                    lineB.Tokens.Add(new Token($"J{prevCenter.Y - coordsA.Y:0.####}"));
-                    lineB.Tokens.Add(new Token($"K{prevCenter.Z - coordsA.Z:0.####}"));
+                    lineB.AppendToken(new Token($"I{prevCenter.X - coordsA.X:0.####}"));
+                    lineB.AppendToken(new Token($"J{prevCenter.Y - coordsA.Y:0.####}"));
+                    lineB.AppendToken(new Token($"K{prevCenter.Z - coordsA.Z:0.####}"));
                     break;
             }
 
@@ -480,7 +478,7 @@ namespace GCodeClean.Processing
                 line.RemoveTokens(previousSelectedTokens);
 
                 for (var ix = 0; ix < previousSelectedTokens.Count; ix++) {
-                    var newToken = line.Tokens.FirstOrDefault(t => t.Code == previousSelectedTokens[ix].Code);
+                    var newToken = line.AllTokens.FirstOrDefault(t => t.Code == previousSelectedTokens[ix].Code);
                     if (newToken != null) {
                         previousSelectedTokens[ix] = newToken;
                     }
@@ -488,7 +486,7 @@ namespace GCodeClean.Processing
 
                 if (line.Tokens.Count == 0)
                 {
-                    // The whole line was eliminated as a duplicate - silently drop it
+                    // The whole line (ignoring line numbers) was eliminated as a duplicate - silently drop it
                     continue;
                 }
 

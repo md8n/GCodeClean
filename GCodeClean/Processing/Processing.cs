@@ -77,7 +77,7 @@ namespace GCodeClean.Processing
                     }
                     else if (previousCommand.IsCommand)
                     {
-                        line.Tokens.Insert(0, previousCommand);
+                        line.PrependToken(previousCommand);
                     }
                 }
 
@@ -90,11 +90,11 @@ namespace GCodeClean.Processing
                 if (hasXY || hasZ)
                 {
                     line.RemoveTokens(new List<char> { 'X', 'Y', 'Z' });
-                    line.Tokens.AddRange(previousXYZCoords.Where(pc => pc.IsArgument && pc.IsValid));
+                    line.AppendTokens(previousXYZCoords.Where(pc => pc.IsArgument && pc.IsValid));
 
-                    line.Tokens.AddRange(line.RemoveTokens(new List<char> { 'I' }));
-                    line.Tokens.AddRange(line.RemoveTokens(new List<char> { 'J' }));
-                    line.Tokens.AddRange(line.RemoveTokens(new List<char> { 'K' }));
+                    line.AppendTokens(line.RemoveTokens(new List<char> { 'I' }));
+                    line.AppendTokens(line.RemoveTokens(new List<char> { 'J' }));
+                    line.AppendTokens(line.RemoveTokens(new List<char> { 'K' }));
                 }
 
                 yield return line;
@@ -110,10 +110,8 @@ namespace GCodeClean.Processing
             }
         }
 
-        public static async IAsyncEnumerable<Line> ZClamp(this IAsyncEnumerable<Line> tokenisedLines, decimal zClamp = 10.0M)
+        public static async IAsyncEnumerable<Line> ZClamp(this IAsyncEnumerable<Line> tokenisedLines, Context context, decimal zClamp = 10.0M)
         {
-            var context = Default.Preamble();
-
             await foreach (var line in tokenisedLines)
             {
                 context.Update(line, true);
@@ -150,14 +148,20 @@ namespace GCodeClean.Processing
                 }
 
                 var hasZ = line.HasToken('Z');
-                var hasTravelling = line.HasToken("G0");
+                var hasTraveling = line.HasTokens(ModalGroup.ModalSimpleMotion);
 
-                if (hasZ && hasTravelling)
+                if (hasZ && hasTraveling)
                 {
-                    var zTokenIndex = line.Tokens.FindIndex(t => t.Code == 'Z');
+                    foreach (var travelingToken in line.AllTokens.Intersect(ModalGroup.ModalSimpleMotion))
+                    {
+                        // If Z > 0 then the motion should be G0 
+                        travelingToken.Source = "G0";
+                    }
 
-                    if (line.Tokens[zTokenIndex].Number > 0) {
-                        line.Tokens[zTokenIndex].Number = zClamp;
+                    var zTokenIndex = line.AllTokens.FindIndex(t => t.Code == 'Z');
+
+                    if (line.AllTokens[zTokenIndex].Number > 0) {
+                        line.AllTokens[zTokenIndex].Number = zClamp;
                     }
                 }
 
@@ -169,11 +173,11 @@ namespace GCodeClean.Processing
         /// Convert Arc movement commands from using R to using IJ
         /// </summary>
         /// <param name="tokenisedLines"></param>
+        /// <param name="context">The initial 'context' for processing, normally this will be Default.Preamble()</param>
         /// <returns></returns>
-        public static async IAsyncEnumerable<Line> ConvertArcRadiusToCenter(this IAsyncEnumerable<Line> tokenisedLines)
+        public static async IAsyncEnumerable<Line> ConvertArcRadiusToCenter(this IAsyncEnumerable<Line> tokenisedLines, Context context)
         {
             var previousCoords = new Coord();
-            var context = Default.Preamble();
 
             var clockwiseMovementToken = new Token("G2");
 
@@ -230,9 +234,8 @@ namespace GCodeClean.Processing
             }
         }
 
-        public static async IAsyncEnumerable<Line> SimplifyShortArcs(this IAsyncEnumerable<Line> tokenisedLines, decimal arcTolerance = 0.0005M)
+        public static async IAsyncEnumerable<Line> SimplifyShortArcs(this IAsyncEnumerable<Line> tokenisedLines, Context context, decimal arcTolerance = 0.0005M)
         {
-            var context = Default.Preamble();
             var previousCommand = new Token("");
             var previousXYZCoords = new List<Token> { new Token("X"), new Token("Y"), new Token("Z") };
             var arcArguments = new List<char> { 'I', 'J', 'K' };
@@ -255,7 +258,6 @@ namespace GCodeClean.Processing
                     yield return line;
                     continue;
                 }
-                var lengthUnits = unitsCommand.ToString() == "G20" ? "inch" : "mm";
 
                 var hasXY = line.HasTokens(new List<char> { 'X', 'Y' });
                 var hasZ = line.HasToken('Z');
@@ -277,7 +279,7 @@ namespace GCodeClean.Processing
                     }
                     else if (previousCommand.IsCommand)
                     {
-                        line.Tokens.Insert(0, previousCommand);
+                        line.PrependToken(previousCommand);
                     }
                 }
                 
@@ -298,7 +300,7 @@ namespace GCodeClean.Processing
                 if (abDistance <= arcTolerance) {
                     line.RemoveTokens(arcArguments);
                     line.RemoveTokens(arcCommands);
-                    line.Tokens.Insert(0, new Token("G1"));
+                    line.PrependToken(new Token("G1"));
                 }
 
                 for (var ix = 0; ix < previousXYZCoords.Count; ix++)
@@ -310,9 +312,8 @@ namespace GCodeClean.Processing
             }
         }
 
-        public static async IAsyncEnumerable<Line> Clip(this IAsyncEnumerable<Line> tokenisedLines, decimal tolerance = 0.0005M)
+        public static async IAsyncEnumerable<Line> Clip(this IAsyncEnumerable<Line> tokenisedLines, Context context, decimal tolerance = 0.0005M)
         {
-            var context = Default.Preamble();
             var arcArguments = new [] { 'I', 'J', 'K' };
 
             await foreach (var line in tokenisedLines)
@@ -345,7 +346,7 @@ namespace GCodeClean.Processing
                         continue;
                     }
 
-                    // Retweak tolerance to allow for lengthUnits
+                    // Re-tweak tolerance to allow for lengthUnits
                     tolerance = tolerance.ConstrainTolerance(lengthUnits);
 
                     // Set the clipping for the token's value, based on the token's code, the tolerance and/or the lengthUnits
@@ -429,7 +430,7 @@ namespace GCodeClean.Processing
 
                 if (!isDuplicate && annotationTokens.Count > 0)
                 {
-                    line.Tokens.Add(new Token($"({string.Join(", ", annotationTokens)})"));
+                    line.AppendToken(new Token($"({string.Join(", ", annotationTokens)})"));
                     previousTokenCodes = tokenCodes;
                 }
 
@@ -438,19 +439,19 @@ namespace GCodeClean.Processing
         }
 
         private static Line ArcRadiusToCenter(this Line lineB, Coord coordsA, Coord center) {
-            lineB.RemoveTokens(new List<char>() { 'R'});
+            lineB.RemoveTokens(new List<char> { 'R'});
 
             if ((center.Set & CoordSet.X) == CoordSet.X && (coordsA.Set & CoordSet.X) == CoordSet.X)
             {
-                lineB.Tokens.Add(new Token($"I{center.X - coordsA.X:0.####}"));
+                lineB.AppendToken(new Token($"I{center.X - coordsA.X:0.####}"));
             }
             if ((center.Set & CoordSet.Y) == CoordSet.Y && (coordsA.Set & CoordSet.Y) == CoordSet.Y)
             {
-                lineB.Tokens.Add(new Token($"J{center.Y - coordsA.Y:0.####}"));
+                lineB.AppendToken(new Token($"J{center.Y - coordsA.Y:0.####}"));
             }
             if ((center.Set & CoordSet.Z) == CoordSet.Z && (coordsA.Set & CoordSet.Z) == CoordSet.Z)
             {
-                lineB.Tokens.Add(new Token($"K{center.Z - coordsA.Z:0.####}"));
+                lineB.AppendToken(new Token($"K{center.Z - coordsA.Z:0.####}"));
             }
 
             return lineB;
@@ -460,12 +461,14 @@ namespace GCodeClean.Processing
             var replacements = tokenDefinitions["replacements"];
 
             var replacement = (JObject)replacements[token.Source];
-            if (replacement != null)
+            if (replacement == null)
             {
-                foreach (var (ctkey, ctvalue) in replacement)
-                {
-                    context[ctkey] = (string)ctvalue;
-                }
+                return;
+            }
+
+            foreach (var (ctKey, ctValue) in replacement)
+            {
+                context[ctKey] = (string)ctValue;
             }
         }
     }

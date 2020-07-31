@@ -14,15 +14,15 @@ namespace GCodeClean.Processing
         /// <summary>
         /// Is B between A and C, inclusive
         /// </summary>
-        public static bool WithinRange(this decimal B, decimal A, decimal C)
+        public static bool WithinRange(this decimal b, decimal a, decimal c)
         {
-            return A >= B && B >= C || A <= B && B <= C;
+            return a >= b && b >= c || a <= b && b <= c;
         }
 
         public static double Angle(this double da, double db)
         {
             var theta = Math.Atan2(da, db); // range (-PI, PI]
-            theta *= 180 / Math.PI; // rads to degs, range (-180, 180]
+            theta *= 180 / Math.PI; // radians to degrees, range (-180, 180]
 
             return theta;
         }
@@ -40,13 +40,13 @@ namespace GCodeClean.Processing
         public static decimal Angle(this (decimal A, decimal B) d)
         {
             var theta = Math.Atan2((double)d.A, (double)d.B); // range (-PI, PI]
-            theta *= 180 / Math.PI; // rads to degs, range (-180, 180]
+            theta *= 180 / Math.PI; // radians to degrees, range (-180, 180]
 
             return (decimal)theta;
         }
 
         /// <summary>
-        /// Get the number of decimal places in a decimal, igoring any 'significant' zeros at the end
+        /// Get the number of decimal places in a decimal, ignoring any 'significant' zeros at the end
         /// </summary>
         public static int GetDecimalPlaces(this decimal n)
         {
@@ -64,7 +64,7 @@ namespace GCodeClean.Processing
         }
 
         public static decimal ConstrainTolerance(this decimal tolerance, string lengthUnits = "mm") {
-            // Retweak tolerance to allow for lengthUnits
+            // Re-tweak tolerance to allow for lengthUnits
             if (lengthUnits == "mm") {
                 if (tolerance < 0.005M) {
                     tolerance = 0.005M;
@@ -281,7 +281,8 @@ namespace GCodeClean.Processing
             var dist = Math.Sqrt(dx * dx + dy * dy);
 
             // See how many solutions there are.
-            if (dist > (double)(radius * 2) || dist == 0)
+            var tolerance = 0.000000001;
+            if (dist > (double)(radius * 2) || Math.Abs(dist) < tolerance)
             {
                 // No solutions, the circles are too far apart or coincide, must be malformed
                 return intersections;

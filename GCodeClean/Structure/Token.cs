@@ -26,6 +26,7 @@ namespace GCodeClean.Structure
                 IsCommand = false;
                 IsCode = false;
                 IsArgument = false;
+                IsLineNumber = false;
                 IsOther = false;
 
                 if (string.IsNullOrWhiteSpace(_source))
@@ -70,6 +71,7 @@ namespace GCodeClean.Structure
                 IsCommand = false;
                 IsCode = false;
                 IsArgument = false;
+                IsLineNumber = false;
                 IsOther = false;
 
                 if (FileTerminators.Contains(_code))
@@ -91,6 +93,10 @@ namespace GCodeClean.Structure
                 else if (Arguments.Any(a => a == _code))
                 {
                     IsArgument = true;
+                }
+                else if (LineNumbers.Any(a => a == _code))
+                {
+                    IsLineNumber = true;
                 }
                 else if (Other.Any(a => a == _code))
                 {
@@ -129,7 +135,7 @@ namespace GCodeClean.Structure
                     IsValid = false;
                 }
 
-                if (IsArgument)
+                if (IsArgument || IsLineNumber)
                 {
                     IsValid = true;
                 }
@@ -146,6 +152,8 @@ namespace GCodeClean.Structure
 
         public bool IsArgument { get; private set; }
 
+        public bool IsLineNumber { get; private set; }
+
         public bool IsOther { get; private set; }
 
         public bool IsValid { get; private set; }
@@ -158,7 +166,9 @@ namespace GCodeClean.Structure
 
         public static readonly char[] Codes = {'F', 'S', 'T'};
 
-        public static readonly char[] Arguments = {'A', 'B', 'C', 'D', 'H', 'I', 'J', 'K', 'L', 'N', 'P', 'R', 'X', 'Y', 'Z'};
+        public static readonly char[] Arguments = {'A', 'B', 'C', 'D', 'H', 'I', 'J', 'K', 'L', 'P', 'R', 'X', 'Y', 'Z'};
+
+        public static readonly char[] LineNumbers = { 'N' };
 
         public static readonly char[] Other = {'E', 'O', 'Q', 'U', 'V'};
 
