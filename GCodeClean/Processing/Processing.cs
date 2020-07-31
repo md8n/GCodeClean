@@ -152,22 +152,67 @@ namespace GCodeClean.Processing
 
                 if (hasZ && hasTraveling)
                 {
-                    foreach (var travelingToken in line.AllTokens.Intersect(ModalGroup.ModalSimpleMotion))
-                    {
-                        // If Z > 0 then the motion should be G0 
-                        travelingToken.Source = "G0";
-                    }
-
                     var zTokenIndex = line.AllTokens.FindIndex(t => t.Code == 'Z');
 
                     if (line.AllTokens[zTokenIndex].Number > 0) {
                         line.AllTokens[zTokenIndex].Number = zClamp;
+
+                        foreach (var travelingToken in line.AllTokens.Intersect(ModalGroup.ModalSimpleMotion))
+                        {
+                            // If Z > 0 then the motion should be G0 
+                            travelingToken.Source = "G0";
+                        }
                     }
                 }
 
                 yield return line;
             }
         }
+
+        // public static async IAsyncEnumerable<Line> ZClean(this IAsyncEnumerable<Line> tokenisedLines)
+        // {
+        //     var previousCoords = new Coord();
+
+        //     await foreach (var line in tokenisedLines)
+        //     {
+        //         var hasMovement = line.HasMovementCommand();
+        //         if (!hasMovement)
+        //         {
+        //             yield return line;
+        //             continue;
+        //         }
+                
+        //         Coord coords = line;
+        //         if (!previousCoords.HasCoordPair())
+        //         {
+        //             // Some movement command, and we're at a 'start'
+        //             previousCoords = Coord.Merge(previousCoords, coords, true);
+
+        //             yield return line;
+        //             continue;
+        //         }
+
+        //         var hasZ = line.HasToken('Z');
+        //         var hasTraveling = line.HasTokens(ModalGroup.ModalSimpleMotion);
+
+        //         if (hasZ && hasTraveling)
+        //         {
+        //             var zTokenIndex = line.AllTokens.FindIndex(t => t.Code == 'Z');
+
+        //             if (line.AllTokens[zTokenIndex].Number > 0) {
+        //                 line.AllTokens[zTokenIndex].Number = zClamp;
+
+        //                 foreach (var travelingToken in line.AllTokens.Intersect(ModalGroup.ModalSimpleMotion))
+        //                 {
+        //                     // If Z > 0 then the motion should be G0 
+        //                     travelingToken.Source = "G0";
+        //                 }
+        //             }
+        //         }
+
+        //         yield return line;
+        //     }
+        // }
 
         /// <summary>
         /// Convert Arc movement commands from using R to using IJ
