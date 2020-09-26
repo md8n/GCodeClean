@@ -120,6 +120,7 @@ namespace GCodeCleanCLI
                 .SimplifyShortArcs(context, options.arcTolerance)
                 .DedupLinearToArc(context, linearToArcTolerance)
                 .Clip(context, options.tolerance)
+                .CorrectG1WhenPositiveZ(context)
                 .DedupRepeatedTokens()
                 .DedupLine()
                 .DedupLinear(options.tolerance)

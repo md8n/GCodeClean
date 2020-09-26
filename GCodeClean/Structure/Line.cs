@@ -242,6 +242,24 @@ namespace GCodeClean.Structure
             return removedTokens;
         }
 
+        public List<Token> RemoveToken(Token token)
+        {
+            var removedTokens = new List<Token>();
+
+            for (var ix = _tokens.Count - 1; ix >= 0; ix--)
+            {
+                if (token != _tokens[ix])
+                {
+                    continue;
+                }
+
+                removedTokens.Add(_tokens[ix]);
+                _tokens.RemoveAt(ix);
+            }
+
+            return removedTokens;
+        }
+
         /// <summary>
         /// Compares two lines to ensure they are `compatible`.
         /// Ignores any line number tokens
