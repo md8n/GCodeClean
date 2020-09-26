@@ -8,6 +8,7 @@ We also have:
 * converting very short arcs (G2, G3) to simple lines (G1), also within tolerances,
 * linear to arc deduplication, converting several simple lines to a single arc,
 * eliminate meaningless movement commands - especially G0 without any arguments,
+* correcting G1 to G0 when the z-axis is at a positive value,
 * clipping decimal places on arguments to meaningful values,
 * `per line` linting: splitting lines to match the actual execution order as per the NIST gcode spec, and then reorganising the 'words' on a line to conform to some common practices (but not all),
 * `annotate` the GCode with explanatory comments (optional),
