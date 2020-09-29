@@ -20,7 +20,7 @@ namespace GCodeClean.Processing
                 }
 
                 if (!line.IsNotCommandCodeOrArguments()) {
-                    previousLine = line;
+                    previousLine = new Line(line);
                 }
 
                 yield return line;
@@ -54,7 +54,7 @@ namespace GCodeClean.Processing
                 var hasLinearMovement = lineC.Tokens.Contains(linearMovementToken);
                 if (hasMovement && !isLineASet && !isLineBSet) {
                     // Some movement command, and we're at a 'start'
-                    lineA = lineC;
+                    lineA = new Line(lineC);
                     isLineASet = true;
                     continue;
                 }
@@ -86,14 +86,14 @@ namespace GCodeClean.Processing
                         lineB = new Line();
                         isLineBSet = false;
                     }
-                    lineA = lineC;
+                    lineA = new Line(lineC);
                     isLineASet = true;
                     continue;
                 }
 
                 if (!isLineBSet) {
                     // Set up the B token
-                    lineB = lineC;
+                    lineB = new Line(lineC);
                     isLineBSet = true;
                     continue;
                 }
@@ -166,7 +166,7 @@ namespace GCodeClean.Processing
                 }
                 // else - They are co-linear! so move things along and silently drop tokenB
 
-                lineA = lineC;
+                lineA = new Line(lineC);
                 isLineASet = true;
                 lineB = new Line();
                 isLineBSet = false;
@@ -198,7 +198,7 @@ namespace GCodeClean.Processing
 
                 if (hasMovement && !isLineASet && !isLineBSet) {
                     // Some movement command, and we're at a 'start'
-                    lineA = lineC;
+                    lineA = new Line(lineC);
                     isLineASet = true;
                     continue;
                 }
@@ -256,14 +256,14 @@ namespace GCodeClean.Processing
                     prevIsClockwise = false;
                     inArc = false;
 
-                    lineA = lineC;
+                    lineA = new Line(lineC);
                     isLineASet = true;
                     continue;
                 }
 
                 if (!isLineBSet) {
                     // Set up the B token
-                    lineB = lineC;
+                    lineB = new Line(lineC);
                     isLineBSet = true;
                     continue;
                 }
@@ -359,8 +359,8 @@ namespace GCodeClean.Processing
                 if (!hasCoords || !withinBounds || !isSignificant) {
                     yield return lineA;
                     if (!inArc) {
-                        lineA = lineB;
-                        lineB = lineC;
+                        lineA = new Line(lineB);
+                        lineB = new Line(lineC);
 
                         isLineASet = true;
                         isLineBSet = true;
@@ -376,7 +376,7 @@ namespace GCodeClean.Processing
                         prevIsClockwise = false;
 
                         yield return lineB;
-                        lineA = lineC;
+                        lineA = new Line(lineC);
                         isLineASet = true;
                         lineB = new Line();
                         isLineBSet = false;
@@ -391,7 +391,7 @@ namespace GCodeClean.Processing
                     prevRadius = radius;
                     prevIsClockwise = isClockwise;
 
-                    lineB = lineC;
+                    lineB = new Line(lineC);
                     isLineBSet = true;
 
                     inArc = true;

@@ -168,7 +168,7 @@ namespace GCodeClean.Structure
 
         public Line(Line line)
         {
-            Source = line.Source;
+            Source = line.ToString();
         }
 
         public Line(Token token)

@@ -415,64 +415,6 @@ namespace GCodeClean.Processing
             }
         }
 
-        public static async IAsyncEnumerable<Line> CorrectG1WhenPositiveZ(this IAsyncEnumerable<Line> tokenisedLines, Context context)
-        {
-            var previousCommand = new Token("");
-            var previousZCoord = new Token("Z");
-            var cutTravelCommand = new Token("G1");
-
-            await foreach (var line in tokenisedLines)
-            {
-                context.Update(line, true);
-
-                if (line.IsNotCommandCodeOrArguments())
-                {
-                    yield return line;
-                    continue;
-                }
-
-                var hasZ = line.HasToken('Z');
-
-                if (hasZ)
-                {
-                    if (line.HasMovementCommand())
-                    {
-                        foreach (var token in line.Tokens)
-                        {
-                            if (!ModalGroup.ModalSimpleMotion.Contains(token))
-                            {
-                                continue;
-                            }
-
-                            previousCommand = token;
-                            break;
-                        }
-                    }
-                    else if (previousCommand.IsCommand)
-                    {
-                        line.PrependToken(previousCommand);
-                    }
-                }
-                
-                if (!line.HasToken(cutTravelCommand))
-                {
-                    previousZCoord = line.Tokens.FirstOrDefault(t => t.Code == previousZCoord.Code) ?? previousZCoord;
-
-                    yield return line;
-                    continue;
-                }
-
-                if (previousZCoord.Number > 0) {
-                    line.RemoveToken(cutTravelCommand);
-                    line.PrependToken(new Token("G0"));
-                }
-
-                previousZCoord = line.Tokens.FirstOrDefault(t => t.Code == previousZCoord.Code) ?? previousZCoord;
-
-                yield return line;
-            }
-        }
-
         public static async IAsyncEnumerable<Line> Annotate(this IAsyncEnumerable<Line> tokenisedLines, JObject tokenDefinitions)
         {
             var tokenDefs = tokenDefinitions["tokenDefs"];
