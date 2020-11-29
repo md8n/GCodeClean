@@ -3,15 +3,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 
 using GCodeClean.Processing;
 using GCodeClean.Structure;
-
-using Newtonsoft.Json.Linq;
 
 using Xunit;
 using Xunit.Abstractions;
@@ -37,30 +33,57 @@ namespace GCodeClean.Tests
         }
 
         [Fact]
+        public async void TestAugment()
+        {
+            var sourceLines = new List<Line> { new Line("G21"), new Line("G90"), new Line("G1 Z-0.15"), new Line("X26.6059 Z - 0.1539 F60"), new Line("X26.6068 Z - 0.1577") };
+            var testLines = sourceLines.ConvertAll(l => new Line(l));
+            var lines = AsyncLines(testLines);
+            var expectedLines = new List<Line> { new Line("G21"), new Line("G90"), new Line("G1 Z-0.15"), new Line("G1 F60 X26.6059 Z-0.1539"), new Line("G1 X26.6068 Z-0.1577") };
+
+            var resultLines = await lines.Augment().ToListAsync();
+            Assert.False(sourceLines.SequenceEqual(resultLines));
+            Assert.True(expectedLines.SequenceEqual(resultLines));
+        }
+
+        [Fact]
+        public async void TestZClampMM()
+        {
+            var sourceLines = new List<Line> { new Line("G21"), new Line("G90"), new Line("G0 Z0.15"), new Line("G0 Z0.05"), new Line("G1 Z0.0394 F30"), new Line("G1 Z-0.15") };
+            var testLines = sourceLines.ConvertAll(l => new Line(l));
+            var lines = AsyncLines(testLines);
+            var setHeight = 1.1M;
+            var expectedLines = new List<Line> { new Line("G21"), new Line("G90"), new Line($"G0 Z{setHeight}"), new Line($"G0 Z{setHeight}"), new Line($"G0 Z{setHeight} F30"), new Line("G1 Z-0.15") };
+
+            var resultLines = await lines.ZClamp(Default.Preamble(), setHeight).ToListAsync();
+            Assert.False(sourceLines.SequenceEqual(resultLines));
+            Assert.True(expectedLines.SequenceEqual(resultLines));
+        }
+
+        [Fact]
+        public async void TestZClampInch()
+        {
+            var sourceLines = new List<Line> { new Line("G20"), new Line("G90"), new Line("G0 Z0.15"), new Line("G0 Z0.05"), new Line("G1 Z0.0394 F30"), new Line("G1 Z-0.15") };
+            var testLines = sourceLines.ConvertAll(l => new Line(l));
+            var lines = AsyncLines(testLines);
+            var setHeight = 1.1M;
+            var adjustedHeight = 0.5M;
+            var expectedLines = new List<Line> { new Line("G20"), new Line("G90"), new Line($"G0 Z{adjustedHeight}"), new Line($"G0 Z{adjustedHeight}"), new Line($"G0 Z{adjustedHeight} F30"), new Line("G1 Z-0.15") };
+
+            var resultLines = await lines.ZClamp(Default.Preamble(), setHeight).ToListAsync();
+            Assert.False(sourceLines.SequenceEqual(resultLines));
+            Assert.True(expectedLines.SequenceEqual(resultLines));
+        }
+
+        [Fact]
         public async void TestClip()
         {
             var sourceLines = new List<Line> { new Line("G21"), new Line("G90"), new Line("G1 Z0.15678 F9.0") };
+
             var testLines = sourceLines.ConvertAll(l => new Line(l));
             var lines = AsyncLines(testLines);
 
-            var entryDir = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location)
-                           ?? Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-
-            var tokenDefsPath = $"{entryDir}{Path.DirectorySeparatorChar}tokenDefinitions.json";
-
-            JObject tokenDefinitions;
-            try
-            {
-                var tokenDefsSource = File.ReadAllText(tokenDefsPath);
-                tokenDefinitions = JObject.Parse(tokenDefsSource);
-            }
-            catch (Exception)
-            {
-                throw;
-            }
-
-            var clippedLines = await lines.Clip(Default.Preamble()).ToListAsync();
-            Assert.False(sourceLines.SequenceEqual(clippedLines));
+            var resultLines = await lines.Clip(Default.Preamble()).ToListAsync();
+            Assert.False(sourceLines.SequenceEqual(resultLines));
         }
     }
 }

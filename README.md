@@ -23,9 +23,9 @@ We'll also look at supporting:
 
 There are standalone 64bit release builds available, for Linux, Windows and OSX at [GCodeClean releases](https://github.com/md8n/GCodeClean/releases)
 
-The standalone releases include all the relevant .NET Core 3.1 libraries for this application.
+The standalone releases include all the relevant .NET 5.0 libraries for this application.
 
-To build and run this project needs the .NET Core 3.1 SDK.
+To build and run this project needs the .NET 5.0 SDK.
 
 There are a very large number of possible targets including 32bit, ARM, etc.
 
@@ -100,13 +100,13 @@ Note: If the input file does not exist (or can't be found, i.e. your typo) then 
 
 ### Prerequisites for Building it Yourself
 
-.NET Core 3.1 SDK - get the correct version for your OS and architecture here: [.NET Core 3.1 SDK downloads](https://dotnet.microsoft.com/download/dotnet-core/3.1)
+.NET 5.0 SDK - get the correct version for your OS and architecture here: [.NET SDK downloads](https://dotnet.microsoft.com/download/)
 
 A text editor if you want to change something.
 
 ### Building and Running it Yourself
 
-Once you've got the .NET Core SDK installed.
+Once you've got the .NET 5.0 SDK installed.
 
 Get yourself to a command line prompt, change to the folder where you've cloned this repository to, and then to the CLI folder, and enter:
 ```
@@ -128,13 +128,13 @@ dotnet run -- --filename <filename>
 ```
 Obviously replacing `<filename>` with your file's name (and path if needed).
 
-Or you can build `GCodeCleanCLI` and run it with these two steps:
+Or you can build `CLI` and run it with these two steps:
 ```
 dotnet publish
 ```
-Take a note of the `publish` folder, the `GCodeCleanCLI` executable will be located there.
+Take a note of the `publish` folder, the `CLI` executable will be located there.
 
-And then run the `GCodeCleanCLI` executable.
+And then run the `CLI` executable.
 e.g. for Windows that might look like:
 ```
 .\bin\Debug\netcoreapp3.1\publish\gcodecleancli --filename FacadeFullAlternate.nc --minimise hard --annotate
@@ -149,7 +149,7 @@ or for Linux (Ubuntu 18.04)
 
 GCodeClean is organised into 3 projects:
 1. GCodeClean - A library that contains most of the code
-2. GCodeCleanCLI - An executable to call the above library - this also handles the command line arguments and does the actual file handling
+2. CLI - An executable to call the above library - this also handles the command line arguments and does the actual file handling
 3. CodeClean.Test - A test suite - which will be 'grown' over time.
 
 ## What's Special about GCodeClean?

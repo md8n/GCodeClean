@@ -5,8 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
 
 using GCodeClean.Structure;
 
@@ -415,9 +414,9 @@ namespace GCodeClean.Processing
             }
         }
 
-        public static async IAsyncEnumerable<Line> Annotate(this IAsyncEnumerable<Line> tokenisedLines, JObject tokenDefinitions)
+        public static async IAsyncEnumerable<Line> Annotate(this IAsyncEnumerable<Line> tokenisedLines, JsonElement tokenDefinitions)
         {
-            var tokenDefs = tokenDefinitions["tokenDefs"];
+            var tokenDefs = tokenDefinitions.GetProperty("tokenDefs");
             var context = new Dictionary<string, string>();
 
             var previousTokenCodes = new List<string>();
@@ -436,12 +435,12 @@ namespace GCodeClean.Processing
                 {
                     context.BuildContext(tokenDefinitions, token);
 
-                    var annotation = (string)tokenDefs[token.ToString()];
+                    var annotation = tokenDefs.GetProperty(token.ToString()).GetString();
                     if (annotation is null && token.Number.HasValue)
                     {
                         var subToken = "" + token.Code;
                         tokenCodes.Add(subToken);
-                        annotation = (string)tokenDefs[subToken];
+                        annotation = tokenDefs.GetProperty(subToken).GetString();
                         context[token.Code + "value"] = token.Number.Value.ToString(CultureInfo.InvariantCulture);
                     }
                     else
@@ -502,18 +501,17 @@ namespace GCodeClean.Processing
             return lineB;
         }
 
-        private static void BuildContext(this Dictionary<string, string> context, JObject tokenDefinitions, Token token) {
-            var replacements = tokenDefinitions["replacements"];
+        private static void BuildContext(this Dictionary<string, string> context, JsonElement tokenDefinitions, Token token) {
+            var replacements = tokenDefinitions.GetProperty("replacements");
 
-            var replacement = (JObject)replacements[token.Source];
-            if (replacement == null)
+            if (!replacements.TryGetProperty(token.Source, out var replacement))
             {
                 return;
             }
 
-            foreach (var (ctKey, ctValue) in replacement)
+            foreach (var ct in replacement.EnumerateObject())
             {
-                context[ctKey] = (string)ctValue;
+                context[ct.Name] = ct.Value.GetString();
             }
         }
     }
