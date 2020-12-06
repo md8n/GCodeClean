@@ -1,3 +1,7 @@
 obj/
 bin/
 Samples/
+
+.vs/
+.vscode/
+.github/workflows/

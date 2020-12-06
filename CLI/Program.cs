@@ -6,10 +6,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 using CommandLine;
-using Newtonsoft.Json.Linq;
 
 using GCodeClean.IO;
 using GCodeClean.Processing;
@@ -46,20 +46,20 @@ namespace GCodeCleanCLI
                 tokenDefsPath = $"{entryDir}{Path.DirectorySeparatorChar}tokenDefinitions.json";
             }
 
-            JObject tokenDefinitions;
+            JsonDocument tokenDefinitions;
             try
             {
                 var tokenDefsSource = File.ReadAllText(tokenDefsPath);
-                tokenDefinitions = JObject.Parse(tokenDefsSource);
+                tokenDefinitions = JsonDocument.Parse(tokenDefsSource);
             }
             catch (FileNotFoundException fileNotFoundEx)
             {
                 Console.WriteLine($"No token definitions file was found at {tokenDefsPath}. {fileNotFoundEx.Message}");
                 return;
             }
-            catch (Newtonsoft.Json.JsonReaderException jsonReaderEx)
+            catch (JsonException jsonEx)
             {
-                Console.WriteLine($"The supplied file {tokenDefsPath} does not appear to be valid JSON. {jsonReaderEx.Message}");
+                Console.WriteLine($"The supplied file {tokenDefsPath} does not appear to be valid JSON. {jsonEx.Message}");
                 return;
             }
             catch (Exception e)
@@ -142,7 +142,7 @@ namespace GCodeCleanCLI
 
             var minimisedLines = outputLines.DedupSelectTokens(dedupSelection);
 
-            var annotatedLines = options.annotate ? minimisedLines.Annotate(tokenDefinitions) : minimisedLines;
+            var annotatedLines = options.annotate ? minimisedLines.Annotate(tokenDefinitions.RootElement) : minimisedLines;
             var reassembledLines = annotatedLines.JoinLines(minimisationStrategy);
             var lineCount = outputFile.WriteLinesAsync(reassembledLines);
 

@@ -1,3 +1,6 @@
+// Copyright (c) 2020 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for details.
+
 using System;
 using System.Collections.Generic;
 using System.Drawing;

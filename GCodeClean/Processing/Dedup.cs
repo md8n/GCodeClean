@@ -269,7 +269,7 @@ namespace GCodeClean.Processing
                 }
 
                 // Check we've got a full set of coords for the three token sets
-                var hasCoords = (coordsA.Set & coordsB.Set & coordsC.Set) == CoordSet.All;
+                var hasCoords = coordsA.Set == coordsB.Set && coordsB.Set == coordsC.Set;
                 var withinBounds = false;
                 var isSignificant = false;
 
@@ -419,16 +419,8 @@ namespace GCodeClean.Processing
             }
 
             var linearMovementToken = new Token("G1");
-            for (var ix = 0; ix < lineB.AllTokens.Count; ix++)
-            {
-                if (lineB.AllTokens[ix] != linearMovementToken)
-                {
-                    continue;
-                }
-
-                lineB.AllTokens[ix] = new Token(prevIsClockwise ? "G2" : "G3");
-                break;
-            }
+            lineB.RemoveToken(linearMovementToken);
+            lineB.PrependToken(new Token(prevIsClockwise ? "G2" : "G3"));
 
             switch (modalPlace)
             {
