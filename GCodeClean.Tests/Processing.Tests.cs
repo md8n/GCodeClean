@@ -3,7 +3,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 using GCodeClean.Processing;
@@ -84,6 +87,53 @@ namespace GCodeClean.Tests
 
             var resultLines = await lines.Clip(Default.Preamble()).ToListAsync();
             Assert.False(sourceLines.SequenceEqual(resultLines));
+        }
+
+        [Fact]
+        public async void TestAnnotate()
+        {
+            var entryDir = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location)
+               ?? Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+            var tokenDefsPath = $"{entryDir}{Path.DirectorySeparatorChar}tokenDefinitions.json";
+
+            JsonDocument tokenDefinitions;
+            try
+            {
+                var tokenDefsSource = File.ReadAllText(tokenDefsPath);
+                tokenDefinitions = JsonDocument.Parse(tokenDefsSource);
+            }
+            catch (FileNotFoundException fileNotFoundEx)
+            {
+                Console.WriteLine($"No token definitions file was found at {tokenDefsPath}. {fileNotFoundEx.Message}");
+                return;
+            }
+            catch (JsonException jsonEx)
+            {
+                Console.WriteLine($"The supplied file {tokenDefsPath} does not appear to be valid JSON. {jsonEx.Message}");
+                return;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+
+            var sourceLines = new List<Line> { new Line("G21"), new Line("G90"), new Line("G1 Z0.15678 F9.0"), new Line("G1234") };
+            var expectedLines = new List<string> {
+                "G21 (Length units: Millimeters)",
+                "G90 (Set Distance Mode: Absolute)",
+                "G1 Z0.1568 F9 (Linear motion: at Feed Rate, Z0.1568mm, Set Feed Rate to {feedRateMode})",
+                "G1234"
+            };
+
+
+            var testLines = sourceLines.ConvertAll(l => new Line(l));
+            var lines = AsyncLines(testLines);
+
+            var resultLines = await lines.Annotate(tokenDefinitions.RootElement).JoinLines("SOFT").ToListAsync();
+
+            Assert.True(expectedLines.SequenceEqual(resultLines));
         }
     }
 }
