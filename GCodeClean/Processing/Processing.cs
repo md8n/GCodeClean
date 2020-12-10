@@ -435,12 +435,19 @@ namespace GCodeClean.Processing
                 {
                     context.BuildContext(tokenDefinitions, token);
 
-                    var annotation = tokenDefs.GetProperty(token.ToString()).GetString();
+                    string annotation = null;
+                    if (tokenDefs.TryGetProperty(token.ToString(), out var tokenDef))
+                    {
+                        annotation = tokenDef.GetString();
+                    }
                     if (annotation is null && token.Number.HasValue)
                     {
                         var subToken = "" + token.Code;
                         tokenCodes.Add(subToken);
-                        annotation = tokenDefs.GetProperty(subToken).GetString();
+                        if (tokenDefs.TryGetProperty(subToken, out var subTokenDef))
+                        {
+                            annotation = subTokenDef.GetString();
+                        }
                         context[token.Code + "value"] = token.Number.Value.ToString(CultureInfo.InvariantCulture);
                     }
                     else
