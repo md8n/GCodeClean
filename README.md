@@ -34,30 +34,34 @@ There are a very large number of possible targets including 32bit, ARM, etc.
 Throw the `--help` command line option at GCodeClean and you'll get back the following:
 
 ```
-Copyright (C) 2020 gcodeclean
+CLI 0.9.1
+Copyright (C) 2020 CLI
 USAGE:
 Clean GCode file:
   GCodeClean --filename facade.nc
 
-  --filename      Required. Full path to the input filename.
+  --filename        Required. Full path to the input filename.
 
-  --annotate      Annotate the GCode with inline comments.
+  --tokenDefs       (Default: tokenDefinitions.json) Full path to the tokenDefinitions.json file.
 
-  --minimise      (Default: soft) Select preferred minimisation strategy, 'soft' - (default) FZ only, 'medium' - All
-                   codes excluding IJK (but leave spaces in place), 'hard' - All codes excluding IJK and remove spaces,
-                   or list of codes e.g. FGXYZ
+  --annotate        Annotate the GCode with inline comments.
 
-  --tolerance     Enter a clipping tolerance for the various deduplication operations
+  --minimise        (Default: soft) Select preferred minimisation strategy, 'soft' - (default) FZ only, 'medium' - All
+                    codes excluding IJK (but leave spaces in place), 'hard' - All codes excluding IJK and remove spaces,
+                    or list of codes e.g. FGXYZ
 
-  --arcTolerance  Enter a tolerance for the 'point-to-point' length of arcs (G2, G3) below which 
-                   they will be converted to lines (G1)
+  --tolerance       Enter a clipping tolerance for the various deduplication operations
 
-  --zClamp        Restrict z-axis positive values to the supplied value
+  --arcTolerance    Enter a tolerance for the 'point-to-point' length of arcs (G2, G3) below which they will be
+                    converted to lines (G1)
 
-  --help          Display this help screen.
+  --zClamp          Restrict z-axis positive values to the supplied value
 
-  --version       Display version information.
+  --help            Display this help screen.
 
+  --version         Display version information.
+
+Exit code= 0
   
 ```
 
@@ -85,12 +89,12 @@ And replace `<filename>` with the full path to your gcode file (as per what your
 And then run the `GCodeCleanCLI` executable.
 e.g. for Windows that might look like:
 ```
-.\gcodecleancli --filename FacadeFullAlternate.nc --minimise soft --annotate
+.\cli --filename FacadeFullAlternate.nc --minimise soft --annotate
 ```
 
 or for Linux (Ubuntu 18.04)
 ```
-./GCodeCleanCLI --filename FacadeFullAlternate.nc --minimise hard --annotate
+./CLI --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
 
 After processing `GCodeCleanCLI` will report the number of lines that it output.
@@ -137,12 +141,12 @@ Take a note of the `publish` folder, the `CLI` executable will be located there.
 And then run the `CLI` executable.
 e.g. for Windows that might look like:
 ```
-.\bin\Debug\netcoreapp3.1\publish\gcodecleancli --filename FacadeFullAlternate.nc --minimise hard --annotate
+.\bin\Debug\netcoreapp3.1\publish\cli --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
 
 or for Linux (Ubuntu 18.04)
 ```
-./bin/Debug/netcoreapp3.1/publish/GCodeCleanCLI --filename FacadeFullAlternate.nc --minimise hard --annotate
+./bin/Debug/netcoreapp3.1/publish/CLI --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
 
 ## GCodeClean Solution Organisation
@@ -216,7 +220,7 @@ G0 X39.29 Y-105.937
 
 Run a fresh 'self-contained' `publish` of `GCodeClean` as follows:
 ```
-dotnet publish  /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary --output bin/release/netcoreapp3.1/publish --self-contained
+dotnet publish  /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary --output bin/release/net5.0/publish --self-contained
 ```
 You can also include the option `--configuration Release` for a release build.
 And target many different platforms by adding `--runtime ` and specifying a runtime platform, e.g. `--runtime win-x64`
