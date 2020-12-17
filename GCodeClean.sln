@@ -17,6 +17,7 @@ Global
 		Release|Any CPU = Release|Any CPU
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
+		Description = GCode Linter
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{D43535FE-FDEB-4A3C-BB36-B01D1F660920}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
