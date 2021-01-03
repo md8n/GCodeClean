@@ -14,16 +14,24 @@ namespace GCodeClean.Processing
     public static class Processing
     {
         public static async IAsyncEnumerable<Line> InjectPreamble(this IAsyncEnumerable<Line> tokenisedLines,
-            Context preamble)
+            Context preamble, decimal zClamp = 10.0M)
         {
             var preambleOutput = false;
-            await foreach (var line in tokenisedLines) {
+            await foreach (var line in tokenisedLines)
+            {
                 if (line.HasTokens(ModalGroup.ModalAllMotion))
                 {
                     var linesToOutput = preamble.NonOutputLines();
                     if (linesToOutput.Count > 0)
                     {
                         linesToOutput.Insert(0, new Line("(Preamble completed by GCodeClean)"));
+                        // If the line is a G0 movement then inject a +ve Z
+                        if (line.HasToken("G0"))
+                        {
+                            var lengthUnits = GetLengthUnits(preamble);
+                            zClamp = ConstrictZClamp(lengthUnits, zClamp);
+                            linesToOutput.Add(new Line($"Z{zClamp}"));
+                        }
                         linesToOutput.Add(new Line("(Preamble completed by GCodeClean)"));
                         foreach (var preambleLine in linesToOutput)
                         {
@@ -42,7 +50,7 @@ namespace GCodeClean.Processing
                 yield return line;
             }
         }
-        
+
         public static async IAsyncEnumerable<Line> Augment(this IAsyncEnumerable<Line> tokenisedLines)
         {
             var previousCommand = new Token("");
@@ -109,6 +117,49 @@ namespace GCodeClean.Processing
             }
         }
 
+        private static string GetLengthUnits(Context context)
+        {
+            var unitsCommand = context.GetModalState(ModalGroup.ModalUnits);
+
+            return unitsCommand == null || unitsCommand.ToString() == "G20" ? "inch" : "mm";
+        }
+
+        private static decimal ConstrictZClamp(string lengthUnits = "mm", decimal zClamp = 10.0M)
+        {
+            if (lengthUnits == "mm")
+            {
+                if (zClamp == 0M)
+                {
+                    zClamp = 5.0M;
+                }
+                else if (zClamp < 0.5M)
+                {
+                    zClamp = 0.5M;
+                }
+                else if (zClamp > 10.0M)
+                {
+                    zClamp = 10.0M;
+                }
+            }
+            else
+            {
+                if (zClamp == 0M)
+                {
+                    zClamp = 0.2M;
+                }
+                else if (zClamp < 0.02M)
+                {
+                    zClamp = 0.02M;
+                }
+                else if (zClamp > 0.5M)
+                {
+                    zClamp = 0.5M;
+                }
+            }
+
+            return zClamp;
+        }
+
         public static async IAsyncEnumerable<Line> ZClamp(this IAsyncEnumerable<Line> tokenisedLines, Context context, decimal zClamp = 10.0M)
         {
             await foreach (var line in tokenisedLines)
@@ -120,31 +171,15 @@ namespace GCodeClean.Processing
                     yield return line;
                     continue;
                 }
-                
+
                 var unitsCommand = context.GetModalState(ModalGroup.ModalUnits);
-                if (unitsCommand == null) {
+                if (unitsCommand == null)
+                {
                     yield return line;
                     continue;
                 }
-                var lengthUnits = unitsCommand.ToString() == "G20" ? "inch" : "mm";
-
-                if (lengthUnits == "mm") {
-                    if (zClamp == 0M) {
-                        zClamp = 5.0M;
-                    } else if (zClamp < 0.5M) {
-                        zClamp = 0.5M;
-                    } else if (zClamp > 10.0M) {
-                        zClamp = 10.0M;
-                    }
-                } else {
-                    if (zClamp == 0M) {
-                        zClamp = 0.2M;
-                    } else if (zClamp < 0.02M) {
-                        zClamp = 0.02M;
-                    } else if (zClamp > 0.5M) {
-                        zClamp = 0.5M;
-                    }                    
-                }
+                var lengthUnits = GetLengthUnits(context);
+                zClamp = ConstrictZClamp(lengthUnits, zClamp);
 
                 var hasZ = line.HasToken('Z');
                 var hasTraveling = line.HasTokens(ModalGroup.ModalSimpleMotion);
@@ -153,7 +188,8 @@ namespace GCodeClean.Processing
                 {
                     var zTokenIndex = line.AllTokens.FindIndex(t => t.Code == 'Z');
 
-                    if (line.AllTokens[zTokenIndex].Number > 0) {
+                    if (line.AllTokens[zTokenIndex].Number > 0)
+                    {
                         line.AllTokens[zTokenIndex].Number = zClamp;
 
                         foreach (var travelingToken in line.AllTokens.Intersect(ModalGroup.ModalSimpleMotion))
@@ -180,7 +216,7 @@ namespace GCodeClean.Processing
         //             yield return line;
         //             continue;
         //         }
-                
+
         //         Coord coords = line;
         //         if (!previousCoords.HasCoordPair())
         //         {
@@ -264,13 +300,13 @@ namespace GCodeClean.Processing
                         yield return line;
                         continue;
                     case 2:
-                    {
-                        var isClockwise = line.Tokens.Contains(clockwiseMovementToken);
-                        var isClockwiseIntersection = Utility.DirectionOfPoint(previousCoords.ToPointF(), coords.ToPointF(), intersections[0].ToPointF()) < 0;
+                        {
+                            var isClockwise = line.Tokens.Contains(clockwiseMovementToken);
+                            var isClockwiseIntersection = Utility.DirectionOfPoint(previousCoords.ToPointF(), coords.ToPointF(), intersections[0].ToPointF()) < 0;
 
-                        intersections.RemoveAt(isClockwise != isClockwiseIntersection ? 0 : 1);
-                        break;
-                    }
+                            intersections.RemoveAt(isClockwise != isClockwiseIntersection ? 0 : 1);
+                            break;
+                        }
                 }
 
                 previousCoords = Coord.Merge(previousCoords, coords, true);
@@ -296,9 +332,10 @@ namespace GCodeClean.Processing
                     yield return line;
                     continue;
                 }
-                
+
                 var unitsCommand = context.GetModalState(ModalGroup.ModalUnits);
-                if (unitsCommand == null) {
+                if (unitsCommand == null)
+                {
                     yield return line;
                     continue;
                 }
@@ -326,7 +363,7 @@ namespace GCodeClean.Processing
                         line.PrependToken(previousCommand);
                     }
                 }
-                
+
                 if (!line.HasTokens(arcCommands))
                 {
                     for (var ix = 0; ix < previousXYZCoords.Count; ix++)
@@ -341,7 +378,8 @@ namespace GCodeClean.Processing
                 Coord coordsA = new Line(previousXYZCoords);
                 Coord coordsB = line;
                 var abDistance = (coordsA, coordsB).Distance();
-                if (abDistance <= arcTolerance) {
+                if (abDistance <= arcTolerance)
+                {
                     line.RemoveTokens(arcArguments);
                     line.RemoveTokens(arcCommands);
                     line.PrependToken(new Token("G1"));
@@ -358,7 +396,7 @@ namespace GCodeClean.Processing
 
         public static async IAsyncEnumerable<Line> Clip(this IAsyncEnumerable<Line> tokenisedLines, Context context, decimal tolerance = 0.0005M)
         {
-            var arcArguments = new [] { 'I', 'J', 'K' };
+            var arcArguments = new[] { 'I', 'J', 'K' };
 
             await foreach (var line in tokenisedLines)
             {
@@ -371,7 +409,8 @@ namespace GCodeClean.Processing
                 }
 
                 var unitsCommand = context.GetModalState(ModalGroup.ModalUnits);
-                if (unitsCommand == null) {
+                if (unitsCommand == null)
+                {
                     yield return line;
                     continue;
                 }
@@ -489,8 +528,9 @@ namespace GCodeClean.Processing
             }
         }
 
-        private static Line ArcRadiusToCenter(this Line lineB, Coord coordsA, Coord center) {
-            lineB.RemoveTokens(new List<char> { 'R'});
+        private static Line ArcRadiusToCenter(this Line lineB, Coord coordsA, Coord center)
+        {
+            lineB.RemoveTokens(new List<char> { 'R' });
 
             if ((center.Set & CoordSet.X) == CoordSet.X && (coordsA.Set & CoordSet.X) == CoordSet.X)
             {
@@ -508,7 +548,8 @@ namespace GCodeClean.Processing
             return lineB;
         }
 
-        private static void BuildContext(this Dictionary<string, string> context, JsonElement tokenDefinitions, Token token) {
+        private static void BuildContext(this Dictionary<string, string> context, JsonElement tokenDefinitions, Token token)
+        {
             var replacements = tokenDefinitions.GetProperty("replacements");
 
             if (!replacements.TryGetProperty(token.Source, out var replacement))

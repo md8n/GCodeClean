@@ -31,11 +31,11 @@ There are a very large number of possible targets including 32bit, ARM, etc.
 
 ### Command Line Parameters
 
-Throw the `--help` command line option at GCodeClean and you'll get back the following:
+Throw the `--help` command line option at the GCodeClean `CLI` and you'll get back the following:
 
 ```
-CLI 0.9.1
-Copyright (C) 2020 CLI
+CLI 0.9.3
+Copyright (C) 2021 md8n
 USAGE:
 Clean GCode file:
   GCodeClean --filename facade.nc
@@ -67,7 +67,7 @@ Exit code= 0
 
 `--annotate` is a simple switch, include it on its own to have your GCode annotated with inline comments (even if you specify hard minimisation).
 
-`--minimise` accepts 'soft', 'hard', or a selection you choose of codes to be deduplicated.
+`--minimise` accepts 'soft', 'medium', 'hard', or a selection you choose of codes to be deduplicated.
 - soft = 'F', 'Z' only - this is also the default.
 - medium = All codes excluding IJK, but there is a space between each 'word'.
 - hard = All codes excluding IJK, and spaces between 'words' are eliminated also.
@@ -84,7 +84,7 @@ For the tolerance values, the smallest value (inch or mm specific) is used as th
 Now find yourself a gcode (`.nc`, `.gcode`, etc.) file to use for the option `--filename <filename>`.
 And replace `<filename>` with the full path to your gcode file (as per what your OS requires).
 
-`GCodeClean` will require Read access to that file, and Write access to the folder where that file is located.
+The GCodeClean `CLI` will require Read access to that file, and Write access to the folder where that file is located.
 
 And then run the `GCodeCleanCLI` executable.
 e.g. for Windows that might look like:
@@ -97,10 +97,10 @@ or for Linux (Ubuntu 18.04)
 ./CLI --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
 
-After processing `GCodeCleanCLI` will report the number of lines that it output.
+After processing the GCodeClean `CLI` will report the number of lines that it output.
 The output file will have `-gcc` appended to name of the input file (but before the file extension) that you provided on the command line.
 
-Note: If the input file does not exist (or can't be found, i.e. your typo) then `GCodeCleanCLI` will fail, but it won't do any harm.
+Note: If the input file does not exist (or can't be found, i.e. your typo) then GCodeClean `CLI` will fail, but it won't do any harm.
 
 ### Prerequisites for Building it Yourself
 
@@ -141,12 +141,12 @@ Take a note of the `publish` folder, the `CLI` executable will be located there.
 And then run the `CLI` executable.
 e.g. for Windows that might look like:
 ```
-.\bin\Debug\netcoreapp3.1\publish\cli --filename FacadeFullAlternate.nc --minimise hard --annotate
+.\bin\Debug\net5.0\publish\cli --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
 
 or for Linux (Ubuntu 18.04)
 ```
-./bin/Debug/netcoreapp3.1/publish/CLI --filename FacadeFullAlternate.nc --minimise hard --annotate
+./bin/Debug/net5.0/publish/CLI --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
 
 ## GCodeClean Solution Organisation
@@ -212,6 +212,7 @@ M3
 (Preamble completed by GCodeClean)
 G94
 G49
+Z2
 (Preamble completed by GCodeClean)
 G0 X39.29 Y-105.937
 ```

@@ -123,6 +123,8 @@
 		"M98": "Subprogram: Call",
 		"M99": "Subprogram: End",
 
+		"#": "Set Parameter",
+
 		"D": "Tool Radius Compensation",
 		"E": "Extrude Filament",
 		"F": "Set Feed Rate to {feedRateMode}",

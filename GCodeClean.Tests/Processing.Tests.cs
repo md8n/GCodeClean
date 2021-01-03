@@ -36,6 +36,43 @@ namespace GCodeClean.Tests
         }
 
         [Fact]
+        public async void TestInjectPreamble()
+        {
+            var sourceLines = new List<Line> {
+                new Line("G17"),
+                new Line("G40"),
+                new Line("G90"),
+                new Line("G21"),
+                new Line("T1"),
+                new Line("S10000"),
+                new Line("M3"),
+                new Line("G0 X35.747 Y46.824")
+            };
+            var testLines = sourceLines.ConvertAll(l => new Line(l));
+            var lines = AsyncLines(testLines);
+            var zClamp = 3M;
+            var expectedLines = new List<Line> {
+                new Line("G17"),
+                new Line("G40"),
+                new Line("G90"),
+                new Line("G21"),
+                new Line("T1"),
+                new Line("S10000"),
+                new Line("M3"),
+                new Line("(Preamble completed by GCodeClean)"),
+                new Line("G94"),
+                new Line("G49"),
+                new Line($"Z{zClamp}"),
+                new Line("(Preamble completed by GCodeClean)"),
+                new Line("G0 X35.747 Y46.824")
+            };
+
+            var resultLines = await lines.InjectPreamble(Default.Preamble(), zClamp).ToListAsync();
+            Assert.False(sourceLines.SequenceEqual(resultLines));
+            Assert.True(expectedLines.SequenceEqual(resultLines));
+        }
+
+        [Fact]
         public async void TestAugment()
         {
             var sourceLines = new List<Line> { new Line("G21"), new Line("G90"), new Line("G1 Z-0.15"), new Line("X26.6059 Z - 0.1539 F60"), new Line("X26.6068 Z - 0.1577") };
