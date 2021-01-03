@@ -112,7 +112,7 @@ namespace GCodeCleanCLI
                 //.EliminateLineNumbers()
                 .DedupRepeatedTokens()
                 .SingleCommandPerLine()
-                .InjectPreamble(context)
+                .InjectPreamble(context, options.zClamp)
                 .Augment()
                 .ZClamp(context, options.zClamp)
                 .ConvertArcRadiusToCenter(context)

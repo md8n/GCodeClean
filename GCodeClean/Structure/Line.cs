@@ -1,4 +1,4 @@
-// Copyright (c) 2020 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
+// Copyright (c) 2020-2021 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System.Collections.Generic;
@@ -23,11 +23,15 @@ namespace GCodeClean.Structure
             {
                 // Always manipulate the returned list of tokens to put any line number first
                 // Even though we are doing this below in the set
-                return _tokens.Where(t => t.IsLineNumber).Take(1).Concat(_tokens.Where(t => !t.IsLineNumber)).ToList();
+                return _tokens.Where(t => t.IsLineNumber).Take(1)
+                    .Concat(_tokens.Where(t => !t.IsLineNumber))
+                    .ToList();
             }
             set
             {
-                _tokens = value.Where(t => t.IsLineNumber).Take(1).Concat(value.Where(t => !t.IsLineNumber)).ToList();
+                _tokens = value.Where(t => t.IsLineNumber).Take(1)
+                    .Concat(value.Where(t => !t.IsLineNumber))
+                    .ToList();
             }
         }
 
@@ -368,9 +372,16 @@ namespace GCodeClean.Structure
             return Tokens.Select(t => t.GetHashCode()).GetHashCode();
         }
         
+        /// <summary>
+        /// Return the line as a formatted string, with any line number first and any comments last
+        /// </summary>
+        /// <returns></returns>
         public override string ToString()
         {
-            return string.Join(" ", AllTokens).Trim();
+            var allTokensOrdered = _tokens.Where(t => t.IsLineNumber).Take(1)
+                .Concat(_tokens.Where(t => !(t.IsLineNumber || t.IsComment)))
+                .Concat(_tokens.Where(t => t.IsComment));
+            return string.Join(" ", allTokensOrdered).Trim();
         }
     }
 }

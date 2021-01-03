@@ -1,6 +1,7 @@
 // Copyright (c) 2020 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
+using System;
 using System.Linq;
 
 namespace GCodeClean.Structure
@@ -11,6 +12,7 @@ namespace GCodeClean.Structure
 
         private char _code;
 
+        private int? _parameter;
         private decimal? _number;
 
         public string Source
@@ -27,6 +29,7 @@ namespace GCodeClean.Structure
                 IsCode = false;
                 IsArgument = false;
                 IsLineNumber = false;
+                IsParameterSetting = false;
                 IsOther = false;
 
                 if (string.IsNullOrWhiteSpace(_source))
@@ -49,7 +52,32 @@ namespace GCodeClean.Structure
                     return;
                 }
 
-                if (!decimal.TryParse(token.Substring(1), out var number))
+                decimal number;
+                if (IsParameterSetting)
+                {
+                    var parameterParts = token[1..].Split('=', StringSplitOptions.RemoveEmptyEntries);
+                    if (parameterParts.Length != 2)
+                    {
+                        IsValid = false;
+                        return;
+                    }
+
+                    if (!int.TryParse(parameterParts[0], out var parameter))
+                    {
+                        IsValid = false;
+                        return;
+                    }
+
+                    if (!decimal.TryParse(parameterParts[1], out number))
+                    {
+                        IsValid = false;
+                        return;
+                    }
+
+                    Parameter = parameter;
+                }
+
+                if (!decimal.TryParse(token[1..], out number))
                 {
                     IsValid = false;
                     return;
@@ -72,6 +100,7 @@ namespace GCodeClean.Structure
                 IsCode = false;
                 IsArgument = false;
                 IsLineNumber = false;
+                IsParameterSetting = false;
                 IsOther = false;
 
                 if (FileTerminators.Contains(_code))
@@ -94,9 +123,14 @@ namespace GCodeClean.Structure
                 {
                     IsArgument = true;
                 }
-                else if (LineNumbers.Any(a => a == _code))
+                else if (LineNumbers.Any(l => l == _code))
                 {
                     IsLineNumber = true;
+                }
+                else if (Parameters.Any(p => p == _code))
+                {
+                    // Parameter Setting is technically a command, however we handle it separately from commands
+                    IsParameterSetting = true;
                 }
                 else if (Other.Any(a => a == _code))
                 {
@@ -135,9 +169,29 @@ namespace GCodeClean.Structure
                     IsValid = false;
                 }
 
-                if (IsArgument || IsLineNumber)
+                if (IsArgument || IsLineNumber || IsParameterSetting)
                 {
                     IsValid = true;
+                }
+            }
+        }
+
+        public int? Parameter
+        {
+            get => _parameter;
+            set
+            {
+                _parameter = value;
+
+                if (IsFileTerminator || IsComment)
+                {
+                    IsValid = false;
+                    return;
+                }
+
+                if (IsCommand || IsArgument || IsLineNumber || IsParameterSetting)
+                {
+                    IsValid = _parameter >= 1 && _parameter <= 5399;
                 }
             }
         }
@@ -154,6 +208,8 @@ namespace GCodeClean.Structure
 
         public bool IsLineNumber { get; private set; }
 
+        public bool IsParameterSetting { get; private set; }
+
         public bool IsOther { get; private set; }
 
         public bool IsValid { get; private set; }
@@ -169,6 +225,12 @@ namespace GCodeClean.Structure
         public static readonly char[] Arguments = {'A', 'B', 'C', 'D', 'H', 'I', 'J', 'K', 'L', 'P', 'R', 'X', 'Y', 'Z'};
 
         public static readonly char[] LineNumbers = { 'N' };
+
+        /// <summary>
+        /// Parameters are identified by a Hash followed by an integer (from 1 to 5399)
+        /// Parameters may be set (a command) or may be used as a value (after a command, code or argument)
+        /// </summary>
+        public static readonly char[] Parameters = { '#' };
 
         public static readonly char[] Other = {'E', 'O', 'Q', 'U', 'V'};
 
@@ -243,7 +305,12 @@ namespace GCodeClean.Structure
                 return Source;
             }
 
-            return $"{Code}{Number:0.####}";
+            if (IsParameterSetting)
+            {
+                return $"{Code}{Parameter}={Number:0.####}";
+            }
+
+            return Number.HasValue ? $"{Code}{Number:0.####}" : $"{Code}#{Parameter}";
         }
     }
 }
