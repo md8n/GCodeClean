@@ -119,57 +119,39 @@ namespace GCodeClean.Processing
                 if (hasCoords && withinBounds)
                 {
                     // Check if any value is too small to matter                    
-                    var coordsAC = coordsA - coordsC;
-                    var coordsAB = coordsA - coordsB;
-                    var coordsBC = coordsB - coordsC;
+                    var distanceAB = Coord.Distance(coordsA, coordsB);
+                    var distanceAC = Coord.Distance(coordsA, coordsC);
+                    var distanceBC = Coord.Distance(coordsB, coordsC);
 
-                    var xIsRelevant = coordsAC.X >= tolerance && coordsAB.X >= tolerance && coordsBC.X >= tolerance ? 1 : 0;
-                    var yIsRelevant = coordsAC.Y >= tolerance && coordsAB.Y >= tolerance && coordsBC.Y >= tolerance ? 1 : 0;
-                    var zIsRelevant = coordsAC.Z >= tolerance && coordsAB.Z >= tolerance && coordsBC.Z >= tolerance ? 1 : 0;
+                    // Establish whether 'B' is 'significant' and therefore should (probably) not be dropped
+                    isSignificant = distanceAB >= tolerance && distanceBC >= tolerance;
 
-                    isSignificant = xIsRelevant + yIsRelevant + zIsRelevant < 2;
-
-                    var xyIsSignificant = false;
-                    var xzIsSignificant = false;
-                    var yzIsSignificant = false;
-
-                    if (isSignificant) {
-                        var acXYAngle = (coordsAC.X, coordsAC.Y).Angle();
-                        var abXYAngle = (coordsAB.X, coordsAB.Y).Angle();
-
-                        var acXZAngle = (coordsAC.X, coordsAC.Z).Angle();
-                        var abXZAngle = (coordsAB.X, coordsAB.Z).Angle();
-
-                        var acYZAngle = (coordsAC.Y, coordsAC.Z).Angle();
-                        var abYZAngle = (coordsAB.Y, coordsAB.Z).Angle();
-
-                        if (xIsRelevant + yIsRelevant == 2)
-                        {
-                            xyIsSignificant = Math.Abs(acXYAngle - abXYAngle) >= tolerance;
-                        }
-                        if (xIsRelevant + zIsRelevant == 2)
-                        {
-                            xzIsSignificant = Math.Abs(acXZAngle - abXZAngle) >=tolerance;
-                        }
-                        if (yIsRelevant + zIsRelevant == 2)
-                        {
-                            yzIsSignificant = Math.Abs(acYZAngle - abYZAngle) >= tolerance;
-                        }
+                    if (isSignificant)
+                    {
+                        isSignificant = Math.Abs(distanceAC - (distanceAB + distanceBC)) >= tolerance;
                     }
 
-                    isSignificant = xyIsSignificant || xzIsSignificant || yzIsSignificant;
+                    if (isSignificant) {
+                        // Heron's formula for area
+                        var s = (distanceAB + distanceAC + distanceBC) / 2;
+                        var area = (decimal) Math.Sqrt((double) (s * (s - distanceAB) * (s - distanceAC) * (s - distanceBC)));
+
+                        var altitude = 2 * (area / distanceAC);
+
+                        isSignificant = altitude >= tolerance;
+                    }
                 }
 
-                yield return lineA;
-                if (!hasCoords || !withinBounds || !isSignificant) {
-                    yield return lineB;
+                if (!hasCoords || !withinBounds || isSignificant) {
+                    // They are not co-linear! so yield A, and step along (preserving B)
+                    yield return lineA;
+                    lineA = new Line(lineB);
                 }
-                // else - They are co-linear! so move things along and silently drop tokenB
 
-                lineA = new Line(lineC);
+                lineB = new Line(lineC);
+                isLineBSet = true;
+
                 isLineASet = true;
-                lineB = new Line();
-                isLineBSet = false;
             }
         }
 

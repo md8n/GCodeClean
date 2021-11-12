@@ -1,7 +1,7 @@
 # GCodeClean
 
 A library and command line utility to do some 'cleaning' of a gcode (an `.nc`, `.gcode`) file.
-The primary objective is to be a `GCode Linter`, `per line` linting of gcode is already done.
+The primary objective is to be a `GCode Linter`, as part of that `per line` linting of gcode is already done.
 
 We also have:
 * eliminating redundant lines (within tolerances),
@@ -17,24 +17,24 @@ We also have:
 
 We'll also look at supporting:
 * injecting blank lines to highlight significant instructions (tool raising, tool changes),
-* `postamble linting`: Similar to the `peramble`, but at the end of the file (obviously).
+* `postamble linting`: Similar to the `preamble`, but at the end of the file (obviously).
 
 ## Getting Started
 
 There are standalone 64bit release builds available, for Linux, Windows and OSX at [GCodeClean releases](https://github.com/md8n/GCodeClean/releases)
 
-The standalone releases include all the relevant .NET 5.0 libraries for this application.
+The standalone releases include all the relevant .NET 6.0 libraries for this application.
 
-To build and run this project needs the .NET 5.0 SDK.
+Alternatively you can build and run this project yourself, and for that you would need the .NET 6.0 SDK.
 
-There are a very large number of possible targets including 32bit, ARM, etc.
+But if you do build it yourself then there are a very large number of possible targets including 32bit, ARM (e.g. Raspberry Pi), etc.
 
 ### Command Line Parameters
 
 Throw the `--help` command line option at the GCodeClean `CLI` and you'll get back the following:
 
 ```
-CLI 0.9.3
+CLI 0.9.4
 Copyright (C) 2021 md8n
 USAGE:
 Clean GCode file:
@@ -92,7 +92,7 @@ e.g. for Windows that might look like:
 .\cli --filename FacadeFullAlternate.nc --minimise soft --annotate
 ```
 
-or for Linux (Ubuntu 18.04)
+or for Linux (Ubuntu 18.04 / 20.04)
 ```
 ./CLI --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
@@ -104,13 +104,14 @@ Note: If the input file does not exist (or can't be found, i.e. your typo) then 
 
 ### Prerequisites for Building it Yourself
 
-.NET 5.0 SDK - get the correct version for your OS and architecture here: [.NET SDK downloads](https://dotnet.microsoft.com/download/)
+.NET 6.0 SDK - get the correct version for your OS and architecture here: [.NET SDK downloads](https://dotnet.microsoft.com/download/)
 
-A text editor if you want to change something.
+A text editor if you want to change something.  I recommend Visual Studio Code, or alternatively go the whole hog and use full Visual Studio.
+The 'community edition' of Visual Studio is free.  But anything so long as you can edit text files with it is fine.
 
 ### Building and Running it Yourself
 
-Once you've got the .NET 5.0 SDK installed.
+Once you've got the .NET 6.0 SDK installed.
 
 Get yourself to a command line prompt, change to the folder where you've cloned this repository to, and then to the CLI folder, and enter:
 ```
@@ -141,12 +142,12 @@ Take a note of the `publish` folder, the `CLI` executable will be located there.
 And then run the `CLI` executable.
 e.g. for Windows that might look like:
 ```
-.\bin\Debug\net5.0\publish\cli --filename FacadeFullAlternate.nc --minimise hard --annotate
+.\bin\Debug\net6.0\publish\cli --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
 
-or for Linux (Ubuntu 18.04)
+or for Linux (Ubuntu 18.04 / 20.04)
 ```
-./bin/Debug/net5.0/publish/CLI --filename FacadeFullAlternate.nc --minimise hard --annotate
+./bin/Debug/net6.0/publish/CLI --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
 
 ## GCodeClean Solution Organisation
@@ -168,7 +169,7 @@ However, certain conventions have arisen in how GCode should be presented.  Ther
 
 GCodeClean's linting approach is to respect those conventions while prioritising the execution order, and deliberately injecting commands to turn the implicit assumptions about the state of the machine into explicit assertions about what state is desired.
 
-This means that any line that has multiple commands on it (G, M, F, S, T) will be split into multiple lines, and those line will appear in execution order.
+This means that any line that has multiple commands on it (G, M, F, S, T) will be split into multiple lines, and those lines will appear in execution order.
 Also GCodeClean defines a set of GCode commands as a 'preamble'. When the first movement command is detected, any of these 'preamble' codes that have not yet been seen are injected into the GCode above that movement command.
 This also adds the concept of a 'Context' (i.e. the state as identified by the various commands seen so far, or the state that is desired), the preamble is the first such 'Context'.
 
