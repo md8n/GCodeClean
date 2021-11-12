@@ -156,12 +156,29 @@ namespace GCodeClean.Structure
             return coords3;
         }
 
-
         public static Coord Difference(Coord coords1, Coord coords2)
         {
             var coords3 = coords1 - coords2;
 
             return new Coord(Math.Abs(coords3.X), Math.Abs(coords3.Y), Math.Abs(coords3.Z));
+        }
+
+        /// <summary>
+        /// The distance between two coords (all three axes)
+        /// </summary>
+        /// <param name="coords1"></param>
+        /// <param name="coords2"></param>
+        /// <returns></returns>
+        public static decimal Distance(Coord coords1, Coord coords2)
+        {
+            var a = Math.Abs(coords1.X - coords2.X);
+            var b = Math.Abs(coords1.Y - coords2.Y);
+            var c = Math.Abs(coords1.Z - coords2.Z);
+
+            var ab = Math.Sqrt((Double)((a * a) + (b * b)));
+            var abc = Math.Sqrt((ab * ab) + (Double)(c * c));
+
+            return (decimal)abc;
         }
 
         public static Coord operator -(Coord coords1, Coord coords2)

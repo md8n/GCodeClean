@@ -18,12 +18,11 @@ namespace GCodeCleanCLI
 {
     internal static class Program
     {
-
         public static async Task Main(string[] args)
         {
             if (args.Length == 0)
             {
-                args = new [] { "--help" };
+                args = new[] { "--help" };
             }
             await Parser.Default.ParseArguments<Options>(args)
                 .WithParsedAsync(RunAsync).ConfigureAwait(true);
@@ -81,23 +80,32 @@ namespace GCodeCleanCLI
             }
             Console.WriteLine("Outputting to:" + outputFile);
 
-            if (options.tolerance < 0.0005M) {
-                options.tolerance = 0.0005M;
-            } else if (options.tolerance > 0.5M) {
+            if (options.tolerance < 0.00005M)
+            {
+                options.tolerance = 0.00005M;
+            }
+            else if (options.tolerance > 0.5M)
+            {
                 options.tolerance = 0.5M;
             }
             Console.WriteLine("Clipping and general mathematical tolerance:" + options.tolerance);
 
-            if (options.arcTolerance < 0.0005M) {
-                options.arcTolerance = 0.0005M;
-            } else if (options.arcTolerance > 0.5M) {
+            if (options.arcTolerance < 0.00005M)
+            {
+                options.arcTolerance = 0.00005M;
+            }
+            else if (options.arcTolerance > 0.5M)
+            {
                 options.arcTolerance = 0.5M;
             }
             Console.WriteLine("Arc simplification tolerance:" + options.arcTolerance);
 
-            if (options.zClamp > 10.0M) {
+            if (options.zClamp > 10.0M)
+            {
                 options.zClamp = 10.0M;
-            } else if (options.zClamp > 0 && options.zClamp < 0.02M) {
+            }
+            else if (options.zClamp > 0 && options.zClamp < 0.02M)
+            {
                 options.zClamp = 0.02M;
             }
             Console.WriteLine("Z-axis clamping value (max traveling height):" + options.zClamp);
