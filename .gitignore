@@ -5,3 +5,4 @@ Samples/
 .vs/
 .vscode/
 .github/workflows/
+/CLI/Properties/launchSettings.json
