@@ -19,6 +19,9 @@ namespace GCodeCleanCLI
         [Option("annotate", Required = false, HelpText = "Annotate the GCode with inline comments.")]
         public bool annotate { get; set; }
 
+        [Option("lineNumbers", Required = false, HelpText = "Keep line numbers", Default = false)]
+        public bool lineNumbers { get; set; }
+
         [Option("minimise", Required = false, HelpText = "Select preferred minimisation strategy, 'soft' - (default) FZ only, 'medium' - All codes excluding IJK (but leave spaces in place), 'hard' - All codes excluding IJK and remove spaces, or list of codes e.g. FGXYZ", Default = "soft")]
         public string minimise { get; set; }
 
