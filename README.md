@@ -34,7 +34,7 @@ But if you do build it yourself then there are a very large number of possible t
 Throw the `--help` command line option at the GCodeClean `CLI` and you'll get back the following:
 
 ```
-CLI 0.9.4
+CLI 0.9.5
 Copyright (C) 2021 md8n
 USAGE:
 Clean GCode file:
@@ -44,7 +44,9 @@ Clean GCode file:
 
   --tokenDefs       (Default: tokenDefinitions.json) Full path to the tokenDefinitions.json file.
 
-  --annotate        Annotate the GCode with inline comments.
+  --annotate        (Default: false) Annotate the GCode with inline comments.
+
+  --lineNumbers     (Default: false) Keep line numbers.
 
   --minimise        (Default: soft) Select preferred minimisation strategy, 'soft' - (default) FZ only, 'medium' - All
                     codes excluding IJK (but leave spaces in place), 'hard' - All codes excluding IJK and remove spaces,
@@ -66,6 +68,8 @@ Exit code= 0
 ```
 
 `--annotate` is a simple switch, include it on its own to have your GCode annotated with inline comments (even if you specify hard minimisation).
+
+`--lineNumbers` is also a simple switch. Normally line numbers will be stripped out (they are NOT recommended), but adding this flag will ensure they are preserved (if you must).
 
 `--minimise` accepts 'soft', 'medium', 'hard', or a selection you choose of codes to be deduplicated.
 - soft = 'F', 'Z' only - this is also the default.
@@ -109,7 +113,7 @@ Note: If the input file does not exist (or can't be found, i.e. your typo) then 
 A text editor if you want to change something.  I recommend Visual Studio Code, or alternatively go the whole hog and use full Visual Studio.
 The 'community edition' of Visual Studio is free.  But anything so long as you can edit text files with it is fine.
 
-### Building and Running it Yourself
+### Building and Running it Yourself (you don't have to if one of the binaries works for you)
 
 Once you've got the .NET 6.0 SDK installed.
 
