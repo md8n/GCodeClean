@@ -1,4 +1,4 @@
-// Copyright (c) 2020 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
+// Copyright (c) 2020-22 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -63,19 +63,32 @@ namespace GCodeClean.Processing
             return decimalPlaces;
         }
 
+        public static string GetLengthUnits(Context context)
+        {
+            var unitsCommand = context.GetModalState(ModalGroup.ModalUnits);
+
+            return unitsCommand == null || unitsCommand.ToString() == "G20" ? "inch" : "mm";
+        }
+
         public static decimal ConstrainTolerance(this decimal tolerance, string lengthUnits = "mm") {
             // Re-tweak tolerance to allow for lengthUnits
             if (lengthUnits == "mm") {
-                if (tolerance < 0.005M) {
-                    tolerance = 0.005M;
-                } else if (tolerance > 0.5M) {
-                    tolerance = 0.5M;
+                if (tolerance < 0.001M)
+                {
+                    tolerance = 0.001M;
+                }
+                else if (tolerance > 0.01M)
+                {
+                    tolerance = 0.01M;
                 }
             } else {
-                if (tolerance < 0.0005M) {
-                    tolerance = 0.0005M;
-                } else if (tolerance > 0.05M) {
-                    tolerance = 0.05M;
+                if (tolerance < 0.00005M)
+                {
+                    tolerance = 0.00005M;
+                }
+                else if (tolerance > 0.2M)
+                {
+                    tolerance = 0.2M;
                 }
             }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2020 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
+// Copyright (c) 2020-22 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -269,6 +269,8 @@ namespace GCodeClean.Processing
                 var radius = 0M;
                 var isClockwise = false;
 
+                var lengthUnits = Utility.GetLengthUnits(context);
+                var linearToArcTolerance = tolerance.ConstrainTolerance(lengthUnits) * 10;
                 if (hasCoords && withinBounds)
                 {
                     // Check if any value is too small to matter                    
@@ -276,9 +278,9 @@ namespace GCodeClean.Processing
                     var coordsAB = coordsA - coordsB;
                     var coordsBC = coordsB - coordsC;
 
-                    var xIsRelevant = coordsAC.X >= tolerance && coordsAB.X >= tolerance && coordsBC.X >= tolerance ? 1 : 0;
-                    var yIsRelevant = coordsAC.Y >= tolerance && coordsAB.Y >= tolerance && coordsBC.Y >= tolerance ? 1 : 0;
-                    var zIsRelevant = coordsAC.Z >= tolerance && coordsAB.Z >= tolerance && coordsBC.Z >= tolerance ? 1 : 0;
+                    var xIsRelevant = coordsAC.X >= linearToArcTolerance && coordsAB.X >= linearToArcTolerance && coordsBC.X >= linearToArcTolerance ? 1 : 0;
+                    var yIsRelevant = coordsAC.Y >= linearToArcTolerance && coordsAB.Y >= linearToArcTolerance && coordsBC.Y >= linearToArcTolerance ? 1 : 0;
+                    var zIsRelevant = coordsAC.Z >= linearToArcTolerance && coordsAB.Z >= linearToArcTolerance && coordsBC.Z >= linearToArcTolerance ? 1 : 0;
 
                     var coordPlane = context.GetModalState(ModalGroup.ModalPlane).ToString();
 
@@ -294,7 +296,7 @@ namespace GCodeClean.Processing
                     {
                         (center, radius, isClockwise) = Utility.FindCircle(coordsA, coordsB, coordsC, context);
 
-                        if (radius > tolerance)
+                        if (radius > linearToArcTolerance)
                         {
                             var radSqr = radius.Sqr();
 
@@ -308,15 +310,15 @@ namespace GCodeClean.Processing
 
                                 var centerWithinTolerance = coordPlane switch
                                 {
-                                    "G17" => centerDiff.X <= tolerance && centerDiff.Y <= tolerance,
-                                    "G18" => centerDiff.X <= tolerance && centerDiff.Z <= tolerance,
-                                    "G19" => centerDiff.Y <= tolerance && centerDiff.Z <= tolerance,
-                                    _ => centerDiff.X <= tolerance && centerDiff.Y <= tolerance && centerDiff.Z <= tolerance,
+                                    "G17" => centerDiff.X <= linearToArcTolerance && centerDiff.Y <= linearToArcTolerance,
+                                    "G18" => centerDiff.X <= linearToArcTolerance && centerDiff.Z <= linearToArcTolerance,
+                                    "G19" => centerDiff.Y <= linearToArcTolerance && centerDiff.Z <= linearToArcTolerance,
+                                    _ => centerDiff.X <= linearToArcTolerance && centerDiff.Y <= linearToArcTolerance && centerDiff.Z <= linearToArcTolerance,
                                 };
 
-                                if (centerWithinTolerance && radiusDiff <= tolerance)
+                                if (centerWithinTolerance && radiusDiff <= linearToArcTolerance)
                                 {
-                                    isSignificant = bcr <= (double)tolerance;
+                                    isSignificant = bcr <= (double)linearToArcTolerance;
                                 }
                                 else
                                 {
@@ -328,7 +330,7 @@ namespace GCodeClean.Processing
                                 var abDistance = (coordsA, coordsB).Distance().Sqr() / 4;
                                 var abr = (double)radius - Math.Sqrt((double)(radSqr - abDistance));
 
-                                isSignificant = abr <= (double)tolerance && bcr <= (double)tolerance;
+                                isSignificant = abr <= (double)linearToArcTolerance && bcr <= (double)linearToArcTolerance;
                             }
                         }
                         else

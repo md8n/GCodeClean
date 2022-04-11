@@ -1,4 +1,4 @@
-// Copyright (c) 2020 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
+// Copyright (c) 2020-22 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -28,7 +28,7 @@ namespace GCodeClean.Processing
                         // If the line is a G0 movement then inject a +ve Z
                         if (line.HasToken("G0"))
                         {
-                            var lengthUnits = GetLengthUnits(preamble);
+                            var lengthUnits = Utility.GetLengthUnits(preamble);
                             zClamp = ConstrictZClamp(lengthUnits, zClamp);
                             linesToOutput.Add(new Line($"Z{zClamp}"));
                         }
@@ -117,13 +117,6 @@ namespace GCodeClean.Processing
             }
         }
 
-        private static string GetLengthUnits(Context context)
-        {
-            var unitsCommand = context.GetModalState(ModalGroup.ModalUnits);
-
-            return unitsCommand == null || unitsCommand.ToString() == "G20" ? "inch" : "mm";
-        }
-
         private static decimal ConstrictZClamp(string lengthUnits = "mm", decimal zClamp = 10.0M)
         {
             if (lengthUnits == "mm")
@@ -178,7 +171,7 @@ namespace GCodeClean.Processing
                     yield return line;
                     continue;
                 }
-                var lengthUnits = GetLengthUnits(context);
+                var lengthUnits = Utility.GetLengthUnits(context);
                 zClamp = ConstrictZClamp(lengthUnits, zClamp);
 
                 var hasZ = line.HasToken('Z');
@@ -378,6 +371,8 @@ namespace GCodeClean.Processing
                 Coord coordsA = new Line(previousXYZCoords);
                 Coord coordsB = line;
                 var abDistance = (coordsA, coordsB).Distance();
+                var lengthUnits = Utility.GetLengthUnits(context);
+                arcTolerance = arcTolerance.ConstrainTolerance(lengthUnits);
                 if (abDistance <= arcTolerance)
                 {
                     line.RemoveTokens(arcArguments);
