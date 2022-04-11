@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2020 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
+﻿// Copyright (c) 2020-22 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -24,9 +24,19 @@ namespace GCodeCleanCLI
             {
                 args = new[] { "--help" };
             }
-            await Parser.Default.ParseArguments<Options>(args)
-                .WithParsedAsync(RunAsync).ConfigureAwait(true);
-            Console.WriteLine($"Exit code= {Environment.ExitCode}");
+            
+            try
+            {
+                await Parser.Default.ParseArguments<Options>(args)
+                    .WithParsedAsync(RunAsync).ConfigureAwait(true);
+            }
+            catch (FileNotFoundException fnfEx)
+            {
+                Console.WriteLine(fnfEx.Message);
+                Environment.ExitCode = 2;
+            }
+
+            Console.WriteLine($"Exit code={Environment.ExitCode}");
         }
 
         private static async Task RunAsync(Options options)
@@ -53,7 +63,6 @@ namespace GCodeCleanCLI
             var zClamp = Program.ConstrainOption(options.zClamp, 0.02M, 10.0M, "Z-axis clamping value (max traveling height):");
             Console.WriteLine("All tolerance and clamping values may be further adjusted to allow for inches vs. millimeters");
 
-            var linearToArcTolerance = tolerance * 10;
             var context = Default.Preamble();
 
             var dedupSelection = new List<char> { 'F', 'Z' };
@@ -71,7 +80,7 @@ namespace GCodeCleanCLI
                 .ConvertArcRadiusToCenter(context)
                 .DedupLine()
                 .SimplifyShortArcs(context, arcTolerance)
-                .DedupLinearToArc(context, linearToArcTolerance)
+                .DedupLinearToArc(context, tolerance)
                 .Clip(context, tolerance)
                 .DedupRepeatedTokens()
                 .DedupLine()
