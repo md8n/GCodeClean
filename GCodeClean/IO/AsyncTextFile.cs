@@ -1,4 +1,4 @@
-// Copyright (c) 2020 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
+// Copyright (c) 2020-22 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System.Collections.Generic;
@@ -12,6 +12,12 @@ namespace GCodeClean.IO
         private const int DefaultBufferSize = 4096;
         private const FileOptions DefaultOptions = FileOptions.Asynchronous | FileOptions.SequentialScan;
 
+        /// <summary>
+        /// Reads and yields lines one at a time from the input source file
+        /// </summary>
+        /// <param name="path">Path to the input file</param>
+        /// <exception cref="FileNotFoundException">Throws FileNotFoundException if the input source file can not be found</exception>
+        /// <returns></returns>
         public static async IAsyncEnumerable<string> ReadLinesAsync(this string path)
         {
             var encoding = Encoding.UTF8;

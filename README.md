@@ -34,8 +34,8 @@ But if you do build it yourself then there are a very large number of possible t
 Throw the `--help` command line option at the GCodeClean `CLI` and you'll get back the following:
 
 ```
-CLI 0.9.5
-Copyright (C) 2021 md8n
+CLI 0.9.6
+Copyright (C) 2022 md8n
 USAGE:
 Clean GCode file:
   GCodeClean --filename facade.nc
@@ -63,7 +63,7 @@ Clean GCode file:
 
   --version         Display version information.
 
-Exit code= 0
+Exit code=0
   
 ```
 
@@ -105,6 +105,10 @@ After processing the GCodeClean `CLI` will report the number of lines that it ou
 The output file will have `-gcc` appended to name of the input file (but before the file extension) that you provided on the command line.
 
 Note: If the input file does not exist (or can't be found, i.e. your typo) then GCodeClean `CLI` will fail, but it won't do any harm.
+
+`Exit code`:
+* `0` - Success
+* `2` - File not found exception - check for typos etc.
 
 ### Prerequisites for Building it Yourself
 
