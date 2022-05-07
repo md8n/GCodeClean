@@ -13,8 +13,7 @@ namespace GCodeClean.Processing
 {
     public static class Processing
     {
-        public static async IAsyncEnumerable<Line> InjectPreamble(this IAsyncEnumerable<Line> tokenisedLines,
-            Context preamble, decimal zClamp = 10.0M)
+        public static async IAsyncEnumerable<Line> InjectPreamble(this IAsyncEnumerable<Line> tokenisedLines, Context preamble, decimal zClamp = 10.0M)
         {
             var preambleOutput = false;
             await foreach (var line in tokenisedLines)
@@ -48,6 +47,115 @@ namespace GCodeClean.Processing
                 }
 
                 yield return line;
+            }
+        }
+
+        /// <summary>
+        /// Ensure that file terminations meet the rules
+        /// </summary>
+        /// <remarks>In effect this is also `InjectPostamble`</remarks>
+        /// <param name="tokenisedLines"></param>
+        /// <param name="preamble"></param>
+        /// <param name="zClamp"></param>
+        /// <returns></returns>
+        public static async IAsyncEnumerable<Line> FileDemarcation(this IAsyncEnumerable<Line> tokenisedLines, Context preamble, decimal zClamp = 10.0M)
+        {
+            var currentZ = -1M; // Arbitrary
+            var leadingBlankLinesStripped = false;
+            var hasLeadingFileTerminator = false;
+            var hasTrailingFileTerminator = false;
+            var hasStopping = false;
+            var commentOutAllRemainingCommands = false;
+
+            await foreach (var line in tokenisedLines)
+            {
+                preamble.Update(line, true);
+
+                var lengthUnits = Utility.GetLengthUnits(preamble);
+                zClamp = ConstrictZClamp(lengthUnits, zClamp);
+
+                var hasZ = line.HasToken('Z');
+                var hasTraveling = line.HasTokens(ModalGroup.ModalSimpleMotion);
+
+                if (hasZ && hasTraveling)
+                {
+                    var zTokenIndex = line.AllTokens.FindIndex(t => t.Code == 'Z');
+                    currentZ = line.AllTokens[zTokenIndex].Number.Value;
+                }
+
+                if (!leadingBlankLinesStripped)
+                {
+                    if (line.AllTokens.Count == 0)
+                    {
+                        // Strip the leading blank line
+                        continue;
+                    }
+                    else
+                    {
+                        leadingBlankLinesStripped = true;
+                        hasLeadingFileTerminator = line.HasToken('%');
+                    }
+                }
+                else
+                {
+                    if (line.HasToken('%'))
+                    {
+                        commentOutAllRemainingCommands = true;
+                        if (!hasLeadingFileTerminator)
+                        {
+                            // throw away the trailing terminator, because there is no leading one
+                            // Note that all commands after this point are still commented out on the assumption that 
+                            // the mismatched trailling terminator was intentional.
+                            continue;
+                        }
+                        else
+                        {
+                            hasTrailingFileTerminator = true;
+                        }
+                    }
+                    if (line.HasTokens(ModalGroup.ModalStopping))
+                    {
+                        hasStopping = true;
+                        if (!commentOutAllRemainingCommands)
+                        {
+                            commentOutAllRemainingCommands = true;
+
+                            if (currentZ < 0)
+                            {
+                                // If the current tool height is less than zero then it needs to be raised
+                                // before the stop command
+                                yield return new Line($"G0 Z{zClamp}");
+                            }
+
+                            yield return line;
+                            continue;
+                        }
+                    }
+                }
+
+                if (commentOutAllRemainingCommands)
+                {
+                    line.AllTokens = line.AllTokens.Select(t => t.ToComment()).ToList();
+                }
+
+                yield return line;
+            }
+
+            if (hasLeadingFileTerminator && !hasTrailingFileTerminator)
+            {
+                // Inject a file demarcation character
+                yield return new Line("%");
+            }
+            else if (!hasLeadingFileTerminator && !hasStopping)
+            {
+                if (currentZ < 0)
+                {
+                    // If the current tool height is less than zero then it needs to be raised
+                    // before the stop command
+                    yield return new Line($"G0 Z{zClamp}");
+                }
+                // Inject a full stop - M30 used in preference to M2
+                yield return new Line("M30");
             }
         }
 
@@ -153,11 +261,11 @@ namespace GCodeClean.Processing
             return zClamp;
         }
 
-        public static async IAsyncEnumerable<Line> ZClamp(this IAsyncEnumerable<Line> tokenisedLines, Context context, decimal zClamp = 10.0M)
+        public static async IAsyncEnumerable<Line> ZClamp(this IAsyncEnumerable<Line> tokenisedLines, Context preamble, decimal zClamp = 10.0M)
         {
             await foreach (var line in tokenisedLines)
             {
-                context.Update(line, true);
+                preamble.Update(line, true);
 
                 if (line.IsNotCommandCodeOrArguments())
                 {
@@ -165,13 +273,13 @@ namespace GCodeClean.Processing
                     continue;
                 }
 
-                var unitsCommand = context.GetModalState(ModalGroup.ModalUnits);
+                var unitsCommand = preamble.GetModalState(ModalGroup.ModalUnits);
                 if (unitsCommand == null)
                 {
                     yield return line;
                     continue;
                 }
-                var lengthUnits = Utility.GetLengthUnits(context);
+                var lengthUnits = Utility.GetLengthUnits(preamble);
                 zClamp = ConstrictZClamp(lengthUnits, zClamp);
 
                 var hasZ = line.HasToken('Z');
@@ -248,7 +356,7 @@ namespace GCodeClean.Processing
         /// <param name="tokenisedLines"></param>
         /// <param name="context">The initial 'context' for processing, normally this will be Default.Preamble()</param>
         /// <returns></returns>
-        public static async IAsyncEnumerable<Line> ConvertArcRadiusToCenter(this IAsyncEnumerable<Line> tokenisedLines, Context context)
+        public static async IAsyncEnumerable<Line> ConvertArcRadiusToCenter(this IAsyncEnumerable<Line> tokenisedLines, Context preamble)
         {
             var previousCoords = new Coord();
 
@@ -256,7 +364,7 @@ namespace GCodeClean.Processing
 
             await foreach (var line in tokenisedLines)
             {
-                context.Update(line, true);
+                preamble.Update(line, true);
                 var hasMovement = line.HasMovementCommand();
                 if (!hasMovement)
                 {
@@ -283,7 +391,7 @@ namespace GCodeClean.Processing
                     continue;
                 }
 
-                var intersections = Utility.FindIntersections(coords, previousCoords, radius.Value, context);
+                var intersections = Utility.FindIntersections(coords, previousCoords, radius.Value, preamble);
                 switch (intersections.Count)
                 {
                     case 0:
@@ -307,7 +415,7 @@ namespace GCodeClean.Processing
             }
         }
 
-        public static async IAsyncEnumerable<Line> SimplifyShortArcs(this IAsyncEnumerable<Line> tokenisedLines, Context context, decimal arcTolerance = 0.0005M)
+        public static async IAsyncEnumerable<Line> SimplifyShortArcs(this IAsyncEnumerable<Line> tokenisedLines, Context preamble, decimal arcTolerance = 0.0005M)
         {
             var previousCommand = new Token("");
             var previousXYZCoords = new List<Token> { new Token("X"), new Token("Y"), new Token("Z") };
@@ -318,7 +426,7 @@ namespace GCodeClean.Processing
 
             await foreach (var line in tokenisedLines)
             {
-                context.Update(line, true);
+                preamble.Update(line, true);
 
                 if (line.IsNotCommandCodeOrArguments())
                 {
@@ -326,7 +434,7 @@ namespace GCodeClean.Processing
                     continue;
                 }
 
-                var unitsCommand = context.GetModalState(ModalGroup.ModalUnits);
+                var unitsCommand = preamble.GetModalState(ModalGroup.ModalUnits);
                 if (unitsCommand == null)
                 {
                     yield return line;
@@ -371,7 +479,7 @@ namespace GCodeClean.Processing
                 Coord coordsA = new Line(previousXYZCoords);
                 Coord coordsB = line;
                 var abDistance = (coordsA, coordsB).Distance();
-                var lengthUnits = Utility.GetLengthUnits(context);
+                var lengthUnits = Utility.GetLengthUnits(preamble);
                 arcTolerance = arcTolerance.ConstrainTolerance(lengthUnits);
                 if (abDistance <= arcTolerance)
                 {
@@ -389,13 +497,13 @@ namespace GCodeClean.Processing
             }
         }
 
-        public static async IAsyncEnumerable<Line> Clip(this IAsyncEnumerable<Line> tokenisedLines, Context context, decimal tolerance = 0.0005M)
+        public static async IAsyncEnumerable<Line> Clip(this IAsyncEnumerable<Line> tokenisedLines, Context preamble, decimal tolerance = 0.0005M)
         {
             var arcArguments = new[] { 'I', 'J', 'K' };
 
             await foreach (var line in tokenisedLines)
             {
-                context.Update(line, true);
+                preamble.Update(line, true);
 
                 if (line.IsNotCommandCodeOrArguments())
                 {
@@ -403,7 +511,7 @@ namespace GCodeClean.Processing
                     continue;
                 }
 
-                var unitsCommand = context.GetModalState(ModalGroup.ModalUnits);
+                var unitsCommand = preamble.GetModalState(ModalGroup.ModalUnits);
                 if (unitsCommand == null)
                 {
                     yield return line;

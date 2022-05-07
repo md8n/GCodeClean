@@ -40,7 +40,7 @@
 		"G44": "Tool Length Offset: Use - Direction",
 		"G49": "Tool Length Offset: None",
 		"G53": "Motion: Move in Machine Coordinate System",
-		"G54": "Select Coordinate System: 1",
+		"G54": "Select Coordinate System: 1 (Default)",
 		"G55": "Select Coordinate System: 2",
 		"G56": "Select Coordinate System: 3",
 		"G57": "Select Coordinate System: 4",

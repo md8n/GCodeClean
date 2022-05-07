@@ -24,11 +24,16 @@ namespace GCodeCleanCLI
             {
                 args = new[] { "--help" };
             }
-            
+
             try
             {
                 await Parser.Default.ParseArguments<Options>(args)
                     .WithParsedAsync(RunAsync).ConfigureAwait(true);
+            }
+            catch (DirectoryNotFoundException dnfEx)
+            {
+                Console.WriteLine(dnfEx.Message);
+                Environment.ExitCode = 2;
             }
             catch (FileNotFoundException fnfEx)
             {
@@ -63,7 +68,7 @@ namespace GCodeCleanCLI
             var zClamp = Program.ConstrainOption(options.zClamp, 0.02M, 10.0M, "Z-axis clamping value (max traveling height):");
             Console.WriteLine("All tolerance and clamping values may be further adjusted to allow for inches vs. millimeters");
 
-            var context = Default.Preamble();
+            var preambleContext = Default.Preamble();
 
             var dedupSelection = new List<char> { 'F', 'Z' };
             var minimisationStrategy = Program.GetMinimisationStrategy(options, dedupSelection);
@@ -75,13 +80,14 @@ namespace GCodeCleanCLI
                 .DedupRepeatedTokens()
                 .Augment()
                 .SingleCommandPerLine()
-                .InjectPreamble(context, zClamp)
-                .ZClamp(context, zClamp)
-                .ConvertArcRadiusToCenter(context)
+                .FileDemarcation(preambleContext, zClamp)
+                .InjectPreamble(preambleContext, zClamp)
+                .ZClamp(preambleContext, zClamp)
+                .ConvertArcRadiusToCenter(preambleContext)
                 .DedupLine()
-                .SimplifyShortArcs(context, arcTolerance)
-                .DedupLinearToArc(context, tolerance)
-                .Clip(context, tolerance)
+                .SimplifyShortArcs(preambleContext, arcTolerance)
+                .DedupLinearToArc(preambleContext, tolerance)
+                .Clip(preambleContext, tolerance)
                 .DedupRepeatedTokens()
                 .DedupLine()
                 .DedupLinear(tolerance)

@@ -4,7 +4,7 @@ dotnet restore
 @IF """%~1"""=="""""" (set pver=1.0.0) ELSE (set pver=%~1)
 @ECHO version set to %pver%
 
-@FOR %%r in (linux-x64 osx-x64 win-x64) DO CALL :loopbody %%r
+@FOR %%r in (linux-x64 linux-arm win-x64) DO CALL :loopbody %%r
 @ECHO Complete
 GOTO :EOF
 

@@ -95,49 +95,56 @@ namespace GCodeClean.Tests
                 new Line("G17"),
                 new Line("G21"),
                 new Line("G90"),
-                new Line("G1 X0 Y0 Z-0.15"),
-                new Line("G1 X24.4773 Y24.4129 Z-0.15"),
-                new Line("G1 X24.3427 Y24.8798 Z-0.15"),
-                new Line("G1 X24.5126 Y24.9612 Z-0.15"),
-                new Line("G1 X25.7214 Y25.8103 Z-0.15"),
-                new Line("G1 X24.9402 Y27.4502 Z-0.15"),
-                new Line("G1 X23.8103 Y27.1292 Z-0.15"),
-                new Line("G1 X22.8441 Y27.4596 Z-0.15"),
-                new Line("G1 X22.1773 Y26.0646 Z-0.15"),
-                new Line("G1 X21.8448 Y25.6385 Z-0.15"),
-                new Line("G1 X21.8361 Y25.3508 Z-0.15"),
-                new Line("G1 X21.7890 Y25.2523 Z-0.15"),
-                new Line("G1 X21.8321 Y25.2170 Z-0.15"),
-                new Line("G1 X21.7860 Y23.6946 Z-0.15"),
+                new Line("G1 X0 Y25 Z-0.15"),
+                new Line("G1 X2.1789 Y24.9049 Z-0.15"),
+                new Line("G1 X4.3412 Y24.6202 Z-0.15"),
+                new Line("G1 X6.4705 Y24.1481 Z-0.15"),
+                new Line("G1 X8.5505 Y23.4923 Z-0.15"),
+                new Line("G1 X10.5655 Y22.6577 Z-0.15"),
+                new Line("G1 X12.5 Y21.6506 Z-0.15"),
+                new Line("G1 X16.0697 Y19.1511 Z-0.15"),
+                new Line("G1 X17.6777 Y17.6777 Z-0.15"),
+                new Line("G1 X19.1511 Y16.0697 Z-0.15"),
+                new Line("G1 X20.4788 Y14.3394 Z-0.15"),
+                new Line("G1 X21.6506 Y12.5 Z-0.15"),
                 new Line("M5"),
                 new Line("M30"),
             };
 
             var testLines = sourceLines.ConvertAll(l => new Line(l));
             var lines = AsyncLines(testLines);
-            var expectedLines = new List<Line> {
+
+            var expectedLinesA = new List<Line> {
                 new Line("G17"),
                 new Line("G21"),
                 new Line("G90"),
-                new Line("G1 X0 Y0 Z-0.15"),
-                new Line("G1 X24.4773 Y24.4129 Z-0.15"),
-                new Line("G1 X24.3427 Y24.8798 Z-0.15"),
-                new Line("G3 X25.7214 Y25.8103 Z-0.15 I-2.095 J4.5907"),
-                new Line("G1 X24.9402 Y27.4502 Z-0.15"),
-                new Line("G1 X23.8103 Y27.1292 Z-0.15"),
-                new Line("G1 X22.8441 Y27.4596 Z-0.15"),
-                new Line("G2 X21.8448 Y25.6385 Z-0.15 I-4.6347 J1.3585"),
-                new Line("G1 X21.8361 Y25.3508 Z-0.15"),
-                new Line("G1 X21.7890 Y25.2523 Z-0.15"),
-                new Line("G1 X21.8321 Y25.217 Z-0.15"),
-                new Line("G1 X21.7860 Y23.6946 Z-0.15"),
+                new Line("G1 X0 Y25 Z-0.15"),
+                new Line("G2 X12.5 Y21.6506 Z-0.15 I0.0006 J-24.9975"),
+                new Line("G1 X16.0697 Y19.1511 Z-0.15"),
+                new Line("G2 X21.6506 Y12.5 Z-0.15 I-16.0687 J-19.1501"),
                 new Line("M5"),
                 new Line("M30"),
             };
 
-            var resultLines = await lines.DedupLinearToArc(Default.Preamble(), 0.5M).ToListAsync();
-            Assert.False(sourceLines.SequenceEqual(resultLines));
-            Assert.True(expectedLines.SequenceEqual(resultLines));
+            var expectedLinesB = new List<Line> {
+                new Line("G17"),
+                new Line("G21"),
+                new Line("G90"),
+                new Line("G1 X0 Y25 Z-0.15"),
+                new Line("G2 X21.6506 Y12.5 Z-0.15 I0.0002 J-24.9995"),
+                new Line("M5"),
+                new Line("M30"),
+            };
+
+            // A Test with fine tolerance
+            var resultLinesA = await lines.DedupLinearToArc(Default.Preamble(), 0.005M).ToListAsync();
+            Assert.False(sourceLines.SequenceEqual(resultLinesA));
+            Assert.True(expectedLinesA.SequenceEqual(resultLinesA));
+
+            // B Test with coarse tolerance
+            var resultLinesB = await lines.DedupLinearToArc(Default.Preamble(), 0.5M).ToListAsync();
+            Assert.False(sourceLines.SequenceEqual(resultLinesB));
+            Assert.True(expectedLinesB.SequenceEqual(resultLinesB));
         }
     }
 }

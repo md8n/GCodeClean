@@ -14,7 +14,7 @@ namespace GCodeClean.Processing
         /// <summary>
         /// A GCode parser pattern for full line statements only (file terminators and full line comments)
         /// </summary>
-        private const string FullLinePattern = @"(\%)|(?<fullcomment>\;.*$)";
+        private const string FullLinePattern = @"(?<fileterminator>\%)|(?<fullcomment>\;.*$)";
 
         /// <summary>
         /// A GCode parser pattern for line numbers only

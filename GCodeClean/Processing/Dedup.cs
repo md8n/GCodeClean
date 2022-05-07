@@ -159,7 +159,7 @@ namespace GCodeClean.Processing
         /// Testing whether A -> B -> C can be fitted to an arc
         /// and eliminating B if that's the case
         /// </summary>
-        public static async IAsyncEnumerable<Line> DedupLinearToArc(this IAsyncEnumerable<Line> tokenisedLines, Context context, decimal tolerance) {
+        public static async IAsyncEnumerable<Line> DedupLinearToArc(this IAsyncEnumerable<Line> tokenisedLines, Context preamble, decimal tolerance) {
             var lineA = new Line();
             var lineB = new Line();
             var isLineASet = false;
@@ -176,7 +176,7 @@ namespace GCodeClean.Processing
                 var hasMovement = lineC.HasMovementCommand();
                 var hasLinearMovement = lineC.Tokens.Contains(linearMovementToken);
 
-                context.Update(lineC, true);
+                preamble.Update(lineC, true);
 
                 if (hasMovement && !isLineASet && !isLineBSet) {
                     // Some movement command, and we're at a 'start'
@@ -200,7 +200,7 @@ namespace GCodeClean.Processing
                     if (isLineBSet)
                     {
                         if (inArc) {
-                            lineB = lineB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise, context);
+                            lineB = lineB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise, preamble);
                         }
 
                         yield return lineB;
@@ -225,7 +225,7 @@ namespace GCodeClean.Processing
                     }
                     if (isLineBSet) {
                         if (inArc) {
-                            lineB = lineB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise, context);
+                            lineB = lineB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise, preamble);
                         }
 
                         yield return lineB;
@@ -269,7 +269,7 @@ namespace GCodeClean.Processing
                 var radius = 0M;
                 var isClockwise = false;
 
-                var lengthUnits = Utility.GetLengthUnits(context);
+                var lengthUnits = Utility.GetLengthUnits(preamble);
                 var linearToArcTolerance = tolerance.ConstrainTolerance(lengthUnits) * 10;
                 if (hasCoords && withinBounds)
                 {
@@ -282,7 +282,7 @@ namespace GCodeClean.Processing
                     var yIsRelevant = coordsAC.Y >= linearToArcTolerance && coordsAB.Y >= linearToArcTolerance && coordsBC.Y >= linearToArcTolerance ? 1 : 0;
                     var zIsRelevant = coordsAC.Z >= linearToArcTolerance && coordsAB.Z >= linearToArcTolerance && coordsBC.Z >= linearToArcTolerance ? 1 : 0;
 
-                    var coordPlane = context.GetModalState(ModalGroup.ModalPlane).ToString();
+                    var coordPlane = preamble.GetModalState(ModalGroup.ModalPlane).ToString();
 
                     isSignificant = coordPlane switch
                     {
@@ -294,7 +294,7 @@ namespace GCodeClean.Processing
 
                     if (isSignificant)
                     {
-                        (center, radius, isClockwise) = Utility.FindCircle(coordsA, coordsB, coordsC, context);
+                        (center, radius, isClockwise) = Utility.FindCircle(coordsA, coordsB, coordsC, preamble);
 
                         if (radius > linearToArcTolerance)
                         {
@@ -353,7 +353,7 @@ namespace GCodeClean.Processing
                     {
                         // Finish the arc manipulation we were doing,
                         // the new arc end point will be lineB
-                        lineB = lineB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise, context);
+                        lineB = lineB.ConvertLinearToArc(coordsA, prevCenter, prevIsClockwise, preamble);
 
                         prevCenter = new Coord();
                         prevRadius = 0M;
@@ -383,12 +383,12 @@ namespace GCodeClean.Processing
             }
         }
 
-        private static Line ConvertLinearToArc(this Line lineB, Coord coordsA, Coord prevCenter, bool prevIsClockwise, Context context) {
+        private static Line ConvertLinearToArc(this Line lineB, Coord coordsA, Coord prevCenter, bool prevIsClockwise, Context preamble) {
             var addI = (prevCenter.Set & CoordSet.X) == CoordSet.X && (coordsA.Set & CoordSet.X) == CoordSet.X;
             var addJ = (prevCenter.Set & CoordSet.Y) == CoordSet.Y && (coordsA.Set & CoordSet.Y) == CoordSet.Y;
             var addK = (prevCenter.Set & CoordSet.Z) == CoordSet.Z && (coordsA.Set & CoordSet.Z) == CoordSet.Z;
 
-            var modalPlace = context.GetModalState(ModalGroup.ModalPlane).ToString();
+            var modalPlace = preamble.GetModalState(ModalGroup.ModalPlane).ToString();
             var haveCoordPair = modalPlace switch
             {
                 "G17" => addI && addJ,
