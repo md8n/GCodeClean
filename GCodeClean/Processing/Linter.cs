@@ -117,7 +117,7 @@ namespace GCodeClean.Processing
 
                 // But now we extract the 'last' tokens first
                 // 21. stop (M0, M1, M2, M30, M60).
-                (currentLine, yieldableLines) = currentLine.SplitOutSelectedCommands(ModalGroup.ModalStopping);
+                (currentLine, yieldableLines) = currentLine.SplitOutSelectedCommands(ModalGroup.ModalAllStop);
                 var stopTokens = yieldableLines.Count > 0 ? yieldableLines[0] : new Line();
 
                 // 20. perform motion (G0 to G3, G38.2, G80 to G89), as modified (possibly) by G53.

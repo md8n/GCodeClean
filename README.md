@@ -14,27 +14,25 @@ We also have:
 * `annotate` the GCode with explanatory comments (optional),
 * 'soft', 'medium', 'hard' or custom removal of superfluous tokens (`minimise`).
 * `preamble linting`: Adding a 'standard' set of gcode declarations, i.e. converting the 'implicit' to 'explicit'.
-
-We'll also look at supporting:
-* injecting blank lines to highlight significant instructions (tool raising, tool changes),
 * `postamble linting`: Similar to the `preamble`, but at the end of the file (obviously).
+* `file terminator matching`: Ensuring that if the file demarcation character `%` is used at the start of the file then it is also used at the end.
 
 ## Getting Started
 
-There are standalone 64bit release builds available, for Linux, Windows and OSX at [GCodeClean releases](https://github.com/md8n/GCodeClean/releases)
+There are standalone release builds available, for Linux, Raspberry Pi (linux-arm), and Windows at [GCodeClean releases](https://github.com/md8n/GCodeClean/releases). It is very easy to a build for MacOS / OSX (osx-64) (see #Deployment below).
 
 The standalone releases include all the relevant .NET 6.0 libraries for this application.
 
 Alternatively you can build and run this project yourself, and for that you would need the .NET 6.0 SDK.
 
-But if you do build it yourself then there are a very large number of possible targets including 32bit, ARM (e.g. Raspberry Pi), etc.
+But if you do build it yourself then there are a very large number of possible targets including 32bit, and many specific Linux distros, etc.
 
 ### Command Line Parameters
 
 Throw the `--help` command line option at the GCodeClean `CLI` and you'll get back the following:
 
 ```
-CLI 0.9.6
+CLI 1.0.0
 Copyright (C) 2022 md8n
 USAGE:
 Clean GCode file:
@@ -108,7 +106,7 @@ Note: If the input file does not exist (or can't be found, i.e. your typo) then 
 
 `Exit code`:
 * `0` - Success
-* `2` - File not found exception - check for typos etc.
+* `2` - File or Directory not found exception - check for typos etc.
 
 ### Prerequisites for Building it Yourself
 
@@ -178,7 +176,9 @@ However, certain conventions have arisen in how GCode should be presented.  Ther
 GCodeClean's linting approach is to respect those conventions while prioritising the execution order, and deliberately injecting commands to turn the implicit assumptions about the state of the machine into explicit assertions about what state is desired.
 
 This means that any line that has multiple commands on it (G, M, F, S, T) will be split into multiple lines, and those lines will appear in execution order.
+
 Also GCodeClean defines a set of GCode commands as a 'preamble'. When the first movement command is detected, any of these 'preamble' codes that have not yet been seen are injected into the GCode above that movement command.
+
 This also adds the concept of a 'Context' (i.e. the state as identified by the various commands seen so far, or the state that is desired), the preamble is the first such 'Context'.
 
 For example, it's common to see a Feed Rate command (F) at the end of a movement command, such as:
@@ -230,14 +230,19 @@ G0 X39.29 Y-105.937
 
 Run a fresh 'self-contained' `publish` of `GCodeClean` as follows:
 ```
-dotnet publish  /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary --output bin/release/net5.0/publish --self-contained
+dotnet publish  /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary --output bin/release/publish --self-contained
 ```
 You can also include the option `--configuration Release` for a release build.
-And target many different platforms by adding `--runtime ` and specifying a runtime platform, e.g. `--runtime win-x64`
+And target many different platforms by adding `--runtime ` and specifying a runtime platform, e.g.
+* `--runtime win-x64` (64 bit Windows)
+* `--runtime linux-64` (64 bit Linux)
+* `--runtime linux-arm` (Raspberry Pi)
+* `--runtime osx-64` (64 bit MacOS / OSX)
+* There are many more options - including for specific Linux distros
 
 Copy the contents of the `publish` folder above to wherever you need them.  Assuming that it is the same OS / Architecture of course.
 
-The `dotnet restore` command above gets the runtimes for `linux-x64`, `osx-x64`, `win-x64`.  But there are many, many more options.  If you choose a different option then you may need to allow time for the `restore` of that runtime before publishing can actually take place.
+The `dotnet restore` command above gets the runtimes for `linux-x64`, `linux-arm`, `win-x64`.  But there are many, many more options.  If you choose a different option then you may need to allow time for the `restore` of that runtime before publishing can actually take place.
 
 ## Authors
 

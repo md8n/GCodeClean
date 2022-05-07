@@ -252,6 +252,21 @@ namespace GCodeClean.Structure
             Source = token;
         }
 
+        /// <summary>
+        /// Convert almost any token to a comment token
+        /// </summary>
+        /// <remarks>Does not convert file terminators or tokens that are already comments</remarks>
+        /// <returns></returns>
+        public Token ToComment() {
+            if (IsFileTerminator || IsComment) {
+                return this;
+            }
+
+            Source = $"({ToString()})";
+
+            return this;
+        }
+
         public static bool operator ==(Token a, Token b)
         {
             if (a is null || b is null)
