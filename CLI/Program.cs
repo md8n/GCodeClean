@@ -68,35 +68,12 @@ namespace GCodeCleanCLI
             var zClamp = Program.ConstrainOption(options.zClamp, 0.02M, 10.0M, "Z-axis clamping value (max traveling height):");
             Console.WriteLine("All tolerance and clamping values may be further adjusted to allow for inches vs. millimeters");
 
-            var preambleContext = Default.Preamble();
-
-            var dedupSelection = new List<char> { 'F', 'Z' };
-            var minimisationStrategy = Program.GetMinimisationStrategy(options, dedupSelection);
-
             var inputFile = options.filename;
             var inputLines = inputFile.ReadLinesAsync();
-            var tokenisedLines = inputLines.TokeniseToLine();
-            var outputLines = (options.lineNumbers ? tokenisedLines.EliminateLineNumbers() : tokenisedLines)
-                .DedupRepeatedTokens()
-                .Augment()
-                .SingleCommandPerLine()
-                .FileDemarcation(preambleContext, zClamp)
-                .InjectPreamble(preambleContext, zClamp)
-                .ZClamp(preambleContext, zClamp)
-                .ConvertArcRadiusToCenter(preambleContext)
-                .DedupLine()
-                .SimplifyShortArcs(preambleContext, arcTolerance)
-                .DedupLinearToArc(preambleContext, tolerance)
-                .Clip(preambleContext, tolerance)
-                .DedupRepeatedTokens()
-                .DedupLine()
-                .DedupLinear(tolerance)
-                ;
 
-            var minimisedLines = outputLines.DedupSelectTokens(dedupSelection);
+            (var minimisationStrategy, var dedupSelection) = Program.GetMinimisationStrategy(options.minimise, new List<char> { 'F', 'Z' });
 
-            var annotatedLines = options.annotate ? minimisedLines.Annotate(tokenDefinitions.RootElement) : minimisedLines;
-            var reassembledLines = annotatedLines.JoinLines(minimisationStrategy);
+            var reassembledLines = inputLines.ProcessLines(dedupSelection, minimisationStrategy, options.lineNumbers, zClamp, arcTolerance, tolerance, options.annotate, tokenDefinitions);
             var lineCount = outputFile.WriteLinesAsync(reassembledLines);
 
             await foreach (var line in lineCount)
@@ -178,12 +155,12 @@ namespace GCodeCleanCLI
             return option;
         }
 
-        private static string GetMinimisationStrategy(Options options, List<char> dedupSelection)
+        private static (string, List<char>) GetMinimisationStrategy(string minimise, List<char> dedupSelection)
         {
-            var minimisationStrategy = string.IsNullOrWhiteSpace(options.minimise)
+            var minimisationStrategy = string.IsNullOrWhiteSpace(minimise)
                 ? "SOFT"
-                : options.minimise.ToUpperInvariant();
-            if (!string.IsNullOrWhiteSpace(options.minimise) && minimisationStrategy != "SOFT")
+                : minimise.ToUpperInvariant();
+            if (!string.IsNullOrWhiteSpace(minimise) && minimisationStrategy != "SOFT")
             {
                 var hardList = new List<char> { 'A', 'B', 'C', 'D', 'F', 'G', 'H', 'L', 'M', 'N', 'P', 'R', 'S', 'T', 'X', 'Y', 'Z' };
                 dedupSelection = minimisationStrategy == "HARD" || minimisationStrategy == "MEDIUM"
@@ -191,7 +168,7 @@ namespace GCodeCleanCLI
                     : new List<char>(minimisationStrategy).Intersect(hardList).ToList();
             }
 
-            return minimisationStrategy;
+            return (minimisationStrategy, dedupSelection);
         }
     }
 }
