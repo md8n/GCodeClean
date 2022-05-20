@@ -14,17 +14,19 @@ namespace GCodeClean.Processing
         /// <summary>
         /// A GCode parser pattern for full line statements only (file terminators and full line comments)
         /// </summary>
-        private const string FullLinePattern = @"(?<fileterminator>\%)|(?<fullcomment>\;.*$)";
+        /// <remarks>This supports the illegal comment form that uses a semi-colon.</remarks>
+        private const string FullLinePattern = @"(?<fileterminator>^\%$)|(?<fullcomment>^\(.*?\)$)|(?<badfullcomment>^\;.*$)";
 
         /// <summary>
         /// A GCode parser pattern for line numbers only
         /// </summary>
-        private const string LineNumberPattern = @"(?<linenumber>N\s*\d{1,5})?";
+        private const string LineNumberPattern = @"(?<linenumber>N\s*\d{1,5})";
 
         /// <summary>
         /// A GCode parser for comment statements only
         /// </summary>
-        private const string CommentPattern = @"(?<comment>\(.*?\))";
+        /// <remarks>This supports the illegal comment form that uses a semi-colon.</remarks>
+        private const string CommentPattern = @"(?<comment>\(.*?\))|(?<badcomment>\;.*)";
 
         /// <summary>
         /// A 'basic' GCode parser pattern,
