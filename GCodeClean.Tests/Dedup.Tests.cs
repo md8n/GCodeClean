@@ -1,4 +1,4 @@
-// Copyright (c) 2020 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
+// Copyright (c) 2020-2022 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -33,7 +33,7 @@ namespace GCodeClean.Tests
         }
 
         [Fact]
-        public async void DedupLinear()
+        public async Task DedupLinear()
         {
             var sourceLines = new List<Line> {
                 new Line("G17"),
@@ -89,7 +89,7 @@ namespace GCodeClean.Tests
         }
 
         [Fact]
-        public async void DedupLinearToArc()
+        public async Task DedupLinearToArc()
         {
             var sourceLines = new List<Line> {
                 new Line("G17"),
@@ -136,13 +136,16 @@ namespace GCodeClean.Tests
                 new Line("M30"),
             };
 
+            var lengthUnits = Utility.GetLengthUnits(Default.Preamble());
+            var coordPlane = Default.Preamble().GetModalState(ModalGroup.ModalPlane).ToString();
+
             // A Test with fine tolerance
-            var resultLinesA = await lines.DedupLinearToArc(Default.Preamble(), 0.005M).ToListAsync();
+            var resultLinesA = await lines.DedupLinearToArc(lengthUnits, coordPlane, 0.005M).ToListAsync();
             Assert.False(sourceLines.SequenceEqual(resultLinesA));
             Assert.True(expectedLinesA.SequenceEqual(resultLinesA));
 
             // B Test with coarse tolerance
-            var resultLinesB = await lines.DedupLinearToArc(Default.Preamble(), 0.5M).ToListAsync();
+            var resultLinesB = await lines.DedupLinearToArc(lengthUnits, coordPlane, 0.5M).ToListAsync();
             Assert.False(sourceLines.SequenceEqual(resultLinesB));
             Assert.True(expectedLinesB.SequenceEqual(resultLinesB));
         }

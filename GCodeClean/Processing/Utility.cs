@@ -1,4 +1,4 @@
-// Copyright (c) 2020-22 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
+// Copyright (c) 2020-2022 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -27,6 +27,13 @@ namespace GCodeClean.Processing
             return theta;
         }
 
+        public static decimal Angle(this (decimal A, decimal B) d) {
+            var theta = Math.Atan2((double)d.A, (double)d.B); // range (-PI, PI]
+            theta *= 180 / Math.PI; // radians to degrees, range (-180, 180]
+
+            return (decimal)theta;
+        }
+
         public static decimal Sqr(this decimal value)
         {
             return value * value;
@@ -35,14 +42,6 @@ namespace GCodeClean.Processing
         public static decimal Distance(this (Coord A, Coord B) c)
         {
             return (decimal)Math.Sqrt((double)((c.B.X - c.A.X).Sqr() + (c.B.Y - c.A.Y).Sqr() + (c.B.Z - c.A.Z).Sqr()));
-        }
-
-        public static decimal Angle(this (decimal A, decimal B) d)
-        {
-            var theta = Math.Atan2((double)d.A, (double)d.B); // range (-PI, PI]
-            theta *= 180 / Math.PI; // radians to degrees, range (-180, 180]
-
-            return (decimal)theta;
         }
 
         /// <summary>
@@ -68,6 +67,28 @@ namespace GCodeClean.Processing
             var unitsCommand = context.GetModalState(ModalGroup.ModalUnits);
 
             return unitsCommand == null || unitsCommand.ToString() == "G20" ? "inch" : "mm";
+        }
+
+        public static decimal ConstrictZClamp(string lengthUnits = "mm", decimal zClamp = 10.0M) {
+            if (lengthUnits == "mm") {
+                if (zClamp == 0M) {
+                    zClamp = 5.0M;
+                } else if (zClamp < 0.5M) {
+                    zClamp = 0.5M;
+                } else if (zClamp > 10.0M) {
+                    zClamp = 10.0M;
+                }
+            } else {
+                if (zClamp == 0M) {
+                    zClamp = 0.2M;
+                } else if (zClamp < 0.02M) {
+                    zClamp = 0.02M;
+                } else if (zClamp > 0.5M) {
+                    zClamp = 0.5M;
+                }
+            }
+
+            return zClamp;
         }
 
         public static decimal ConstrainTolerance(this decimal tolerance, string lengthUnits = "mm") {
@@ -101,15 +122,14 @@ namespace GCodeClean.Processing
         /// <param name="a"></param>
         /// <param name="b"></param>
         /// <param name="c"></param>
-        /// <param name="context"></param>
+        /// <param name="coordPlane"></param>
         /// <returns></returns>
-        public static (Coord center, decimal radius, bool isClockwise) FindCircle(Coord a, Coord b, Coord c, Context context)
+        public static (Coord center, decimal radius, bool isClockwise) FindCircle(Coord a, Coord b, Coord c, string coordPlane)
         {
             var center = new Coord();
             var radius = 0M;
             var isClockwise = false;
 
-            var coordPlane = context.GetModalState(ModalGroup.ModalPlane).ToString();
             var ortho = coordPlane switch
             {
                 "G17" => CoordSet.Z,
@@ -240,13 +260,13 @@ namespace GCodeClean.Processing
             return 0;
         }
 
-        public static List<Coord> FindIntersections(Coord cA, Coord cB, decimal radius, Context context)
+        public static List<Coord> FindIntersections(Coord cA, Coord cB, decimal radius, string coordPlane)
         {
             var intersections = new List<Coord>();
 
             // We only calculate a circle through one orthogonal plane,
             // therefore at least one of the dimensions must be the same for both coords
-            var ortho = context.GetModalState(ModalGroup.ModalPlane).ToString() switch
+            var ortho = coordPlane switch
             {
                 "G17" => CoordSet.Z,
                 "G18" => CoordSet.Y,

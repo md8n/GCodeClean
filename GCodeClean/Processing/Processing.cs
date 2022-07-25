@@ -1,4 +1,4 @@
-// Copyright (c) 2020-22 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
+// Copyright (c) 2020-2022 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 using GCodeClean.Structure;
 
@@ -13,37 +15,51 @@ namespace GCodeClean.Processing
 {
     public static class Processing
     {
-        public static async IAsyncEnumerable<Line> InjectPreamble(this IAsyncEnumerable<Line> tokenisedLines, Context preamble, decimal zClamp = 10.0M)
-        {
-            var preambleOutput = false;
-            await foreach (var line in tokenisedLines)
-            {
-                if (line.HasTokens(ModalGroup.ModalAllMotion))
-                {
+        /// <summary>
+        /// Build the `preamble` from the default Context and
+        /// whatever is supplied in the GCode before the first motion command
+        /// </summary>
+        /// <param name="tokenisedLines"></param>
+        /// <param name="preamble"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public static async Task<Context> BuildPreamble(
+            this IAsyncEnumerable<Line> tokenisedLines,
+            Context preamble,
+            CancellationToken cancellationToken = default
+        ) {
+            foreach (var line in await tokenisedLines.ToListAsync(cancellationToken)) {
+                if (line.HasTokens(ModalGroup.ModalAllMotion)) {
+                    break;
+                }
+                preamble.Update(line, true);
+            }
+
+            return preamble;
+        }
+
+        public static async IAsyncEnumerable<Line> InjectPreamble(
+            this IAsyncEnumerable<Line> tokenisedLines,
+            Context preamble,
+            decimal zClamp = 10.0M
+        ) {
+            await foreach (var line in tokenisedLines) {
+                if (line.HasTokens(ModalGroup.ModalAllMotion)) {
                     var linesToOutput = preamble.NonOutputLines();
-                    if (linesToOutput.Count > 0)
-                    {
+                    if (linesToOutput.Count > 0) {
                         linesToOutput.Insert(0, new Line("(Preamble completed by GCodeClean)"));
                         // If the line is a G0 movement then inject a +ve Z
-                        if (line.HasToken("G0"))
-                        {
-                            var lengthUnits = Utility.GetLengthUnits(preamble);
-                            zClamp = ConstrictZClamp(lengthUnits, zClamp);
+                        if (line.HasToken("G0")) {
                             linesToOutput.Add(new Line($"Z{zClamp}"));
                         }
                         linesToOutput.Add(new Line("(Preamble completed by GCodeClean)"));
-                        foreach (var preambleLine in linesToOutput)
-                        {
+                        foreach (var preambleLine in linesToOutput) {
                             yield return preambleLine;
                         }
                     }
-                    preamble.FlagAllLinesAsOutput();
-                    preambleOutput = true;
-                }
-
-                if (!preambleOutput)
-                {
-                    preamble.Update(line, true);
+                    if (!preamble.AllLinesOutput) {
+                        preamble.FlagAllLinesAsOutput();
+                    }
                 }
 
                 yield return line;
@@ -58,7 +74,10 @@ namespace GCodeClean.Processing
         /// <param name="preamble"></param>
         /// <param name="zClamp"></param>
         /// <returns></returns>
-        public static async IAsyncEnumerable<Line> FileDemarcation(this IAsyncEnumerable<Line> tokenisedLines, Context preamble, decimal zClamp = 10.0M)
+        public static async IAsyncEnumerable<Line> FileDemarcation(
+            this IAsyncEnumerable<Line> tokenisedLines,
+            decimal zClamp = 10.0M
+        )
         {
             var currentZ = -1M; // Arbitrary
             var leadingBlankLinesStripped = false;
@@ -69,18 +88,13 @@ namespace GCodeClean.Processing
 
             await foreach (var line in tokenisedLines)
             {
-                preamble.Update(line, true);
-
-                var lengthUnits = Utility.GetLengthUnits(preamble);
-                zClamp = ConstrictZClamp(lengthUnits, zClamp);
-
                 var hasZ = line.HasToken('Z');
                 var hasTraveling = line.HasTokens(ModalGroup.ModalSimpleMotion);
 
                 if (hasZ && hasTraveling)
                 {
-                    var zTokenIndex = line.AllTokens.FindIndex(t => t.Code == 'Z');
-                    currentZ = line.AllTokens[zTokenIndex].Number.Value;
+                    var zToken = line.AllTokens.First(t => t.Code == 'Z');
+                    currentZ = zToken.Number.Value;
                 }
 
                 if (!leadingBlankLinesStripped)
@@ -225,73 +239,54 @@ namespace GCodeClean.Processing
             }
         }
 
-        private static decimal ConstrictZClamp(string lengthUnits = "mm", decimal zClamp = 10.0M)
+        /// <summary>
+        /// Constrict any supplied tolerances etc. according to the selected units
+        /// </summary>
+        /// <param name="tokenisedLines"></param>
+        /// <param name="preamble"></param>
+        /// <param name="zClamp"></param>
+        /// <returns></returns>
+        public static async Task<decimal> ConstrictValues(
+            this IAsyncEnumerable<Line> tokenisedLines,
+            Context preamble,
+            decimal zClamp = 10.0M,
+            CancellationToken cancellationToken = default
+        )
         {
-            if (lengthUnits == "mm")
+            foreach (var line in await tokenisedLines.ToListAsync(cancellationToken))
             {
-                if (zClamp == 0M)
-                {
-                    zClamp = 5.0M;
-                }
-                else if (zClamp < 0.5M)
-                {
-                    zClamp = 0.5M;
-                }
-                else if (zClamp > 10.0M)
-                {
-                    zClamp = 10.0M;
-                }
-            }
-            else
-            {
-                if (zClamp == 0M)
-                {
-                    zClamp = 0.2M;
-                }
-                else if (zClamp < 0.02M)
-                {
-                    zClamp = 0.02M;
-                }
-                else if (zClamp > 0.5M)
-                {
-                    zClamp = 0.5M;
-                }
+                preamble.Update(line, true);
+
+                var lengthUnits = Utility.GetLengthUnits(preamble);
+                zClamp = Utility.ConstrictZClamp(lengthUnits, zClamp);
             }
 
             return zClamp;
         }
 
-        public static async IAsyncEnumerable<Line> ZClamp(this IAsyncEnumerable<Line> tokenisedLines, Context preamble, decimal zClamp = 10.0M)
+        public static async IAsyncEnumerable<Line> ZClamp(
+            this IAsyncEnumerable<Line> tokenisedLines,
+            decimal zClamp = 10.0M
+        )
         {
             await foreach (var line in tokenisedLines)
             {
-                preamble.Update(line, true);
-
                 if (line.IsNotCommandCodeOrArguments())
                 {
                     yield return line;
                     continue;
                 }
 
-                var unitsCommand = preamble.GetModalState(ModalGroup.ModalUnits);
-                if (unitsCommand == null)
-                {
-                    yield return line;
-                    continue;
-                }
-                var lengthUnits = Utility.GetLengthUnits(preamble);
-                zClamp = ConstrictZClamp(lengthUnits, zClamp);
-
                 var hasZ = line.HasToken('Z');
                 var hasTraveling = line.HasTokens(ModalGroup.ModalSimpleMotion);
 
                 if (hasZ && hasTraveling)
                 {
-                    var zTokenIndex = line.AllTokens.FindIndex(t => t.Code == 'Z');
+                    var zToken = line.AllTokens.First(t => t.Code == 'Z');
 
-                    if (line.AllTokens[zTokenIndex].Number > 0)
+                    if (zToken.Number > 0)
                     {
-                        line.AllTokens[zTokenIndex].Number = zClamp;
+                        zToken.Number = zClamp;
 
                         foreach (var travelingToken in line.AllTokens.Intersect(ModalGroup.ModalSimpleMotion))
                         {
@@ -354,9 +349,12 @@ namespace GCodeClean.Processing
         /// Convert Arc movement commands from using R to using IJ
         /// </summary>
         /// <param name="tokenisedLines"></param>
-        /// <param name="context">The initial 'context' for processing, normally this will be Default.Preamble()</param>
+        /// <param name="coordPlane">The coordinate plane as identified by the preamble</param>
         /// <returns></returns>
-        public static async IAsyncEnumerable<Line> ConvertArcRadiusToCenter(this IAsyncEnumerable<Line> tokenisedLines, Context preamble)
+        public static async IAsyncEnumerable<Line> ConvertArcRadiusToCenter(
+            this IAsyncEnumerable<Line> tokenisedLines,
+            string coordPlane
+        )
         {
             var previousCoords = new Coord();
 
@@ -364,7 +362,6 @@ namespace GCodeClean.Processing
 
             await foreach (var line in tokenisedLines)
             {
-                preamble.Update(line, true);
                 var hasMovement = line.HasMovementCommand();
                 if (!hasMovement)
                 {
@@ -391,7 +388,7 @@ namespace GCodeClean.Processing
                     continue;
                 }
 
-                var intersections = Utility.FindIntersections(coords, previousCoords, radius.Value, preamble);
+                var intersections = Utility.FindIntersections(coords, previousCoords, radius.Value, coordPlane);
                 switch (intersections.Count)
                 {
                     case 0:
@@ -415,7 +412,11 @@ namespace GCodeClean.Processing
             }
         }
 
-        public static async IAsyncEnumerable<Line> SimplifyShortArcs(this IAsyncEnumerable<Line> tokenisedLines, Context preamble, decimal arcTolerance = 0.0005M)
+        public static async IAsyncEnumerable<Line> SimplifyShortArcs(
+            this IAsyncEnumerable<Line> tokenisedLines,
+            string lengthUnits = "mm",
+            decimal arcTolerance = 0.0005M
+        )
         {
             var previousCommand = new Token("");
             var previousXYZCoords = new List<Token> { new Token("X"), new Token("Y"), new Token("Z") };
@@ -426,16 +427,7 @@ namespace GCodeClean.Processing
 
             await foreach (var line in tokenisedLines)
             {
-                preamble.Update(line, true);
-
                 if (line.IsNotCommandCodeOrArguments())
-                {
-                    yield return line;
-                    continue;
-                }
-
-                var unitsCommand = preamble.GetModalState(ModalGroup.ModalUnits);
-                if (unitsCommand == null)
                 {
                     yield return line;
                     continue;
@@ -479,7 +471,6 @@ namespace GCodeClean.Processing
                 Coord coordsA = new Line(previousXYZCoords);
                 Coord coordsB = line;
                 var abDistance = (coordsA, coordsB).Distance();
-                var lengthUnits = Utility.GetLengthUnits(preamble);
                 arcTolerance = arcTolerance.ConstrainTolerance(lengthUnits);
                 if (abDistance <= arcTolerance)
                 {
@@ -497,27 +488,24 @@ namespace GCodeClean.Processing
             }
         }
 
-        public static async IAsyncEnumerable<Line> Clip(this IAsyncEnumerable<Line> tokenisedLines, Context preamble, decimal tolerance = 0.0005M)
+        public static async IAsyncEnumerable<Line> Clip(
+            this IAsyncEnumerable<Line> tokenisedLines,
+            string lengthUnits,
+            decimal tolerance = 0.0005M
+        )
         {
             var arcArguments = new[] { 'I', 'J', 'K' };
 
+            // Set the clipping based on the lengthUnits
+            var unitClip = lengthUnits == "mm" ? 3 : 4;
+
             await foreach (var line in tokenisedLines)
             {
-                preamble.Update(line, true);
-
                 if (line.IsNotCommandCodeOrArguments())
                 {
                     yield return line;
                     continue;
                 }
-
-                var unitsCommand = preamble.GetModalState(ModalGroup.ModalUnits);
-                if (unitsCommand == null)
-                {
-                    yield return line;
-                    continue;
-                }
-                var lengthUnits = unitsCommand.ToString() == "G20" ? "inch" : "mm";
 
                 foreach (var token in line.Tokens)
                 {
@@ -537,7 +525,7 @@ namespace GCodeClean.Processing
 
                     // Set the clipping for the token's value, based on the token's code, the tolerance and/or the lengthUnits
                     var clip = arcArguments.Any(a => a == token.Code)
-                        ? lengthUnits == "mm" ? 3 : 4
+                        ? unitClip
                         : tolerance.GetDecimalPlaces();
 
                     var clipFormat = clip switch
@@ -556,7 +544,10 @@ namespace GCodeClean.Processing
             }
         }
 
-        public static async IAsyncEnumerable<Line> Annotate(this IAsyncEnumerable<Line> tokenisedLines, JsonElement tokenDefinitions)
+        public static async IAsyncEnumerable<Line> Annotate(
+            this IAsyncEnumerable<Line> tokenisedLines,
+            JsonElement tokenDefinitions
+        )
         {
             var tokenDefs = tokenDefinitions.GetProperty("tokenDefs");
             var context = new Dictionary<string, string>();
@@ -651,7 +642,11 @@ namespace GCodeClean.Processing
             return lineB;
         }
 
-        private static void BuildContext(this Dictionary<string, string> context, JsonElement tokenDefinitions, Token token)
+        private static void BuildContext(
+            this Dictionary<string, string> context,
+            JsonElement tokenDefinitions,
+            Token token
+        )
         {
             var replacements = tokenDefinitions.GetProperty("replacements");
 

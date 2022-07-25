@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
+// Copyright (c) 2020-2022 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System.Collections.Generic;
@@ -15,7 +15,7 @@ namespace GCodeClean.Structure
         private List<Token> _tokens;
 
         /// <summary>
-        /// Get/Set  the current list of all Tokens, get includes any line number token
+        /// Get/Set the current list of all Tokens, get includes any line number token
         /// </summary>
         public List<Token> AllTokens
         {
@@ -23,15 +23,15 @@ namespace GCodeClean.Structure
             {
                 // Always manipulate the returned list of tokens to put any line number first
                 // Even though we are doing this below in the set
-                return _tokens.Where(t => t.IsLineNumber).Take(1)
-                    .Concat(_tokens.Where(t => !t.IsLineNumber))
-                    .ToList();
+                var lineNumberToken = _tokens.Where(t => t.IsLineNumber).Take(1);
+                var allOtherTokens = _tokens.Where(t => !t.IsLineNumber);
+                return lineNumberToken.Concat(allOtherTokens).ToList();
             }
             set
             {
-                _tokens = value.Where(t => t.IsLineNumber).Take(1)
-                    .Concat(value.Where(t => !t.IsLineNumber))
-                    .ToList();
+                var lineNumberToken = value.Where(t => t.IsLineNumber).Take(1);
+                var allOtherTokens = value.Where(t => !t.IsLineNumber);
+                _tokens = lineNumberToken.Concat(allOtherTokens).ToList();
             }
         }
 
