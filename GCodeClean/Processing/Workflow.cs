@@ -90,6 +90,5 @@ namespace GCodeClean.Processing
                 yield return line;
             }
         }
-
     }
 }
