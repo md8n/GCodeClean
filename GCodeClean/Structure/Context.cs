@@ -1,4 +1,4 @@
-// Copyright (c) 2020 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
+// Copyright (c) 2020-2022 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System.Collections.Generic;
@@ -11,6 +11,8 @@ namespace GCodeClean.Structure
     /// </summary>
     public class Context
     {
+        public bool AllLinesOutput { get; private set; } = false;
+
         private List<(Line line, bool isOutput)> _lines;
 
         public List<(Line line, bool isOutput)> Lines
@@ -104,6 +106,8 @@ namespace GCodeClean.Structure
                 line.isOutput = true;
                 _lines[ix] = line;
             }
+
+            AllLinesOutput = true;
         }
 
         private void UpdateModal(Line line, bool isOutput, IReadOnlyCollection<Token> modal)

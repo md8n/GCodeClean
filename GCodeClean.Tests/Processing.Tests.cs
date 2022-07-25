@@ -1,4 +1,4 @@
-// Copyright (c) 2020 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
+// Copyright (c) 2020 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -36,19 +36,13 @@ namespace GCodeClean.Tests
         }
 
         [Fact]
-        public async void TestInjectPreamble()
+        public async Task TestInjectPreamble()
         {
-            var sourceLines = new List<Line> {
-                new Line("G17"),
-                new Line("G40"),
-                new Line("G90"),
-                new Line("G21"),
-                new Line("T1"),
-                new Line("S10000"),
-                new Line("M3"),
-                new Line("G0 X35.747 Y46.824")
-            };
-            var testLines = sourceLines.ConvertAll(l => new Line(l));
+            var sourceTextLines = new List<string> { "G17", "G40", "G90", "G21", "T1", "S10000", "M3", "G0 X35.747 Y46.824" };
+            var sourceLineLines = sourceTextLines.ConvertAll(l => new Line(l));
+            var sourceLines = sourceTextLines.ToAsyncEnumerable();
+
+            var testLines = sourceLineLines.ConvertAll(l => new Line(l));
             var lines = AsyncLines(testLines);
             var zClamp = 3M;
             var expectedLines = new List<Line> {
@@ -67,13 +61,16 @@ namespace GCodeClean.Tests
                 new Line("G0 X35.747 Y46.824")
             };
 
-            var resultLines = await lines.InjectPreamble(Default.Preamble(), zClamp).ToListAsync();
-            Assert.False(sourceLines.SequenceEqual(resultLines));
+            var firstPhaseLines = sourceLines.ProcessLinesFirstPhase(false);
+            var preambleContext = await firstPhaseLines.BuildPreamble(Default.Preamble());
+
+            var resultLines = await lines.InjectPreamble(preambleContext, zClamp).ToListAsync();
+            Assert.False(sourceLineLines.SequenceEqual(resultLines));
             Assert.True(expectedLines.SequenceEqual(resultLines));
         }
 
         [Fact]
-        public async void TestAugment()
+        public async Task TestAugment()
         {
             var sourceLines = new List<Line> { new Line("G21"), new Line("G90"), new Line("G1 Z-0.15"), new Line("X26.6059 Z - 0.1539 F60"), new Line("X26.6068 Z - 0.1577") };
             var testLines = sourceLines.ConvertAll(l => new Line(l));
@@ -86,7 +83,7 @@ namespace GCodeClean.Tests
         }
 
         [Fact]
-        public async void TestZClampMM()
+        public async Task TestZClampMM()
         {
             var sourceLines = new List<Line> { new Line("G21"), new Line("G90"), new Line("G0 Z0.15"), new Line("G0 Z0.05"), new Line("G1 Z0.0394 F30"), new Line("G1 Z-0.15") };
             var testLines = sourceLines.ConvertAll(l => new Line(l));
@@ -94,40 +91,49 @@ namespace GCodeClean.Tests
             var setHeight = 1.1M;
             var expectedLines = new List<Line> { new Line("G21"), new Line("G90"), new Line($"G0 Z{setHeight}"), new Line($"G0 Z{setHeight}"), new Line($"G0 Z{setHeight} F30"), new Line("G1 Z-0.15") };
 
-            var resultLines = await lines.ZClamp(Default.Preamble(), setHeight).ToListAsync();
+            var resultLines = await lines.ZClamp(setHeight).ToListAsync();
             Assert.False(sourceLines.SequenceEqual(resultLines));
             Assert.True(expectedLines.SequenceEqual(resultLines));
         }
 
         [Fact]
-        public async void TestZClampInch()
+        public async Task TestZClampInch()
         {
-            var sourceLines = new List<Line> { new Line("G20"), new Line("G90"), new Line("G0 Z0.15"), new Line("G0 Z0.05"), new Line("G1 Z0.0394 F30"), new Line("G1 Z-0.15") };
-            var testLines = sourceLines.ConvertAll(l => new Line(l));
+            var sourceTextLines = new List<string> {"G20", "G90", "G0 Z0.15", "G0 Z0.05", "G1 Z0.0394 F30", "G1 Z-0.15" };
+            var sourceLineLines = sourceTextLines.ConvertAll(l => new Line(l));
+            var sourceLines = sourceTextLines.ToAsyncEnumerable();
+
+            var testLines = sourceLineLines.ConvertAll(l => new Line(l));
             var lines = AsyncLines(testLines);
             var setHeight = 1.1M;
-            var adjustedHeight = 0.5M;
+
+            var firstPhaseLines = sourceLines.ProcessLinesFirstPhase(false);
+            var preambleContext = await firstPhaseLines.BuildPreamble(Default.Preamble());
+
+            var adjustedHeight = Utility.ConstrictZClamp(Utility.GetLengthUnits(preambleContext), setHeight);
             var expectedLines = new List<Line> { new Line("G20"), new Line("G90"), new Line($"G0 Z{adjustedHeight}"), new Line($"G0 Z{adjustedHeight}"), new Line($"G0 Z{adjustedHeight} F30"), new Line("G1 Z-0.15") };
 
-            var resultLines = await lines.ZClamp(Default.Preamble(), setHeight).ToListAsync();
-            Assert.False(sourceLines.SequenceEqual(resultLines));
+            var resultLines = await lines.ZClamp(adjustedHeight).ToListAsync();
+            Assert.False(sourceLineLines.SequenceEqual(resultLines));
             Assert.True(expectedLines.SequenceEqual(resultLines));
         }
 
         [Fact]
-        public async void TestClip()
+        public async Task TestClip()
         {
             var sourceLines = new List<Line> { new Line("G21"), new Line("G90"), new Line("G1 Z0.15678 F9.0") };
 
             var testLines = sourceLines.ConvertAll(l => new Line(l));
             var lines = AsyncLines(testLines);
 
-            var resultLines = await lines.Clip(Default.Preamble()).ToListAsync();
+            var lengthUnits = Utility.GetLengthUnits(Default.Preamble());
+
+            var resultLines = await lines.Clip(lengthUnits).ToListAsync();
             Assert.False(sourceLines.SequenceEqual(resultLines));
         }
 
         [Fact]
-        public async void TestAnnotate()
+        public async Task TestAnnotate()
         {
             var entryDir = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location)
                ?? Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);

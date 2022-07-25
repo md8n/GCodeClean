@@ -29,10 +29,10 @@ But if you do build it yourself then there are a very large number of possible t
 
 ### Command Line Parameters
 
-Throw the `--help` command line option at the GCodeClean `CLI` and you'll get back the following:
+Throw the `--help` command line option at the GCodeClean `CLI` (in other words type in `cli --help`) and you'll get back the following:
 
 ```
-CLI 1.0.0
+CLI 1.0.2
 Copyright (C) 2022 md8n
 USAGE:
 Clean GCode file:
@@ -50,12 +50,12 @@ Clean GCode file:
                     codes excluding IJK (but leave spaces in place), 'hard' - All codes excluding IJK and remove spaces,
                     or list of codes e.g. FGXYZ
 
-  --tolerance       Enter a clipping tolerance for the various deduplication operations
+  --tolerance       (Default: 0.0005" or 0.005mm) Enter a clipping tolerance for the various deduplication operations
 
-  --arcTolerance    Enter a tolerance for the 'point-to-point' length of arcs (G2, G3) below which they will be
+  --arcTolerance    (Default: 0.0005" or 0.005mm) Enter a tolerance for the 'point-to-point' length of arcs (G2, G3) below which they will be
                     converted to lines (G1)
 
-  --zClamp          Restrict z-axis positive values to the supplied value
+  --zClamp          (Default: 0.02" or 0.5mm) Restrict z-axis positive values to the supplied value
 
   --help            Display this help screen.
 
@@ -75,13 +75,19 @@ Exit code=0
 - hard = All codes excluding IJK, and spaces between 'words' are eliminated also.
 - Or a custom selection of codes from the official list of `ABCDFGHLMNPRSTXYZ` (i.e. excluding IJK) and the 'others' `EOQUV`.
 
-`--tolerance` accepts values from 0.0005 to 0.05 for inches or 0.005 to 0.5 for millimeters and uses this value when 'clipping' all arguments with the exception of I, J or K.
+`--tolerance` accepts a value to use when 'clipping' all arguments, with the exception of I, J or K.
+  - 0.0005 to 0.05 for inches or
+  - 0.005 to 0.5 for millimeters
 
-`--arcTolerance` accepts values from 0.0005 to 0.05 for inches or 0.005 to 0.5 for millimeters and uses this value to 'simplify' very short arcs to lines.
+`--arcTolerance` accepts a value to use to 'simplify' very short arcs to lines.
+  - 0.0005 to 0.05 for inches or
+  - 0.005 to 0.5 for millimeters
 
-`--zClamp` accepts values from 0.02 to 0.5 for inches or 0.5 to 10.0 for millimeters and uses this value for all positive z-axis values.
+`--zClamp` accepts a value to 'clamp' all positive z-axis values.
+  - 0.02 to 0.5 for inches or
+  - 0.5 to 10.0 for millimeters
 
-For the tolerance values, the smallest value (inch or mm specific) is used as the default value, whereas for zClamp 0.2" or 5mm is used as the default.
+For the tolerance and clamp values, the smallest value (inch or mm specific) is used as the default value.
 
 Now find yourself a gcode (`.nc`, `.gcode`, etc.) file to use for the option `--filename <filename>`.
 And replace `<filename>` with the full path to your gcode file (as per what your OS requires).
@@ -112,8 +118,8 @@ Note: If the input file does not exist (or can't be found, i.e. your typo) then 
 
 .NET 6.0 SDK - get the correct version for your OS and architecture here: [.NET SDK downloads](https://dotnet.microsoft.com/download/)
 
-A text editor if you want to change something.  I recommend Visual Studio Code, or alternatively go the whole hog and use full Visual Studio.
-The 'community edition' of Visual Studio is free.  But anything so long as you can edit text files with it is fine.
+A text editor if you want to change something. I recommend Visual Studio Code, or alternatively go the whole hog and use full Visual Studio.
+The 'community edition' of Visual Studio is free. But anything so long as you can edit text files with it is fine.
 
 ### Building and Running it Yourself (you don't have to if one of the binaries works for you)
 
@@ -165,13 +171,13 @@ GCodeClean is organised into 3 projects:
 
 ## What's Special about GCodeClean?
 
-GCodeClean uses async streaming throughout from input to output.  Hopefully this should keep memory consumption and the number of threads to a minimum regardless of what OS / Architecture you use.
+GCodeClean uses async streaming throughout from input to output. Hopefully this should keep memory consumption and the number of threads to a minimum regardless of what OS / Architecture you use.
 
 ### GCode Linting
 
-The GCode specification allows a lot of flexibility, for example the single letter 'codes' at the start of each 'word' can be upper or lower case, and spaces are allowable after the 'code' and before the number.  The specification also allows for a lot of assumptions about the 'state' of a machine when it starts processing a given GCode file.
+The GCode specification allows a lot of flexibility, for example the single letter 'codes' at the start of each 'word' can be upper or lower case, and spaces are allowable after the 'code' and before the number. The specification also allows for a lot of assumptions about the 'state' of a machine when it starts processing a given GCode file.
 
-However, certain conventions have arisen in how GCode should be presented.  There are also strict guidelines within the GCode specification as regards the execution order of various commands when they appear on the same line.
+However, certain conventions have arisen in how GCode should be presented. There are also strict guidelines within the GCode specification as regards the execution order of various commands when they appear on the same line.
 
 GCodeClean's linting approach is to respect those conventions while prioritising the execution order, and deliberately injecting commands to turn the implicit assumptions about the state of the machine into explicit assertions about what state is desired.
 
@@ -240,9 +246,9 @@ And target many different platforms by adding `--runtime ` and specifying a runt
 * `--runtime osx-64` (64 bit MacOS / OSX)
 * There are many more options - including for specific Linux distros
 
-Copy the contents of the `publish` folder above to wherever you need them.  Assuming that it is the same OS / Architecture of course.
+Copy the contents of the `publish` folder above to wherever you need them. Assuming that it is the same OS / Architecture of course.
 
-The `dotnet restore` command above gets the runtimes for `linux-x64`, `linux-arm`, `win-x64`.  But there are many, many more options.  If you choose a different option then you may need to allow time for the `restore` of that runtime before publishing can actually take place.
+The `dotnet restore` command above gets the runtimes for `linux-x64`, `linux-arm`, `win-x64`. But there are many, many more options. If you choose a different option then you may need to allow time for the `restore` of that runtime before publishing can actually take place.
 
 ## Authors
 
