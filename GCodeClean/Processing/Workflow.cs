@@ -48,7 +48,8 @@ namespace GCodeClean.Processing
             var firstPhaseLines = (lineNumbers ? tokenisedLines : tokenisedLines.EliminateLineNumbers())
                 .DedupRepeatedTokens()
                 .Augment()
-                .SingleCommandPerLine();
+                .SingleCommandPerLine()
+                .DedupContext();
 
             await foreach (var line in firstPhaseLines) {
                 yield return line;
