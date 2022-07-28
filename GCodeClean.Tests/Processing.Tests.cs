@@ -71,7 +71,7 @@ namespace GCodeClean.Tests
             // Note: that cleaning up the redundant preamble context above is performed by DedupContext
 
             var firstPhaseLines = sourceLines.ProcessLinesFirstPhase(false);
-            var preambleContext = await firstPhaseLines.BuildPreamble(Default.Preamble());
+            var preambleContext = await firstPhaseLines.BuildPreamble();
 
             var resultLines = await lines.InjectPreamble(preambleContext, zClamp).ToListAsync();
             Assert.False(sourceLineLines.SequenceEqual(resultLines));
@@ -117,7 +117,7 @@ namespace GCodeClean.Tests
             var setHeight = 1.1M;
 
             var firstPhaseLines = sourceLines.ProcessLinesFirstPhase(false);
-            var preambleContext = await firstPhaseLines.BuildPreamble(Default.Preamble());
+            var preambleContext = await firstPhaseLines.BuildPreamble();
 
             var adjustedHeight = Utility.ConstrictZClamp(Utility.GetLengthUnits(preambleContext), setHeight);
             var expectedLines = new List<Line> { new Line("G20"), new Line("G90"), new Line($"G0 Z{adjustedHeight}"), new Line($"G0 Z{adjustedHeight}"), new Line($"G0 Z{adjustedHeight} F30"), new Line("G1 Z-0.15") };
@@ -135,9 +135,7 @@ namespace GCodeClean.Tests
             var testLines = sourceLines.ConvertAll(l => new Line(l));
             var lines = AsyncLines(testLines);
 
-            var lengthUnits = Utility.GetLengthUnits(Default.Preamble());
-
-            var resultLines = await lines.Clip(lengthUnits).ToListAsync();
+            var resultLines = await lines.Clip().ToListAsync();
             Assert.False(sourceLines.SequenceEqual(resultLines));
         }
 

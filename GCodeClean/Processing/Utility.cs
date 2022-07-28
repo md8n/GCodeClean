@@ -62,11 +62,24 @@ namespace GCodeClean.Processing
             return decimalPlaces;
         }
 
-        public static string GetLengthUnits(Context context)
+        /// <summary>
+        /// Get the length units from the context
+        /// </summary>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public static string GetLengthUnits(this Context context)
         {
             var unitsCommand = context.GetModalState(ModalGroup.ModalUnits);
-
             return unitsCommand == null || unitsCommand.ToString() == "G20" ? "inch" : "mm";
+        }
+
+        /// <summary>
+        /// Get the length units from the context
+        /// </summary>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public static string GetCoordPlane(this Context context) {
+            return context.GetModalState(ModalGroup.ModalPlane).ToString();
         }
 
         public static decimal ConstrictZClamp(string lengthUnits = "mm", decimal zClamp = 10.0M) {

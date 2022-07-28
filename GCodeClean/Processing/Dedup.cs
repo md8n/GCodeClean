@@ -58,6 +58,55 @@ namespace GCodeClean.Processing
             }
         }
 
+
+        /// <summary>
+        /// Eliminates superfluous +ve Z, G0 commands
+        /// </summary>
+        /// <remarks>
+        /// This should always go after Processing.ZClamp , because that method corrects G0=>G1 for any lines with -ve Z values
+        /// </remarks>
+        public static async IAsyncEnumerable<Line> DedupTravelling(this IAsyncEnumerable<Line> tokenisedLines) {
+            var lineA = new Line();
+            var lineB = new Line();
+            var isLineASet = false;
+            var isLineBSet = false;
+
+            var travellingMovementToken = new Token("G0");
+
+            await foreach (var lineC in tokenisedLines) {
+                var hasMovement = lineC.HasMovementCommand();
+                if (hasMovement && !isLineASet && !isLineBSet) {
+                    // Some travelling movement command, and we're at a 'start'
+                    lineA = new Line(lineC);
+                    isLineASet = true;
+                    continue;
+                }
+
+                var hasTravellingMovement = lineC.Tokens.Contains(travellingMovementToken);
+                if (!hasTravellingMovement) {
+                    // Not a travelling movement command, therefore
+                    if (isLineASet) {
+                        yield return lineA;
+                        lineA = new Line();
+                        isLineASet = false;
+                    }
+                    if (isLineBSet) {
+                        yield return lineB;
+                        lineB = new Line();
+                        isLineBSet = false;
+                    }
+                    yield return lineC;
+                    continue;
+                }
+
+                if (!isLineBSet) {
+                    // Set up the B token - this silently drops the previous `lineB`
+                    lineB = new Line(lineC);
+                    isLineBSet = true;
+                }
+            }
+        }
+
         /// <summary>
         /// Testing whether A -> B -> C is a straight line
         /// and eliminating B if that's the case
@@ -139,7 +188,7 @@ namespace GCodeClean.Processing
 
                 if (hasCoords && withinBounds)
                 {
-                    // Check if any value is too small to matter                    
+                    // Check if any value is too small to matter
                     var distanceAB = Coord.Distance(coordsA, coordsB);
                     var distanceAC = Coord.Distance(coordsA, coordsC);
                     var distanceBC = Coord.Distance(coordsB, coordsC);
@@ -182,8 +231,6 @@ namespace GCodeClean.Processing
         /// </summary>
         public static async IAsyncEnumerable<Line> DedupLinearToArc(
             this IAsyncEnumerable<Line> tokenisedLines,
-            string lengthUnits,
-            string coordPlane,
             decimal tolerance
         ) {
             var lineA = new Line();
@@ -198,7 +245,11 @@ namespace GCodeClean.Processing
 
             var linearMovementToken = new Token("G1");
 
+            var context = Default.Preamble();
+
             await foreach (var lineC in tokenisedLines) {
+                context.Update(lineC);
+
                 var hasMovement = lineC.HasMovementCommand();
                 var hasLinearMovement = lineC.Tokens.Contains(linearMovementToken);
 
@@ -212,6 +263,8 @@ namespace GCodeClean.Processing
                 Coord coordsA = lineA;
                 var coordsB = isLineBSet ? lineB : new Coord();
                 Coord coordsC = lineC;
+
+                var coordPlane = context.GetCoordPlane();
 
                 if (!hasLinearMovement) {
                     // Not a linear movement command
@@ -293,10 +346,11 @@ namespace GCodeClean.Processing
                 var radius = 0M;
                 var isClockwise = false;
 
-                var linearToArcTolerance = tolerance.ConstrainTolerance(lengthUnits) * 10;
                 if (hasCoords && withinBounds)
                 {
-                    // Check if any value is too small to matter                    
+                    // Check if any value is too small to matter
+                    var linearToArcTolerance = tolerance.ConstrainTolerance(context.GetLengthUnits()) * 10;
+
                     var coordsAC = coordsA - coordsC;
                     var coordsAB = coordsA - coordsB;
                     var coordsBC = coordsB - coordsC;
@@ -305,8 +359,7 @@ namespace GCodeClean.Processing
                     var yIsRelevant = coordsAC.Y >= linearToArcTolerance && coordsAB.Y >= linearToArcTolerance && coordsBC.Y >= linearToArcTolerance ? 1 : 0;
                     var zIsRelevant = coordsAC.Z >= linearToArcTolerance && coordsAB.Z >= linearToArcTolerance && coordsBC.Z >= linearToArcTolerance ? 1 : 0;
 
-                    isSignificant = coordPlane switch
-                    {
+                    isSignificant = coordPlane switch {
                         "G17" => xIsRelevant + yIsRelevant < 2,
                         "G18" => xIsRelevant + zIsRelevant < 2,
                         "G19" => yIsRelevant + zIsRelevant < 2,
@@ -426,36 +479,40 @@ namespace GCodeClean.Processing
             lineB.RemoveToken(linearMovementToken);
             lineB.PrependToken(new Token(prevIsClockwise ? "G2" : "G3"));
 
+            var centerX = new Token($"I{prevCenter.X - coordsA.X:0.####}");
+            var centerY = new Token($"J{prevCenter.Y - coordsA.Y:0.####}");
+            var centerZ = new Token($"K{prevCenter.Z - coordsA.Z:0.####}");
+
             switch (coordPlane)
             {
                 case "G17":
-                    lineB.AppendToken(new Token($"I{prevCenter.X - coordsA.X:0.####}"));
-                    lineB.AppendToken(new Token($"J{prevCenter.Y - coordsA.Y:0.####}"));
+                    lineB.AppendToken(centerX);
+                    lineB.AppendToken(centerY);
                     if (addK && prevCenter.Z - coordsA.Z != 0)
                     {
-                        lineB.AppendToken(new Token($"K{prevCenter.Z - coordsA.Z:0.####}"));
+                        lineB.AppendToken(centerZ);
                     }
                     break;
                 case "G18":
-                    lineB.AppendToken(new Token($"I{prevCenter.X - coordsA.X:0.####}"));
+                    lineB.AppendToken(centerX);
                     if (addJ && prevCenter.Y - coordsA.Y != 0)
                     {
-                        lineB.AppendToken(new Token($"J{prevCenter.Y - coordsA.Y:0.####}"));
+                        lineB.AppendToken(centerY);
                     }
-                    lineB.AppendToken(new Token($"K{prevCenter.Z - coordsA.Z:0.####}"));
+                    lineB.AppendToken(centerZ);
                     break;
                 case "G19":
                     if (addI && prevCenter.X - coordsA.X != 0)
                     {
-                        lineB.AppendToken(new Token($"I{prevCenter.X - coordsA.X:0.####}"));
+                        lineB.AppendToken(centerX);
                     }
-                    lineB.AppendToken(new Token($"J{prevCenter.Y - coordsA.Y:0.####}"));
-                    lineB.AppendToken(new Token($"K{prevCenter.Z - coordsA.Z:0.####}"));
+                    lineB.AppendToken(centerY);
+                    lineB.AppendToken(centerZ);
                     break;
                 default:
-                    lineB.AppendToken(new Token($"I{prevCenter.X - coordsA.X:0.####}"));
-                    lineB.AppendToken(new Token($"J{prevCenter.Y - coordsA.Y:0.####}"));
-                    lineB.AppendToken(new Token($"K{prevCenter.Z - coordsA.Z:0.####}"));
+                    lineB.AppendToken(centerX);
+                    lineB.AppendToken(centerY);
+                    lineB.AppendToken(centerZ);
                     break;
             }
 
