@@ -68,7 +68,7 @@ namespace GCodeClean.Tests
                 new Line("G0 X35.747 Y46.824")
             };
 
-            // Note that cleaning up the redundant preamble context above is performed by DedupContext
+            // Note: that cleaning up the redundant preamble context above is performed by DedupContext
 
             var firstPhaseLines = sourceLines.ProcessLinesFirstPhase(false);
             var preambleContext = await firstPhaseLines.BuildPreamble(Default.Preamble());
