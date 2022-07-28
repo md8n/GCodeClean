@@ -54,13 +54,21 @@ namespace GCodeClean.Tests
                 new Line("S10000"),
                 new Line("M3"),
                 new Line("(Preamble completion by GCodeClean)"),
+                new Line("G21"),
+                new Line("G90"),
                 new Line("G94"),
+                new Line("G17"),
+                new Line("G40"),
                 new Line("G49"),
+                new Line("G54"),
+                new Line("M3"),
                 new Line("(Preamble completed by GCodeClean)"),
                 new Line(""),
                 new Line($"G0 Z{zClamp}"),
                 new Line("G0 X35.747 Y46.824")
             };
+
+            // Note that cleaning up the redundant preamble context above is performed by DedupContext
 
             var firstPhaseLines = sourceLines.ProcessLinesFirstPhase(false);
             var preambleContext = await firstPhaseLines.BuildPreamble(Default.Preamble());

@@ -33,6 +33,28 @@ namespace GCodeClean.Tests
         }
 
         [Fact]
+        public async Task DedupContext() {
+            var sourceTextLines = new List<string> { "G17", "G40", "G90", "G20", "T1", "S10000", "M3", "G19", "G0 Z3", "G0 X35.747 Y46.824", "G17" };
+            var sourceLineLines = sourceTextLines.ConvertAll(l => new Line(l));
+
+            var testLines = sourceLineLines.ConvertAll(l => new Line(l));
+            var lines = AsyncLines(testLines);
+            var expectedLines = new List<Line> {
+                new Line("G20"),
+                new Line("T1"),
+                new Line("S10000"),
+                new Line("G19"),
+                new Line("G0 Z3"),
+                new Line("G0 X35.747 Y46.824"),
+                new Line("G17")
+            };
+
+            var resultLines = await lines.DedupContext().ToListAsync();
+            Assert.False(sourceLineLines.SequenceEqual(resultLines));
+            Assert.True(expectedLines.SequenceEqual(resultLines));
+        }
+
+        [Fact]
         public async Task DedupLinear()
         {
             var sourceLines = new List<Line> {
