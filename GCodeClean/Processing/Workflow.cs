@@ -24,12 +24,15 @@ namespace GCodeClean.Processing
             var firstPhaseLines = inputLines.ProcessLinesFirstPhase(lineNumbers);
             var preambleContext = await firstPhaseLines.BuildPreamble(Default.Preamble());
             var (lengthUnits, coordPlane, zClampContrained) = preambleContext.ExtractKeyInfo(zClamp);
-            var preAndPostamblePhaseLines = firstPhaseLines.PreAndPostamblePhase(preambleContext, zClampContrained);
 
-            var secondPhaseLines = preAndPostamblePhaseLines.ProcessLinesSecondPhase(lengthUnits, coordPlane, zClampContrained, arcTolerance, tolerance);
-            var thirdPhaseLines = secondPhaseLines.ProcessLinesThirdPhase(dedupSelection, minimisationStrategy, annotate, tokenDefinitions);
+            var processedLines = firstPhaseLines
+                .PreAndPostamblePhase(preambleContext, zClampContrained)
+                .ProcessLinesSecondPhase(lengthUnits, coordPlane, zClampContrained, arcTolerance, tolerance)
+                .ProcessLinesThirdPhase(dedupSelection, annotate, tokenDefinitions);
 
-            await foreach (var line in thirdPhaseLines) {   
+            var reassembledLines = processedLines.ReassembleLines(minimisationStrategy);
+
+            await foreach (var line in reassembledLines) {   
                 yield return line;
             }
         }
@@ -130,20 +133,33 @@ namespace GCodeClean.Processing
         /// </summary>
         /// <param name="secondPhaseLines"></param>
         /// <param name="dedupSelection"></param>
-        /// <param name="minimisationStrategy"></param>
         /// <param name="annotate"></param>
         /// <param name="tokenDefinitions"></param>
         /// <returns></returns>
-        public static async IAsyncEnumerable<string> ProcessLinesThirdPhase(
+        public static async IAsyncEnumerable<Line> ProcessLinesThirdPhase(
             this IAsyncEnumerable<Line> secondPhaseLines,
             List<char> dedupSelection,
-            string minimisationStrategy,
             bool annotate,
             JsonDocument tokenDefinitions
         ) {
             var minimisedLines = secondPhaseLines.DedupSelectTokens(dedupSelection);
             var annotatedLines = annotate ? minimisedLines.Annotate(tokenDefinitions.RootElement) : minimisedLines;
-            var reassembledLines = annotatedLines.JoinLines(minimisationStrategy);
+
+            await foreach (var line in annotatedLines) {
+                yield return line;
+            }
+        }
+
+        /// <summary>
+        /// Do the final processing of the GCode and output as simple strings
+        /// </summary>
+        /// <param name="minimisationStrategy"></param>
+        /// <returns></returns>
+        public static async IAsyncEnumerable<string> ReassembleLines(
+            this IAsyncEnumerable<Line> thirdPhaseLines,
+            string minimisationStrategy
+        ) {
+            var reassembledLines = thirdPhaseLines.JoinLines(minimisationStrategy);
 
             await foreach (var line in reassembledLines) {
                 yield return line;

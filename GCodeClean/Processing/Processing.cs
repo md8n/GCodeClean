@@ -285,12 +285,9 @@ namespace GCodeClean.Processing
         public static async IAsyncEnumerable<Line> ZClamp(
             this IAsyncEnumerable<Line> tokenisedLines,
             decimal zClamp = 10.0M
-        )
-        {
-            await foreach (var line in tokenisedLines)
-            {
-                if (line.IsNotCommandCodeOrArguments())
-                {
+        ) {
+            await foreach (var line in tokenisedLines) {
+                if (line.IsNotCommandCodeOrArguments()) {
                     yield return line;
                     continue;
                 }
@@ -298,18 +295,17 @@ namespace GCodeClean.Processing
                 var hasZ = line.HasToken('Z');
                 var hasTraveling = line.HasTokens(ModalGroup.ModalSimpleMotion);
 
-                if (hasZ && hasTraveling)
-                {
+                if (hasZ && hasTraveling) {
                     var zToken = line.AllTokens.First(t => t.Code == 'Z');
 
-                    if (zToken.Number > 0)
-                    {
-                        zToken.Number = zClamp;
-
-                        foreach (var travelingToken in line.AllTokens.Intersect(ModalGroup.ModalSimpleMotion))
-                        {
+                    foreach (var travelingToken in line.AllTokens.Intersect(ModalGroup.ModalSimpleMotion)) {
+                        if (zToken.Number > 0) {
                             // If Z > 0 then the motion should be G0 
+                            zToken.Number = zClamp;
                             travelingToken.Source = "G0";
+                        } else if (travelingToken.Source == "G0") {
+                            // If Z <= 0 and source is G0 then the motion should be G1 (probably)
+                            travelingToken.Source = "G1";
                         }
                     }
                 }
