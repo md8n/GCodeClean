@@ -43,22 +43,38 @@ namespace GCodeClean.Processing
             Context preamble,
             decimal zClamp = 10.0M
         ) {
+            var premableCompletionByGCodeClean = false;
             await foreach (var line in tokenisedLines) {
                 if (line.HasTokens(ModalGroup.ModalAllMotion)) {
                     var linesToOutput = preamble.NonOutputLines();
                     if (linesToOutput.Count > 0) {
-                        linesToOutput.Insert(0, new Line("(Preamble completed by GCodeClean)"));
-                        // If the line is a G0 movement then inject a +ve Z
-                        if (line.HasToken("G0")) {
-                            linesToOutput.Add(new Line($"Z{zClamp}"));
-                        }
+                        premableCompletionByGCodeClean = true;
+                        linesToOutput.Insert(0, new Line("(Preamble completion by GCodeClean)"));
                         linesToOutput.Add(new Line("(Preamble completed by GCodeClean)"));
+                        linesToOutput.Add(new Line(""));
+                        // Inject a +ve Z after the preamble, and before or with the movement
+                        if (line.HasToken("G0")) {
+                            if (line.Tokens.Count == 2 && line.HasToken('Z')) {
+                                line.RemoveTokens(new List<char> { 'Z' });
+                            }
+                            if (line.Tokens.Count == 1) {
+                                line.AppendToken(new Token($"Z{zClamp}"));
+                            } else {
+                                linesToOutput.Add(new Line($"G0 Z{zClamp}"));
+                            }
+                        } else {
+                            linesToOutput.Add(new Line($"G0 Z{zClamp}"));
+                        }
                         foreach (var preambleLine in linesToOutput) {
                             yield return preambleLine;
                         }
                     }
                     if (!preamble.AllLinesOutput) {
                         preamble.FlagAllLinesAsOutput();
+                        if (!premableCompletionByGCodeClean) {
+                            yield return new Line("(Preamble completed)");
+                            yield return new Line("");
+                        }
                     }
                 }
 
@@ -157,6 +173,7 @@ namespace GCodeClean.Processing
 
             if (hasLeadingFileTerminator && !hasTrailingFileTerminator)
             {
+                yield return new Line("(Postamble completed by GCodeClean)");
                 // Inject a file demarcation character
                 yield return new Line("%");
             }
@@ -168,6 +185,7 @@ namespace GCodeClean.Processing
                     // before the stop command
                     yield return new Line($"G0 Z{zClamp}");
                 }
+                yield return new Line("(Postamble completed by GCodeClean)");
                 // Inject a full stop - M30 used in preference to M2
                 yield return new Line("M30");
             }
@@ -267,12 +285,9 @@ namespace GCodeClean.Processing
         public static async IAsyncEnumerable<Line> ZClamp(
             this IAsyncEnumerable<Line> tokenisedLines,
             decimal zClamp = 10.0M
-        )
-        {
-            await foreach (var line in tokenisedLines)
-            {
-                if (line.IsNotCommandCodeOrArguments())
-                {
+        ) {
+            await foreach (var line in tokenisedLines) {
+                if (line.IsNotCommandCodeOrArguments()) {
                     yield return line;
                     continue;
                 }
@@ -280,18 +295,17 @@ namespace GCodeClean.Processing
                 var hasZ = line.HasToken('Z');
                 var hasTraveling = line.HasTokens(ModalGroup.ModalSimpleMotion);
 
-                if (hasZ && hasTraveling)
-                {
+                if (hasZ && hasTraveling) {
                     var zToken = line.AllTokens.First(t => t.Code == 'Z');
 
-                    if (zToken.Number > 0)
-                    {
-                        zToken.Number = zClamp;
-
-                        foreach (var travelingToken in line.AllTokens.Intersect(ModalGroup.ModalSimpleMotion))
-                        {
+                    foreach (var travelingToken in line.AllTokens.Intersect(ModalGroup.ModalSimpleMotion)) {
+                        if (zToken.Number > 0) {
                             // If Z > 0 then the motion should be G0 
+                            zToken.Number = zClamp;
                             travelingToken.Source = "G0";
+                        } else if (travelingToken.Source == "G0") {
+                            // If Z <= 0 and source is G0 then the motion should be G1 (probably)
+                            travelingToken.Source = "G1";
                         }
                     }
                 }

@@ -62,7 +62,7 @@ namespace GCodeClean.Structure
         public static readonly ImmutableList<Token> ModalMotion = ModalSimpleMotion.AddRange(ModalCannedMotion);
 
         /// <summary>
-        /// G Modal subgroup 1 - special motion - G28, G30, G53
+        /// G Modal group 1 - collective - simple motion, canned motion, home motion, special motion, G53
         /// </summary>
         public static readonly ImmutableList<Token> ModalAllMotion = ModalMotion
             .AddRange(ModalHome) // For our purposes these and G53 are motion commands

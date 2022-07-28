@@ -28,6 +28,27 @@ namespace GCodeClean.Processing
         }
 
         /// <summary>
+        /// Eliminates redundant context(ual) tokens
+        /// </summary>
+        /// <param name="tokenisedLines"></param>
+        /// <returns></returns>
+        public static async IAsyncEnumerable<Line> DedupContext(this IAsyncEnumerable<Line> tokenisedLines) {
+            var context = Default.Preamble();
+            await foreach (var line in tokenisedLines) {
+                var contextTokens = context.Lines.SelectMany(l => l.line.Tokens);
+                line.AllTokens = line.AllTokens.Except(contextTokens).ToList();
+
+                if (line.AllTokens.Count == 0) {
+                    continue;
+                }
+
+                context.Update(line);
+
+                yield return line;
+            }
+        }
+
+        /// <summary>
         /// Eliminates repeated tokens within the same line
         /// </summary>
         public static async IAsyncEnumerable<Line> DedupRepeatedTokens(this IAsyncEnumerable<Line> tokenisedLines) {
