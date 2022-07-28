@@ -158,16 +158,13 @@ namespace GCodeClean.Tests
                 new Line("M30"),
             };
 
-            var lengthUnits = Utility.GetLengthUnits(Default.Preamble());
-            var coordPlane = Default.Preamble().GetModalState(ModalGroup.ModalPlane).ToString();
-
             // A Test with fine tolerance
-            var resultLinesA = await lines.DedupLinearToArc(lengthUnits, coordPlane, 0.005M).ToListAsync();
+            var resultLinesA = await lines.DedupLinearToArc(0.005M).ToListAsync();
             Assert.False(sourceLines.SequenceEqual(resultLinesA));
             Assert.True(expectedLinesA.SequenceEqual(resultLinesA));
 
             // B Test with coarse tolerance
-            var resultLinesB = await lines.DedupLinearToArc(lengthUnits, coordPlane, 0.5M).ToListAsync();
+            var resultLinesB = await lines.DedupLinearToArc(0.5M).ToListAsync();
             Assert.False(sourceLines.SequenceEqual(resultLinesB));
             Assert.True(expectedLinesB.SequenceEqual(resultLinesB));
         }

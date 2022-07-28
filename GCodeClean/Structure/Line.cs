@@ -157,7 +157,7 @@ namespace GCodeClean.Structure
         /// </summary>
         public bool HasMovementCommand()
         {
-            return !IsArgumentsOnly() && HasTokens(ModalGroup.ModalSimpleMotion);
+            return !IsArgumentsOnly() && HasTokens(ModalGroup.ModalAllMotion);
         }
 
         public Line()

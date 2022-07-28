@@ -20,14 +20,13 @@ namespace GCodeClean.Processing
         /// whatever is supplied in the GCode before the first motion command
         /// </summary>
         /// <param name="tokenisedLines"></param>
-        /// <param name="preamble"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         public static async Task<Context> BuildPreamble(
             this IAsyncEnumerable<Line> tokenisedLines,
-            Context preamble,
             CancellationToken cancellationToken = default
         ) {
+            var preamble = Default.Preamble();
             foreach (var line in await tokenisedLines.ToListAsync(cancellationToken)) {
                 if (line.HasTokens(ModalGroup.ModalAllMotion)) {
                     break;
@@ -44,6 +43,8 @@ namespace GCodeClean.Processing
             decimal zClamp = 10.0M
         ) {
             var premableCompletionByGCodeClean = false;
+            var zClampConstrained = Utility.ConstrictZClamp(preamble.GetLengthUnits(), zClamp);
+
             await foreach (var line in tokenisedLines) {
                 if (line.HasTokens(ModalGroup.ModalAllMotion)) {
                     var linesToOutput = preamble.NonOutputLines();
@@ -58,12 +59,12 @@ namespace GCodeClean.Processing
                                 line.RemoveTokens(new List<char> { 'Z' });
                             }
                             if (line.Tokens.Count == 1) {
-                                line.AppendToken(new Token($"Z{zClamp}"));
+                                line.AppendToken(new Token($"Z{zClampConstrained}"));
                             } else {
-                                linesToOutput.Add(new Line($"G0 Z{zClamp}"));
+                                linesToOutput.Add(new Line($"G0 Z{zClampConstrained}"));
                             }
                         } else {
-                            linesToOutput.Add(new Line($"G0 Z{zClamp}"));
+                            linesToOutput.Add(new Line($"G0 Z{zClampConstrained}"));
                         }
                         foreach (var preambleLine in linesToOutput) {
                             yield return preambleLine;
@@ -102,10 +103,14 @@ namespace GCodeClean.Processing
             var hasStopping = false;
             var commentOutAllRemainingCommands = false;
 
+            var context = Default.Preamble();
+
             await foreach (var line in tokenisedLines)
             {
+                context.Update(line);
+
                 var hasZ = line.HasToken('Z');
-                var hasTraveling = line.HasTokens(ModalGroup.ModalSimpleMotion);
+                var hasTraveling = line.HasTokens(ModalGroup.ModalAllMotion);
 
                 if (hasZ && hasTraveling)
                 {
@@ -154,7 +159,8 @@ namespace GCodeClean.Processing
                             {
                                 // If the current tool height is less than zero then it needs to be raised
                                 // before the stop command
-                                yield return new Line($"G0 Z{zClamp}");
+                                var zClampConstrained = Utility.ConstrictZClamp(context.GetLengthUnits(), zClamp);
+                                yield return new Line($"G0 Z{zClampConstrained}");
                             }
 
                             yield return line;
@@ -213,7 +219,7 @@ namespace GCodeClean.Processing
                     {
                         foreach (var token in line.Tokens)
                         {
-                            if (!ModalGroup.ModalSimpleMotion.Contains(token))
+                            if (!ModalGroup.ModalAllMotion.Contains(token))
                             {
                                 continue;
                             }
@@ -286,7 +292,11 @@ namespace GCodeClean.Processing
             this IAsyncEnumerable<Line> tokenisedLines,
             decimal zClamp = 10.0M
         ) {
+            var context = Default.Preamble();
+
             await foreach (var line in tokenisedLines) {
+                context.Update(line);
+
                 if (line.IsNotCommandCodeOrArguments()) {
                     yield return line;
                     continue;
@@ -299,12 +309,13 @@ namespace GCodeClean.Processing
                     var zToken = line.AllTokens.First(t => t.Code == 'Z');
 
                     foreach (var travelingToken in line.AllTokens.Intersect(ModalGroup.ModalSimpleMotion)) {
-                        if (zToken.Number > 0) {
-                            // If Z > 0 then the motion should be G0 
-                            zToken.Number = zClamp;
+                        if (zToken.Number >= 0) {
+                            // If Z >= 0 then the motion should be G0
+                            var zClampConstrained = Utility.ConstrictZClamp(context.GetLengthUnits(), zClamp);
+                            zToken.Number = zClampConstrained;
                             travelingToken.Source = "G0";
                         } else if (travelingToken.Source == "G0") {
-                            // If Z <= 0 and source is G0 then the motion should be G1 (probably)
+                            // If Z < 0 and source is G0 then the motion should be G1 (probably)
                             travelingToken.Source = "G1";
                         }
                     }
@@ -363,19 +374,19 @@ namespace GCodeClean.Processing
         /// Convert Arc movement commands from using R to using IJ
         /// </summary>
         /// <param name="tokenisedLines"></param>
-        /// <param name="coordPlane">The coordinate plane as identified by the preamble</param>
         /// <returns></returns>
         public static async IAsyncEnumerable<Line> ConvertArcRadiusToCenter(
-            this IAsyncEnumerable<Line> tokenisedLines,
-            string coordPlane
+            this IAsyncEnumerable<Line> tokenisedLines
         )
         {
             var previousCoords = new Coord();
-
             var clockwiseMovementToken = new Token("G2");
+            var context = Default.Preamble();
 
             await foreach (var line in tokenisedLines)
             {
+                context.Update(line);
+
                 var hasMovement = line.HasMovementCommand();
                 if (!hasMovement)
                 {
@@ -402,6 +413,7 @@ namespace GCodeClean.Processing
                     continue;
                 }
 
+                var coordPlane = context.GetCoordPlane();
                 var intersections = Utility.FindIntersections(coords, previousCoords, radius.Value, coordPlane);
                 switch (intersections.Count)
                 {
@@ -428,7 +440,6 @@ namespace GCodeClean.Processing
 
         public static async IAsyncEnumerable<Line> SimplifyShortArcs(
             this IAsyncEnumerable<Line> tokenisedLines,
-            string lengthUnits = "mm",
             decimal arcTolerance = 0.0005M
         )
         {
@@ -438,9 +449,11 @@ namespace GCodeClean.Processing
             var arcCommands = new List<Token> {
                 new Token("G2"), new Token("G3")
             };
+            var context = Default.Preamble();
 
             await foreach (var line in tokenisedLines)
             {
+                context.Update(line);
                 if (line.IsNotCommandCodeOrArguments())
                 {
                     yield return line;
@@ -485,7 +498,7 @@ namespace GCodeClean.Processing
                 Coord coordsA = new Line(previousXYZCoords);
                 Coord coordsB = line;
                 var abDistance = (coordsA, coordsB).Distance();
-                arcTolerance = arcTolerance.ConstrainTolerance(lengthUnits);
+                arcTolerance = arcTolerance.ConstrainTolerance(context.GetLengthUnits());
                 if (abDistance <= arcTolerance)
                 {
                     line.RemoveTokens(arcArguments);
@@ -504,22 +517,26 @@ namespace GCodeClean.Processing
 
         public static async IAsyncEnumerable<Line> Clip(
             this IAsyncEnumerable<Line> tokenisedLines,
-            string lengthUnits,
             decimal tolerance = 0.0005M
         )
         {
             var arcArguments = new[] { 'I', 'J', 'K' };
 
-            // Set the clipping based on the lengthUnits
-            var unitClip = lengthUnits == "mm" ? 3 : 4;
+            var context = Default.Preamble();
 
             await foreach (var line in tokenisedLines)
             {
+                context.Update(line);
+
                 if (line.IsNotCommandCodeOrArguments())
                 {
                     yield return line;
                     continue;
                 }
+
+                // Set the clipping based on the lengthUnits
+                var lengthUnits = context.GetLengthUnits();
+                var unitClip = lengthUnits == "mm" ? 3 : 4;
 
                 foreach (var token in line.Tokens)
                 {
