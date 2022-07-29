@@ -34,6 +34,9 @@ namespace GCodeCleanCLI
         [Option("zClamp", Required = false, HelpText = "Restrict z-axis positive values to the supplied value")]
         public decimal zClamp { get; set; }
 
+        [Option("eliminateNeedlessTravelling", Required = false, HelpText = "Eliminate needless 'travelling', extra movements with positive z-axis values", Default = true)]
+        public bool eliminateNeedlessTravelling { get; set; }
+
         [Usage(ApplicationAlias = "GCodeClean")]
         public static IEnumerable<Example> Examples => new List<Example> {
             new Example("Clean GCode file", new Options { filename = "facade.nc" })

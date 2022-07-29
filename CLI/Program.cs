@@ -73,7 +73,7 @@ namespace GCodeCleanCLI
 
             (var minimisationStrategy, var dedupSelection) = Program.GetMinimisationStrategy(options.minimise, new List<char> { 'F', 'Z' });
 
-            var reassembledLines = inputLines.ProcessLines(dedupSelection, minimisationStrategy, options.lineNumbers, zClamp, arcTolerance, tolerance, options.annotate, tokenDefinitions);
+            var reassembledLines = inputLines.ProcessLines(dedupSelection, minimisationStrategy, options.lineNumbers, options.eliminateNeedlessTravelling, zClamp, arcTolerance, tolerance, options.annotate, tokenDefinitions);
             var lineCount = outputFile.WriteLinesAsync(reassembledLines);
 
             await foreach (var line in lineCount)
