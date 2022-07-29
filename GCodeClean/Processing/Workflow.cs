@@ -1,9 +1,10 @@
 // Copyright (c) 2022 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
-using GCodeClean.Structure;
 using System.Collections.Generic;
 using System.Text.Json;
+
+using GCodeClean.Structure;
 
 
 namespace GCodeClean.Processing
@@ -15,6 +16,7 @@ namespace GCodeClean.Processing
             List<char> dedupSelection,
             string minimisationStrategy,
             bool lineNumbers,
+            bool eliminateNeedlessTravel,
             decimal zClamp,
             decimal arcTolerance,
             decimal tolerance,
@@ -27,7 +29,7 @@ namespace GCodeClean.Processing
  
             var processedLines = firstPhaseLines
                 .PreAndPostamblePhase(preambleContext, zClamp)
-                .ProcessLinesSecondPhase(zClamp, arcTolerance, tolerance)
+                .ProcessLinesSecondPhase(eliminateNeedlessTravel, zClamp, arcTolerance, tolerance)
                 .ProcessLinesThirdPhase(dedupSelection, annotate, tokenDefinitions);
 
             var reassembledLines = processedLines.ReassembleLines(minimisationStrategy);
@@ -62,16 +64,16 @@ namespace GCodeClean.Processing
         /// <summary>
         /// Inject the pre and postamble GCode lines to complete getting the GCode to a consistent state
         /// </summary>
-        /// <param name="firstPhaseLines"></param>
+        /// <param name="inputLines"></param>
         /// <param name="preambleContext"></param>
         /// <param name="zClamp"></param>
         /// <returns></returns>
         public static async IAsyncEnumerable<Line> PreAndPostamblePhase(
-            this IAsyncEnumerable<Line> firstPhaseLines,
+            this IAsyncEnumerable<Line> inputLines,
             Context preambleContext,
             decimal zClamp
         ) {
-            var preAndPostamblePhaseLines = firstPhaseLines
+            var preAndPostamblePhaseLines = inputLines
                 .FileDemarcation(zClamp)
                 .InjectPreamble(preambleContext, zClamp);
 
@@ -89,14 +91,18 @@ namespace GCodeClean.Processing
         /// <param name="tolerance"></param>
         /// <returns></returns>
         public static async IAsyncEnumerable<Line> ProcessLinesSecondPhase(
-            this IAsyncEnumerable<Line> preAndPostamblePhaseLines,
+            this IAsyncEnumerable<Line> inputLines,
+            bool eliminateNeedlessTravel,
             decimal zClamp,
             decimal arcTolerance,
             decimal tolerance
         ) {
-            var secondPhaseLines = preAndPostamblePhaseLines
-                .ZClamp(zClamp)
-                //.DedupTravelling()
+            var zClampedLines = inputLines
+                .ZClamp(zClamp);
+            var dedupTravellingLines = eliminateNeedlessTravel
+                ? zClampedLines.DedupTravelling()
+                : zClampedLines;
+            var secondPhaseLines = dedupTravellingLines
                 .ConvertArcRadiusToCenter()
                 .DedupLine()
                 .SimplifyShortArcs(arcTolerance)
@@ -114,18 +120,18 @@ namespace GCodeClean.Processing
         /// <summary>
         /// Do the final processing of the GCode and output as simple strings
         /// </summary>
-        /// <param name="secondPhaseLines"></param>
+        /// <param name="inputLines"></param>
         /// <param name="dedupSelection"></param>
         /// <param name="annotate"></param>
         /// <param name="tokenDefinitions"></param>
         /// <returns></returns>
         public static async IAsyncEnumerable<Line> ProcessLinesThirdPhase(
-            this IAsyncEnumerable<Line> secondPhaseLines,
+            this IAsyncEnumerable<Line> inputLines,
             List<char> dedupSelection,
             bool annotate,
             JsonDocument tokenDefinitions
         ) {
-            var minimisedLines = secondPhaseLines.DedupSelectTokens(dedupSelection);
+            var minimisedLines = inputLines.DedupSelectTokens(dedupSelection);
             var annotatedLines = annotate ? minimisedLines.Annotate(tokenDefinitions.RootElement) : minimisedLines;
 
             await foreach (var line in annotatedLines) {
@@ -136,13 +142,14 @@ namespace GCodeClean.Processing
         /// <summary>
         /// Do the final processing of the GCode and output as simple strings
         /// </summary>
+        /// <param name="inputLines"></param>
         /// <param name="minimisationStrategy"></param>
         /// <returns></returns>
         public static async IAsyncEnumerable<string> ReassembleLines(
-            this IAsyncEnumerable<Line> thirdPhaseLines,
+            this IAsyncEnumerable<Line> inputLines,
             string minimisationStrategy
         ) {
-            var reassembledLines = thirdPhaseLines.JoinLines(minimisationStrategy);
+            var reassembledLines = inputLines.JoinLines(minimisationStrategy);
 
             await foreach (var line in reassembledLines) {
                 yield return line;

@@ -38,28 +38,31 @@ USAGE:
 Clean GCode file:
   GCodeClean --filename facade.nc
 
-  --filename        Required. Full path to the input filename.
+  --filename                       Required. Full path to the input filename.
 
-  --tokenDefs       (Default: tokenDefinitions.json) Full path to the tokenDefinitions.json file.
+  --tokenDefs                      (Default: tokenDefinitions.json) Full path to the tokenDefinitions.json file.
 
-  --annotate        (Default: false) Annotate the GCode with inline comments.
+  --annotate                       Annotate the GCode with inline comments.
 
-  --lineNumbers     (Default: false) Keep line numbers.
+  --lineNumbers                    (Default: false) Keep line numbers
 
-  --minimise        (Default: soft) Select preferred minimisation strategy, 'soft' - (default) FZ only, 'medium' - All
-                    codes excluding IJK (but leave spaces in place), 'hard' - All codes excluding IJK and remove spaces,
-                    or list of codes e.g. FGXYZ
+  --minimise                       (Default: soft) Select preferred minimisation strategy, 'soft' - (default) FZ only,
+                                   'medium' - All codes excluding IJK (but leave spaces in place), 'hard' - All codes
+                                   excluding IJK and remove spaces, or list of codes e.g. FGXYZ
 
-  --tolerance       (Default: 0.0005" or 0.005mm) Enter a clipping tolerance for the various deduplication operations
+  --tolerance                      Enter a clipping tolerance for the various deduplication operations
 
-  --arcTolerance    (Default: 0.0005" or 0.005mm) Enter a tolerance for the 'point-to-point' length of arcs (G2, G3) below which they will be
-                    converted to lines (G1)
+  --arcTolerance                   Enter a tolerance for the 'point-to-point' length of arcs (G2, G3) below which they will be
+                                   converted to lines (G1)
 
-  --zClamp          (Default: 0.02" or 0.5mm) Restrict z-axis positive values to the supplied value
+  --zClamp                         Restrict z-axis positive values to the supplied value
 
-  --help            Display this help screen.
+  --eliminateNeedlessTravelling    (Default: true) Eliminate needless 'travelling', extra movements with positive z-axis
+                                   values
 
-  --version         Display version information.
+  --help                           Display this help screen.
+
+  --version                        Display version information.
 
 Exit code=0
   
@@ -86,6 +89,8 @@ Exit code=0
 `--zClamp` accepts a value to 'clamp' all positive z-axis values.
   - 0.02 to 0.5 for inches or
   - 0.5 to 10.0 for millimeters
+
+`--eliminateNeedlessTravelling` is a simple switch. Normally needless travalling (intermediary `G0` with positive z-axis values) will be eliminated, but adding this flag and setting it to false will ensure they are preserved.
 
 For the tolerance and clamp values, the smallest value (inch or mm specific) is used as the default value.
 
