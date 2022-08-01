@@ -173,7 +173,7 @@ namespace GCodeClean.Tests
             var expectedLines = new List<string> {
                 "G21 (Length units: Millimeters)",
                 "G90 (Set Distance Mode: Absolute)",
-                "G1 Z0.1568 F9 (Linear motion: at Feed Rate, Z0.1568mm, Set Feed Rate to {feedRateMode})",
+                "G1 Z0.1568 F9 (Linear motion: at Feed Rate, Z0.1568mm, Set Feed Rate to 9 {feedRateMode})",
                 "G1234"
             };
 
