@@ -1,6 +1,11 @@
 {
 	"replaceableTokens": [
 		"feedRateMode",
+		"Fvalue",
+		"Ivalue",
+		"Jvalue",
+		"Kvalue",
+		"Pvalue",
 		"Svalue",
 		"Xvalue",
 		"Yvalue",
@@ -127,11 +132,11 @@
 
 		"D": "Tool Radius Compensation",
 		"E": "Extrude Filament",
-		"F": "Set Feed Rate to {feedRateMode}",
+		"F": "Set Feed Rate to {Fvalue} {feedRateMode}",
 		"H": "Tool Length Offset Index",
 		"L": "Canned Cycle: Number of Repetitions",
 		"N": "Line Number",
-		"P": "Canned Cycle: Dwell Time",
+		"P": "Dwell Time {Pvalue} seconds",
 		"R": "Arc Radius",
 		"S": "Set Spindle Speed {Svalue} rpm",
 		"T": "Select Tool",
@@ -144,9 +149,9 @@
 		"A": "A-Axis",
 		"B": "B-Axis",
 		"C": "C-Axis",
-		"I": "Arc Offset: X-Axis",
-		"J": "Arc Offset: Y-Axis",
-		"K": "Arc Offset: Z-Axis",
+		"I": "Arc Offset: X-Axis I{Ivalue}{lengthUnits}",
+		"J": "Arc Offset: Y-Axis J{Jvalue}{lengthUnits}",
+		"K": "Arc Offset: Z-Axis K{Kvalue}{lengthUnits}",
 		"X": "X{Xvalue}{lengthUnits}",
 		"Y": "Y{Yvalue}{lengthUnits}",
 		"Z": "Z{Zvalue}{lengthUnits}"

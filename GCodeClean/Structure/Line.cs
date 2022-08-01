@@ -196,7 +196,7 @@ namespace GCodeClean.Structure
 
             // This little hack handles situations where we have an existing line number
             // If the supplied token is a line number, then the existing line number will be eliminated
-            // If the supplied toke is not a line number, then it will end up immediately after any line number
+            // If the supplied token is not a line number, then it will end up immediately after any line number
             _tokens = AllTokens;
         }
 
@@ -259,6 +259,22 @@ namespace GCodeClean.Structure
 
                 removedTokens.Add(_tokens[ix]);
                 _tokens.RemoveAt(ix);
+            }
+
+            return removedTokens;
+        }
+
+        public List<Token> ReplaceToken(Token searchToken, Token replaceToken) {
+            var removedTokens = new List<Token>();
+
+            for (var ix = _tokens.Count - 1; ix >= 0; ix--) {
+                if (searchToken != _tokens[ix]) {
+                    continue;
+                }
+
+                removedTokens.Add(_tokens[ix]);
+                _tokens.RemoveAt(ix);
+                _tokens.Insert(ix, replaceToken);
             }
 
             return removedTokens;
