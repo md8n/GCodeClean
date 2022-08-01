@@ -10,6 +10,11 @@ using GCodeClean.Structure;
 namespace GCodeClean.Processing
 {
     public static class Dedup {
+        /// <summary>
+        /// Eliminates duplicate lines of GCode
+        /// </summary>
+        /// <param name="tokenisedLines"></param>
+        /// <returns></returns>
         public static async IAsyncEnumerable<Line> DedupLine(this IAsyncEnumerable<Line> tokenisedLines) {
             var previousLine = new Line();
             await foreach (var line in tokenisedLines) {
@@ -476,8 +481,7 @@ namespace GCodeClean.Processing
             }
 
             var linearMovementToken = new Token("G1");
-            lineB.RemoveToken(linearMovementToken);
-            lineB.PrependToken(new Token(prevIsClockwise ? "G2" : "G3"));
+            lineB.ReplaceToken(linearMovementToken, new Token(prevIsClockwise ? "G2" : "G3"));
 
             var centerX = new Token($"I{prevCenter.X - coordsA.X:0.####}");
             var centerY = new Token($"J{prevCenter.Y - coordsA.Y:0.####}");

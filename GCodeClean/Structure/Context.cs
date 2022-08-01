@@ -45,6 +45,11 @@ namespace GCodeClean.Structure
             Lines = lines;
         }
 
+        /// <summary>
+        /// Update the context in execution order for each modal group
+        /// </summary>
+        /// <param name="line"></param>
+        /// <param name="isOutput"></param>
         public void Update(Line line, bool isOutput = false)
         {
             UpdateModal(line, isOutput, ModalGroup.ModalFeedRate);
@@ -55,7 +60,7 @@ namespace GCodeClean.Structure
             UpdateModal(line, isOutput, ModalGroup.ModalSpindleTurning);
             // No support for Coolants in the context yet
             UpdateModal(line, isOutput, ModalGroup.ModalOverrideEnabling);
-            // Dwell (G4) - we don't care about here
+            // Dwell (G4) - we don't care about here - it's not a modal
             UpdateModal(line, isOutput, ModalGroup.ModalPlane);
             UpdateModal(line, isOutput, ModalGroup.ModalUnits);
             UpdateModal(line, isOutput, ModalGroup.ModalCutterRadiusCompensation);

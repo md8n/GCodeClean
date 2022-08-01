@@ -32,7 +32,7 @@ namespace GCodeClean.Structure
             new Token("G92"), new Token("G92.1"), new Token("G92.2"), new Token("G92.3"));
 
         /// <summary>
-        /// Non-modal group 0 - These describe actions that have no effect (G4),
+        /// Non-modal group 0 - These describe actions that have no effect past the line they are on (G4, (P)),
         /// or that affect offsets only (G10, G92, G92.1, G92.2, G92.3) 
         /// </summary>
         /// <remarks>

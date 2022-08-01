@@ -24,13 +24,14 @@ namespace GCodeClean.Processing
                     (new Line("G40"), false), // Cutter radius compensation, off - alternates are G41, G42
                     (new Line("G49"), false), // Tool length offset, none - alternate G43
                     (new Line("G54"), false), // Coordinate system selection - alternate G55, G56, G57, G58, G59, G59.1, G59.2, G59.3
+                    // (new Line("T1"), false), // Select tool 1 (arbitrary default)
+                    // (new Line("M6"), false), // Change tool
                     (new Line("M3"), false), // Spindle control, clockwise - alternates are M4, M5
                     // (new Line("G61"), false), // Path control mode, exact path - alternates are G61.1, G64
                     // (new Line("G80"), false), // Modal motion (AKA Canned Cycle), Cancel - alternates are G81, G82, G83, G84, G85, G86, G87, G88, G89
                     // (new Line("F"), false), // Feed rate, default will depend on length units
+                    // (new Line("G4 P2"), false), // Dwell, for 2 seconds - useful before any S command to allow the spindle to speed up
                     // (new Line("S"), false), // Spindle speed
-                    // (new Line("T"), false), // Select tool
-                    // (new Line("M6"), false), // Change tool
                     // (new Line("M7 M8"), false), // Coolant control, mist and flood - alternates are any one of M7, M8, M9 
                 }
             );

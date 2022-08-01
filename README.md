@@ -32,7 +32,7 @@ But if you do build it yourself then there are a very large number of possible t
 Throw the `--help` command line option at the GCodeClean `CLI` (in other words type in `cli --help`) and you'll get back the following:
 
 ```
-CLI 1.0.3
+CLI 1.1.0
 Copyright (C) 2022 md8n
 USAGE:
 Clean GCode file:

@@ -110,9 +110,9 @@ namespace GCodeClean.Processing
                 context.Update(line);
 
                 var hasZ = line.HasToken('Z');
-                var hasTraveling = line.HasTokens(ModalGroup.ModalAllMotion);
+                var hasTravelling = line.HasTokens(ModalGroup.ModalAllMotion);
 
-                if (hasZ && hasTraveling)
+                if (hasZ && hasTravelling)
                 {
                     var zToken = line.AllTokens.First(t => t.Code == 'Z');
                     currentZ = zToken.Number.Value;
@@ -293,6 +293,9 @@ namespace GCodeClean.Processing
             decimal zClamp = 10.0M
         ) {
             var context = Default.Preamble();
+            var prevX = 0M;
+            var prevY = 0M;
+            var prevZ = zClamp;
 
             await foreach (var line in tokenisedLines) {
                 context.Update(line);
@@ -302,23 +305,34 @@ namespace GCodeClean.Processing
                     continue;
                 }
 
+                var hasX = line.HasToken('X');
+                var hasY = line.HasToken('Y');
                 var hasZ = line.HasToken('Z');
-                var hasTraveling = line.HasTokens(ModalGroup.ModalSimpleMotion);
+                var hasTravelling = line.HasTokens(ModalGroup.ModalSimpleMotion);
 
-                if (hasZ && hasTraveling) {
+                if (hasZ && hasTravelling) {
                     var zToken = line.AllTokens.First(t => t.Code == 'Z');
 
-                    foreach (var travelingToken in line.AllTokens.Intersect(ModalGroup.ModalSimpleMotion)) {
-                        if (zToken.Number >= 0) {
-                            // If Z >= 0 then the motion should be G0
-                            var zClampConstrained = Utility.ConstrictZClamp(context.GetLengthUnits(), zClamp);
-                            zToken.Number = zClampConstrained;
+                    var travelingToken = line.AllTokens.Intersect(ModalGroup.ModalSimpleMotion).First();
+
+                    if (zToken.Number >= 0) {
+                        // If Z >= 0 then the z value should be constrained
+                        var zClampConstrained = Utility.ConstrictZClamp(context.GetLengthUnits(), zClamp);
+                        zToken.Number = zClampConstrained;
+                        var xUnchanged = !hasX || line.AllTokens.First(t => t.Code == 'X').Number.Value == prevX;
+                        var yUnchanged = !hasY || line.AllTokens.First(t => t.Code == 'Y').Number.Value == prevY;
+                        if (prevZ >= 0 || (xUnchanged || yUnchanged)) {
+                            // If the previous Z value is also >= 0 or there's no X or Y movement then the motion should be G0
                             travelingToken.Source = "G0";
-                        } else if (travelingToken.Source == "G0") {
-                            // If Z < 0 and source is G0 then the motion should be G1 (probably)
-                            travelingToken.Source = "G1";
                         }
+                    } else if (travelingToken.Source == "G0") {
+                        // If Z < 0 and source is G0 then the motion should be G1 (probably)
+                        travelingToken.Source = "G1";
                     }
+
+                    prevX = hasX ? line.AllTokens.First(t => t.Code == 'X').Number.Value : prevX;
+                    prevY = hasY ? line.AllTokens.First(t => t.Code == 'Y').Number.Value : prevY;
+                    prevZ = zToken.Number.Value;
                 }
 
                 yield return line;
@@ -349,9 +363,9 @@ namespace GCodeClean.Processing
         //         }
 
         //         var hasZ = line.HasToken('Z');
-        //         var hasTraveling = line.HasTokens(ModalGroup.ModalSimpleMotion);
+        //         var hasTravelling = line.HasTokens(ModalGroup.ModalSimpleMotion);
 
-        //         if (hasZ && hasTraveling)
+        //         if (hasZ && hasTravelling)
         //         {
         //             var zTokenIndex = line.AllTokens.FindIndex(t => t.Code == 'Z');
 
@@ -575,13 +589,169 @@ namespace GCodeClean.Processing
             }
         }
 
+        /// <summary>
+        /// Inject 'travelling dividers' to show where travelling is occurring
+        /// </summary>
+        /// <param name="tokenisedLines"></param>
+        /// <returns></returns>
+        public static async IAsyncEnumerable<Line> DetectTravelling(this IAsyncEnumerable<Line> tokenisedLines) {
+            var context = Default.Preamble();
+            var isTravelling = true; // Assuming that things start with +ve z-axis value
+            var entry = new Coord(0M, 0M);
+            var exit = new Coord(0M, 0M);
+            var entrySet = false;
+            var travellingLine = new Line("");
+
+            await foreach (var line in tokenisedLines) {
+                context.Update(line);
+
+                if (line.HasToken('X') || line.HasToken('Y')) {
+                    if (!entrySet) {
+                        entry = new Coord(line);
+                        entrySet = true;
+                    }
+                    exit = new Coord(line);
+                }
+
+                if (line.HasToken('Z')) {
+                    var zToken = line.AllTokens.First(t => t.Code == 'Z');
+                    if (zToken.Number >= 0) {
+                        if (!isTravelling) {
+                            travellingLine = new Line(line);
+                            travellingLine.ReplaceToken(new Token("G1"), new Token("G0"));
+
+                            line.AppendToken(new Token($"(|| Travelling {entry} >> {exit})"));
+                            entry = new Coord(0M, 0M);
+                            exit = new Coord(0M, 0M);
+                            entrySet = false;
+                        }
+
+                        if (!isTravelling) {
+                            isTravelling = true;
+                        }
+                    } else {
+                        isTravelling = false;
+                    }
+                }
+                yield return line;
+            }
+        }
+
+        /// <summary>
+        /// Inject 'travelling dividers' to show where travelling is occurring
+        /// </summary>
+        /// <param name="tokenisedLines"></param>
+        /// <returns></returns>
+        //public static async IAsyncEnumerable<Line> InjectTravellingDivider(this IAsyncEnumerable<Line> tokenisedLines) {
+        //    var context = Default.Preamble();
+        //    var isTravelling = true; // Assuming that things start with +ve z-axis value
+        //    var entry = new Coord(0M, 0M);
+        //    var exit = new Coord(0M, 0M);
+        //    var entrySet = false;
+        //    var travellingLine = new Line("");
+        //    var travellingCommentLine = new Line("");
+
+        //    await foreach (var line in tokenisedLines) {
+        //        context.Update(line);
+
+        //        if (line.AllTokens.All(t => t.IsComment)) {
+        //            if (line.Source.StartsWith("(End") || line.Source.StartsWith("(finish")) {
+        //                yield return line;
+        //                if (travellingCommentLine.Source != "" && entrySet) {
+        //                    travellingCommentLine.Source += $"{entry.ToXY()} >> {exit.ToXY()})";
+        //                    entry = new Coord(0M, 0M);
+        //                    exit = new Coord(0M, 0M);
+        //                    entrySet = false;
+        //                    yield return travellingCommentLine;
+        //                    travellingCommentLine = new Line("");
+        //                }
+        //                continue;
+        //            }
+        //            if (travellingCommentLine.Source != "" && entrySet) {
+        //                travellingCommentLine.Source += $"{entry.ToXY()} >> {exit.ToXY()})";
+        //                entry = new Coord(0M, 0M);
+        //                exit = new Coord(0M, 0M);
+        //                entrySet = false;
+        //                yield return travellingCommentLine;
+        //                travellingCommentLine = new Line("");
+        //            }
+        //            yield return line;
+        //            continue;
+        //        }
+
+        //        if (line.HasToken('X') || line.HasToken('Y')) {
+        //            if (!entrySet) {
+        //                entry = new Coord(line);
+        //                entrySet = true;
+        //            }
+        //            exit = new Coord(line);
+        //        }
+
+        //        if (line.HasToken('Z')) {
+        //            if (isTravelling) {
+        //                if (travellingCommentLine.Source != "" && entrySet) {
+        //                    travellingCommentLine.Source += $"{entry.ToXY()} >> {exit.ToXY()})";
+        //                    entry = new Coord(0M, 0M);
+        //                    exit = new Coord(0M, 0M);
+        //                    entrySet = false;
+        //                    yield return travellingCommentLine;
+        //                    travellingCommentLine = new Line("");
+        //                }
+        //            }
+
+        //            var zToken = line.AllTokens.First(t => t.Code == 'Z');
+        //            if (zToken.Number < 0) {
+        //                if (isTravelling) {
+        //                    // Restate the previous travelling Line to make any file splitting easier
+        //                    // Obviously we do not want any DedupLine to occur after this (and before any file splitting)
+        //                    yield return travellingLine;
+        //                    isTravelling = false;
+        //                }
+        //                yield return line;
+        //                continue;
+        //            }
+        //            // zToken.Number >= 0
+
+        //            if (!isTravelling) {
+        //                travellingLine = new Line(line);
+        //                travellingLine.ReplaceToken(new Token("G1"), new Token("G0"));
+
+        //                line.AppendToken(new Token("(Travelling detected)"));
+        //            }
+
+        //            yield return line;
+        //            if (!isTravelling) {
+        //                isTravelling = true;
+        //                travellingCommentLine = new Line("(|| Travelling ");
+        //            }
+        //        } else {
+        //            if (isTravelling) {
+        //                if (travellingCommentLine.Source != "" && entrySet) {
+        //                    travellingCommentLine.Source += $"{entry.ToXY()} >> {exit.ToXY()})";
+        //                    entry = new Coord(0M, 0M);
+        //                    exit = new Coord(0M, 0M);
+        //                    entrySet = false;
+        //                    yield return travellingCommentLine;
+        //                    travellingCommentLine = new Line("");
+        //                }
+        //                yield return travellingLine;
+        //                isTravelling = false;
+        //            } else {
+        //                travellingLine = new Line(line);
+        //                isTravelling = true;
+        //            }
+        //            yield return line;
+        //        }
+        //    }
+        //}
+
         public static async IAsyncEnumerable<Line> Annotate(
             this IAsyncEnumerable<Line> tokenisedLines,
             JsonElement tokenDefinitions
         )
         {
             var tokenDefs = tokenDefinitions.GetProperty("tokenDefs");
-            var context = new Dictionary<string, string>();
+            var annotationContext = new Dictionary<string, string>();
 
             var previousTokenCodes = new List<string>();
 
@@ -597,7 +767,7 @@ namespace GCodeClean.Processing
                 var tokenCodes = new List<string>();
                 foreach (var token in line.Tokens)
                 {
-                    context.BuildContext(tokenDefinitions, token);
+                    annotationContext.BuildAnnotation(tokenDefinitions, token);
 
                     string annotation = null;
                     if (tokenDefs.TryGetProperty(token.ToString(), out var tokenDef))
@@ -612,7 +782,7 @@ namespace GCodeClean.Processing
                         {
                             annotation = subTokenDef.GetString();
                         }
-                        context[token.Code + "value"] = token.Number.Value.ToString(CultureInfo.InvariantCulture);
+                        annotationContext[token.Code + "value"] = token.Number.Value.ToString(CultureInfo.InvariantCulture);
                     }
                     else
                     {
@@ -624,7 +794,7 @@ namespace GCodeClean.Processing
                         continue;
                     }
 
-                    foreach (var (key, value) in context)
+                    foreach (var (key, value) in annotationContext)
                     {
                         annotation = annotation.Replace("{" + key + "}", value);
                     }
@@ -673,7 +843,7 @@ namespace GCodeClean.Processing
             return lineB;
         }
 
-        private static void BuildContext(
+        private static void BuildAnnotation(
             this Dictionary<string, string> context,
             JsonElement tokenDefinitions,
             Token token

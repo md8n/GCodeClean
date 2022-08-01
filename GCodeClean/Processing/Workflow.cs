@@ -110,6 +110,7 @@ namespace GCodeClean.Processing
                 .Clip(tolerance)
                 .DedupRepeatedTokens()
                 .DedupLine()
+                .DetectTravelling()
                 .DedupLinear(tolerance);
 
             await foreach (var line in secondPhaseLines) {
