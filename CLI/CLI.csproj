@@ -12,7 +12,8 @@ The primary objective is to be a `GCode Linter`.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommandLineParser" Version="2.9.1" />
+    <PackageReference Include="Spectre.Console" Version="0.45.1-preview.0.4" />
+    <PackageReference Include="Spectre.Console.Cli" Version="0.45.1-preview.0.4" />
   </ItemGroup>
 
   <ItemGroup>
@@ -20,7 +21,7 @@ The primary objective is to be a `GCode Linter`.</Description>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="SonarAnalyzer.CSharp" Version="8.42.0.51121" />
+    <PackageReference Update="SonarAnalyzer.CSharp" Version="8.44.0.52574" />
   </ItemGroup>
 
 </Project>

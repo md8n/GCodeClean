@@ -32,39 +32,27 @@ But if you do build it yourself then there are a very large number of possible t
 Throw the `--help` command line option at the GCodeClean `CLI` (in other words type in `cli --help`) and you'll get back the following:
 
 ```
-CLI 1.1.0
-Copyright (C) 2022 md8n
 USAGE:
-Clean GCode file:
-  GCodeClean --filename facade.nc
+    CLI.dll [OPTIONS]
 
-  --filename                       Required. Full path to the input filename.
-
-  --tokenDefs                      (Default: tokenDefinitions.json) Full path to the tokenDefinitions.json file.
-
-  --annotate                       Annotate the GCode with inline comments.
-
-  --lineNumbers                    (Default: false) Keep line numbers
-
-  --minimise                       (Default: soft) Select preferred minimisation strategy, 'soft' - (default) FZ only,
-                                   'medium' - All codes excluding IJK (but leave spaces in place), 'hard' - All codes
-                                   excluding IJK and remove spaces, or list of codes e.g. FGXYZ
-
-  --tolerance                      Enter a clipping tolerance for the various deduplication operations
-
-  --arcTolerance                   Enter a tolerance for the 'point-to-point' length of arcs (G2, G3) below which they will be
-                                   converted to lines (G1)
-
-  --zClamp                         Restrict z-axis positive values to the supplied value
-
-  --eliminateNeedlessTravelling    (Default: true) Eliminate needless 'travelling', extra movements with positive z-axis
-                                   values
-
-  --help                           Display this help screen.
-
-  --version                        Display version information.
-
-Exit code=0
+OPTIONS:
+    -h, --help                           Prints help information
+    -f, --filename <FILENAME>            Full path to the input filename. This is the only required option
+        --tokenDefs <TOKENDEFS>          Full path to the **tokenDefinitions.json** file
+        --annotate                       Annotate the GCode with inline comments
+        --lineNumbers                    Keep line numbers
+        --minimise <MINIMISE>            Select preferred minimisation strategy,
+                                         *'soft'* - (default) **FZ** only,
+                                         *'medium'* - All codes excluding **IJK** (but leave spaces in place),
+                                         *'hard'* - All codes excluding **IJK** and remove spaces,
+                                         or list of codes e.g. **FGXYZ**
+        --tolerance [TOLERANCE]          Enter a clipping tolerance for the various deduplication operations
+        --arcTolerance [ARCTOLERANCE]    Enter a tolerance for the 'point-to-point' length of arcs (**G2**, **G3**) below which
+                                         they will be converted to lines (**G1**)
+        --zClamp [ZCLAMP]                Restrict z-axis positive values to the supplied value
+        --eliminateNeedlessTravelling    Eliminate needless 'travelling', extra movements with positive z-axis values   
+COMMANDS:
+    clean    Clean your GCode file. This is the default command
   
 ```
 
