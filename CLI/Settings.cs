@@ -63,12 +63,6 @@ namespace GCodeCleanCLI
             [DefaultValue(true)]
             public bool EliminateNeedlessTravelling { get; set; }
 
-            //[Usage(ApplicationAlias = "GCodeClean")]
-            //public static IEnumerable<Example> Examples => new List<Example> {
-            //    new Example("Clean GCode file", new Options { Filename = "facade.nc" })
-            //};
-
-
             public override ValidationResult Validate()
             {
                 if (string.IsNullOrWhiteSpace(TokenDefs))
@@ -90,8 +84,7 @@ namespace GCodeCleanCLI
             {
                 if (tokenDefsPath.ToUpperInvariant() == "TOKENDEFINITIONS.JSON")
                 {
-                    var entryDir = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location)
-                                   ?? Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                    var entryDir = Path.GetDirectoryName(AppContext.BaseDirectory);
 
                     tokenDefsPath = $"{entryDir}{Path.DirectorySeparatorChar}tokenDefinitions.json";
                 }

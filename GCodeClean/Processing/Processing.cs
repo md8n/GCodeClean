@@ -600,7 +600,7 @@ namespace GCodeClean.Processing
             var entry = new Coord(0M, 0M);
             var exit = new Coord(0M, 0M);
             var entrySet = false;
-            var travellingLine = new Line("");
+            Line travellingLine;
 
             await foreach (var line in tokenisedLines) {
                 context.Update(line);

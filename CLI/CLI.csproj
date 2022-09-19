@@ -2,13 +2,14 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
     <Authors>Lee Humphries</Authors>
     <Company>md8n</Company>
     <Product>GCode Clean</Product>
     <Description>A library and command line utility to do some 'cleaning' of a gcode file.
 The primary objective is to be a `GCode Linter`.</Description>
     <PackageTags>s</PackageTags>
+    <PublishAot>true</PublishAot>
   </PropertyGroup>
 
   <ItemGroup>
