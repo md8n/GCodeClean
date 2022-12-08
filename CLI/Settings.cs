@@ -7,7 +7,6 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -21,6 +20,8 @@ namespace GCodeCleanCLI
 {
     internal sealed class GCodeClean : AsyncCommand<GCodeClean.Settings>
     {
+        public GCodeClean () {}
+
         public sealed class Settings : CommandSettings
         {
             [CommandOption("-f|--filename <FILENAME>")]

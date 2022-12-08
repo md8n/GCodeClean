@@ -21,9 +21,9 @@ We also have:
 
 There are standalone release builds available, for Linux, Raspberry Pi (linux-arm), and Windows at [GCodeClean releases](https://github.com/md8n/GCodeClean/releases). It is very easy to a build for MacOS / OSX (osx-64) (see #Deployment below).
 
-The standalone releases include all the relevant .NET 6.0 libraries for this application.
+The standalone releases include all the relevant .NET 7.0 libraries for this application.
 
-Alternatively you can build and run this project yourself, and for that you would need the .NET 6.0 SDK.
+Alternatively you can build and run this project yourself, and for that you would need the .NET 7.0 SDK.
 
 But if you do build it yourself then there are a very large number of possible targets including 32bit, and many specific Linux distros, etc.
 
@@ -78,7 +78,7 @@ COMMANDS:
   - 0.02 to 0.5 for inches or
   - 0.5 to 10.0 for millimeters
 
-`--eliminateNeedlessTravelling` is a simple switch. Normally needless travalling (intermediary `G0` with positive z-axis values) will be eliminated, but adding this flag and setting it to false will ensure they are preserved.
+`--eliminateNeedlessTravelling` is a simple switch. Normally needless travelling (intermediary `G0` with positive z-axis values) will be eliminated, but adding this flag and setting it to false will ensure they are preserved. If you have something protruding from the surface of the workpiece then you should turn this option to false (just in case).
 
 For the tolerance and clamp values, the smallest value (inch or mm specific) is used as the default value.
 
@@ -109,14 +109,14 @@ Note: If the input file does not exist (or can't be found, i.e. your typo) then 
 
 ### Prerequisites for Building it Yourself
 
-.NET 6.0 SDK - get the correct version for your OS and architecture here: [.NET SDK downloads](https://dotnet.microsoft.com/download/)
+.NET 7.0 SDK - get the correct version for your OS and architecture here: [.NET SDK downloads](https://dotnet.microsoft.com/download/)
 
 A text editor if you want to change something. I recommend Visual Studio Code, or alternatively go the whole hog and use full Visual Studio.
 The 'community edition' of Visual Studio is free. But anything so long as you can edit text files with it is fine.
 
 ### Building and Running it Yourself (you don't have to if one of the binaries works for you)
 
-Once you've got the .NET 6.0 SDK installed.
+Once you've got the .NET 7.0 SDK installed.
 
 Get yourself to a command line prompt, change to the folder where you've cloned this repository to, and then to the CLI folder, and enter:
 ```
@@ -147,12 +147,12 @@ Take a note of the `publish` folder, the `CLI` executable will be located there.
 And then run the `CLI` executable.
 e.g. for Windows that might look like:
 ```
-.\bin\Debug\net6.0\publish\cli --filename FacadeFullAlternate.nc --minimise hard --annotate
+.\bin\Debug\net7.0\publish\cli --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
 
 or for Linux (Ubuntu 18.04 / 20.04)
 ```
-./bin/Debug/net6.0/publish/CLI --filename FacadeFullAlternate.nc --minimise hard --annotate
+./bin/Debug/net7.0/publish/CLI --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
 
 ## GCodeClean Solution Organisation

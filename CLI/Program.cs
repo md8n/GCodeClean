@@ -17,8 +17,7 @@ namespace GCodeCleanCLI
                 config.ValidateExamples();
 
                 config.AddCommand<GCodeClean>("clean")
-                    .WithDescription("Clean your GCode file. This is the default command")
-                    .WithExample(new[] { "clean", "--filename", "facade.nc" });
+                    .WithDescription("Clean your GCode file. This is the default command");
             });
 
             if (args.Length == 0)

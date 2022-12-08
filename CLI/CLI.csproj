@@ -10,11 +10,15 @@
 The primary objective is to be a `GCode Linter`.</Description>
     <PackageTags>s</PackageTags>
     <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Spectre.Console" Version="0.45.1-preview.0.4" />
-    <PackageReference Include="Spectre.Console.Cli" Version="0.45.1-preview.0.4" />
+    <PackageReference Include="Spectre.Console" Version="0.45.1-preview.0.46" />
+    <PackageReference Include="Spectre.Console.Cli" Version="0.45.1-preview.0.46" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,7 +26,7 @@ The primary objective is to be a `GCode Linter`.</Description>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="SonarAnalyzer.CSharp" Version="8.44.0.52574" />
+    <PackageReference Update="SonarAnalyzer.CSharp" Version="8.50.0.58025" />
   </ItemGroup>
 
 </Project>
