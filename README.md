@@ -21,9 +21,9 @@ We also have:
 
 There are standalone release builds available, for Linux, Raspberry Pi (linux-arm), and Windows at [GCodeClean releases](https://github.com/md8n/GCodeClean/releases). It is very easy to a build for MacOS / OSX (osx-64) (see #Deployment below).
 
-The standalone releases include all the relevant .NET 6.0 libraries for this application.
+The standalone releases include all the relevant .NET 7.0 libraries for this application.
 
-Alternatively you can build and run this project yourself, and for that you would need the .NET 6.0 SDK.
+Alternatively you can build and run this project yourself, and for that you would need the .NET 7.0 SDK.
 
 But if you do build it yourself then there are a very large number of possible targets including 32bit, and many specific Linux distros, etc.
 
@@ -32,39 +32,27 @@ But if you do build it yourself then there are a very large number of possible t
 Throw the `--help` command line option at the GCodeClean `CLI` (in other words type in `cli --help`) and you'll get back the following:
 
 ```
-CLI 1.1.0
-Copyright (C) 2022 md8n
 USAGE:
-Clean GCode file:
-  GCodeClean --filename facade.nc
+    CLI.dll [OPTIONS]
 
-  --filename                       Required. Full path to the input filename.
-
-  --tokenDefs                      (Default: tokenDefinitions.json) Full path to the tokenDefinitions.json file.
-
-  --annotate                       Annotate the GCode with inline comments.
-
-  --lineNumbers                    (Default: false) Keep line numbers
-
-  --minimise                       (Default: soft) Select preferred minimisation strategy, 'soft' - (default) FZ only,
-                                   'medium' - All codes excluding IJK (but leave spaces in place), 'hard' - All codes
-                                   excluding IJK and remove spaces, or list of codes e.g. FGXYZ
-
-  --tolerance                      Enter a clipping tolerance for the various deduplication operations
-
-  --arcTolerance                   Enter a tolerance for the 'point-to-point' length of arcs (G2, G3) below which they will be
-                                   converted to lines (G1)
-
-  --zClamp                         Restrict z-axis positive values to the supplied value
-
-  --eliminateNeedlessTravelling    (Default: true) Eliminate needless 'travelling', extra movements with positive z-axis
-                                   values
-
-  --help                           Display this help screen.
-
-  --version                        Display version information.
-
-Exit code=0
+OPTIONS:
+    -h, --help                           Prints help information
+    -f, --filename <FILENAME>            Full path to the input filename. This is the only required option
+        --tokenDefs <TOKENDEFS>          Full path to the **tokenDefinitions.json** file
+        --annotate                       Annotate the GCode with inline comments
+        --lineNumbers                    Keep line numbers
+        --minimise <MINIMISE>            Select preferred minimisation strategy,
+                                         *'soft'* - (default) **FZ** only,
+                                         *'medium'* - All codes excluding **IJK** (but leave spaces in place),
+                                         *'hard'* - All codes excluding **IJK** and remove spaces,
+                                         or list of codes e.g. **FGXYZ**
+        --tolerance [TOLERANCE]          Enter a clipping tolerance for the various deduplication operations
+        --arcTolerance [ARCTOLERANCE]    Enter a tolerance for the 'point-to-point' length of arcs (**G2**, **G3**) below which
+                                         they will be converted to lines (**G1**)
+        --zClamp [ZCLAMP]                Restrict z-axis positive values to the supplied value
+        --eliminateNeedlessTravelling    Eliminate needless 'travelling', extra movements with positive z-axis values   
+COMMANDS:
+    clean    Clean your GCode file. This is the default command
   
 ```
 
@@ -90,7 +78,7 @@ Exit code=0
   - 0.02 to 0.5 for inches or
   - 0.5 to 10.0 for millimeters
 
-`--eliminateNeedlessTravelling` is a simple switch. Normally needless travalling (intermediary `G0` with positive z-axis values) will be eliminated, but adding this flag and setting it to false will ensure they are preserved.
+`--eliminateNeedlessTravelling` is a simple switch. Normally needless travelling (intermediary `G0` with positive z-axis values) will be eliminated, but adding this flag and setting it to false will ensure they are preserved. If you have something protruding from the surface of the workpiece then you should turn this option to false (just in case).
 
 For the tolerance and clamp values, the smallest value (inch or mm specific) is used as the default value.
 
@@ -121,14 +109,14 @@ Note: If the input file does not exist (or can't be found, i.e. your typo) then 
 
 ### Prerequisites for Building it Yourself
 
-.NET 6.0 SDK - get the correct version for your OS and architecture here: [.NET SDK downloads](https://dotnet.microsoft.com/download/)
+.NET 7.0 SDK - get the correct version for your OS and architecture here: [.NET SDK downloads](https://dotnet.microsoft.com/download/)
 
 A text editor if you want to change something. I recommend Visual Studio Code, or alternatively go the whole hog and use full Visual Studio.
 The 'community edition' of Visual Studio is free. But anything so long as you can edit text files with it is fine.
 
 ### Building and Running it Yourself (you don't have to if one of the binaries works for you)
 
-Once you've got the .NET 6.0 SDK installed.
+Once you've got the .NET 7.0 SDK installed.
 
 Get yourself to a command line prompt, change to the folder where you've cloned this repository to, and then to the CLI folder, and enter:
 ```
@@ -159,12 +147,12 @@ Take a note of the `publish` folder, the `CLI` executable will be located there.
 And then run the `CLI` executable.
 e.g. for Windows that might look like:
 ```
-.\bin\Debug\net6.0\publish\cli --filename FacadeFullAlternate.nc --minimise hard --annotate
+.\bin\Debug\net7.0\publish\cli --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
 
 or for Linux (Ubuntu 18.04 / 20.04)
 ```
-./bin/Debug/net6.0/publish/CLI --filename FacadeFullAlternate.nc --minimise hard --annotate
+./bin/Debug/net7.0/publish/CLI --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
 
 ## GCodeClean Solution Organisation
