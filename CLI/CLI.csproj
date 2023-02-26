@@ -9,9 +9,9 @@
     <Description>A library and command line utility to do some 'cleaning' of a gcode file.
 The primary objective is to be a `GCode Linter`.</Description>
     <PackageTags>s</PackageTags>
-    <PublishAot>true</PublishAot>
+    <!-- <PublishAot>true</PublishAot> -->
     <InvariantGlobalization>true</InvariantGlobalization>
-    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <!-- <UseSystemResourceKeys>true</UseSystemResourceKeys> -->
     <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
   </PropertyGroup>
