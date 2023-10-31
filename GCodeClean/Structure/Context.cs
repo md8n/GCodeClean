@@ -26,10 +26,7 @@ namespace GCodeClean.Structure
                     return;
                 }
 
-                if (_lines == null)
-                {
-                    _lines = new List<(Line line, bool isOutput)>();
-                }
+                _lines ??= new List<(Line line, bool isOutput)>();
 
                 foreach (var (line, isOutput) in value)
                 {
