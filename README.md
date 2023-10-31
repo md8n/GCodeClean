@@ -23,37 +23,60 @@ There are standalone release builds available, for Linux, Raspberry Pi (linux-ar
 
 The standalone releases include all the relevant .NET 7.0 libraries for this application.
 
-Alternatively you can build and run this project yourself, and for that you would need the .NET 7.0 SDK.
+Alternatively you can build and run this project yourself. See `BuildItYourself.md` for instructions and tips. And how to deploy.
 
 But if you do build it yourself then there are a very large number of possible targets including 32bit, and many specific Linux distros, etc.
 
 ### Command Line Parameters
 
-Throw the `--help` command line option at the GCodeClean `CLI` (in other words type in `cli --help`) and you'll get back the following:
+Throw the `--help` command line option at the GCodeClean `GCC` (in other words type in `GCC --help`) and you'll get back the following:
 
 ```
 USAGE:
-    CLI.dll [OPTIONS]
+    GCC.dll [OPTIONS] <COMMAND>
 
 OPTIONS:
-    -h, --help                           Prints help information
-    -f, --filename <FILENAME>            Full path to the input filename. This is the only required option
-        --tokenDefs <TOKENDEFS>          Full path to the **tokenDefinitions.json** file
-        --annotate                       Annotate the GCode with inline comments
-        --lineNumbers                    Keep line numbers
-        --minimise <MINIMISE>            Select preferred minimisation strategy,
-                                         *'soft'* - (default) **FZ** only,
-                                         *'medium'* - All codes excluding **IJK** (but leave spaces in place),
-                                         *'hard'* - All codes excluding **IJK** and remove spaces,
-                                         or list of codes e.g. **FGXYZ**
-        --tolerance [TOLERANCE]          Enter a clipping tolerance for the various deduplication operations
-        --arcTolerance [ARCTOLERANCE]    Enter a tolerance for the 'point-to-point' length of arcs (**G2**, **G3**) below which
-                                         they will be converted to lines (**G1**)
-        --zClamp [ZCLAMP]                Restrict z-axis positive values to the supplied value
-        --eliminateNeedlessTravelling    Eliminate needless 'travelling', extra movements with positive z-axis values   
+    -h, --help       Prints help information
+    -v, --version    Prints version information
+
+COMMANDS:
+    clean
+    split
+```
+
+#### The `clean` Command
+
+Repeat the above `--help` command, but specify `clean` as the command (in other words type in `GCC clean --help`) and you'll get back the following:
+
+```
+USAGE:
+    GCC.dll clean [OPTIONS] <COMMAND>
+
+OPTIONS:
+                                         DEFAULT
+    -h, --help                                                    Prints help information
+    -f, --filename <FILENAME>                                     Full path to the input filename. This is the only
+                                                                  required option
+        --tokenDefs <TOKENDEFS>          tokenDefinitions.json    Full path to the tokenDefinitions.json file
+        --annotate                                                Annotate the GCode with inline comments
+        --lineNumbers                                             Keep line numbers
+        --minimise <MINIMISE>            soft                     Select preferred minimisation strategy,
+                                                                  'soft' - (default) FZ only,
+                                                                  'medium' - All codes excluding IJK (but leave spaces
+                                                                  in place),
+                                                                  'hard' - All codes excluding IJK and remove spaces,
+                                                                  or list of codes e.g. FGXYZ
+        --tolerance [TOLERANCE]                                   Enter a clipping tolerance for the various
+                                                                  deduplication operations
+        --arcTolerance [ARCTOLERANCE]                             Enter a tolerance for the 'point-to-point' length of
+                                                                  arcs (G2, G3) below which they will be converted to
+                                                                  lines (G1)
+        --zClamp [ZCLAMP]                                         Restrict z-axis positive values to the supplied value
+        --eliminateNeedlessTravelling    True                     Eliminate needless 'travelling', extra movements with
+                                                                  positive z-axis values
+
 COMMANDS:
     clean    Clean your GCode file. This is the default command
-  
 ```
 
 `--annotate` is a simple switch, include it on its own to have your GCode annotated with inline comments (even if you specify hard minimisation).
@@ -106,61 +129,6 @@ Note: If the input file does not exist (or can't be found, i.e. your typo) then 
 `Exit code`:
 * `0` - Success
 * `2` - File or Directory not found exception - check for typos etc.
-
-### Prerequisites for Building it Yourself
-
-.NET 7.0 SDK - get the correct version for your OS and architecture here: [.NET SDK downloads](https://dotnet.microsoft.com/download/)
-
-A text editor if you want to change something. I recommend Visual Studio Code, or alternatively go the whole hog and use full Visual Studio.
-The 'community edition' of Visual Studio is free. But anything so long as you can edit text files with it is fine.
-
-### Building and Running it Yourself (you don't have to if one of the binaries works for you)
-
-Once you've got the .NET 7.0 SDK installed.
-
-Get yourself to a command line prompt, change to the folder where you've cloned this repository to, and then to the CLI folder, and enter:
-```
-dotnet restore
-```
-
-... and, after it has downloaded all of the packages it needs with nuget (which may take a while), you can then build and run it with:
-
-```
-dotnet run
-```
-
-and ... it will probably give you the help text because you haven't specified a filename.
-
-
-To get it to process a file try the following command:
-```
-dotnet run -- --filename <filename>
-```
-Obviously replacing `<filename>` with your file's name (and path if needed).
-
-Or you can build `CLI` and run it with these two steps:
-```
-dotnet publish
-```
-Take a note of the `publish` folder, the `CLI` executable will be located there.
-
-And then run the `CLI` executable.
-e.g. for Windows that might look like:
-```
-.\bin\Debug\net7.0\publish\cli --filename FacadeFullAlternate.nc --minimise hard --annotate
-```
-
-or for Linux (Ubuntu 18.04 / 20.04)
-```
-./bin/Debug/net7.0/publish/CLI --filename FacadeFullAlternate.nc --minimise hard --annotate
-```
-
-## GCodeClean Solution Organisation
-
-GCodeClean is organised into 3 projects:
-1. GCodeClean - A library that contains most of the code
-2. CLI - An executable to call the above library - this also handles the command line arguments and does the actual file handling
-3. CodeClean.Test - A test suite - which will be 'grown' over time.
 
 ## What's Special about GCodeClean?
 
@@ -224,24 +192,6 @@ Z2
 (Preamble completed by GCodeClean)
 G0 X39.29 Y-105.937
 ```
-
-## Deployment
-
-Run a fresh 'self-contained' `publish` of `GCodeClean` as follows:
-```
-dotnet publish  /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary --output bin/release/publish --self-contained
-```
-You can also include the option `--configuration Release` for a release build.
-And target many different platforms by adding `--runtime ` and specifying a runtime platform, e.g.
-* `--runtime win-x64` (64 bit Windows)
-* `--runtime linux-64` (64 bit Linux)
-* `--runtime linux-arm` (Raspberry Pi)
-* `--runtime osx-64` (64 bit MacOS / OSX)
-* There are many more options - including for specific Linux distros
-
-Copy the contents of the `publish` folder above to wherever you need them. Assuming that it is the same OS / Architecture of course.
-
-The `dotnet restore` command above gets the runtimes for `linux-x64`, `linux-arm`, `win-x64`. But there are many, many more options. If you choose a different option then you may need to allow time for the `restore` of that runtime before publishing can actually take place.
 
 ## Authors
 

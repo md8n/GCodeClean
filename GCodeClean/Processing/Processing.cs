@@ -236,7 +236,7 @@ namespace GCodeClean.Processing
 
                 for (var ix = 0; ix < previousXYZCoords.Count; ix++)
                 {
-                    previousXYZCoords[ix] = line.Tokens.FirstOrDefault(t => t.Code == previousXYZCoords[ix].Code) ?? previousXYZCoords[ix];
+                    previousXYZCoords[ix] = line.Tokens.Find(t => t.Code == previousXYZCoords[ix].Code) ?? previousXYZCoords[ix];
                 }
 
                 // Remove and then add back in the arguments - ensures consistency
@@ -373,7 +373,7 @@ namespace GCodeClean.Processing
                     continue;
                 }
 
-                var radius = line.Tokens.FirstOrDefault(t => t.Code == 'R')?.Number;
+                var radius = line.Tokens.Find(t => t.Code == 'R')?.Number;
                 if (!radius.HasValue || !coords.HasCoordPair())
                 {
                     previousCoords = Coord.Merge(previousCoords, coords, true);
@@ -457,7 +457,7 @@ namespace GCodeClean.Processing
                 {
                     for (var ix = 0; ix < previousXYZCoords.Count; ix++)
                     {
-                        previousXYZCoords[ix] = line.Tokens.FirstOrDefault(t => t.Code == previousXYZCoords[ix].Code) ?? previousXYZCoords[ix];
+                        previousXYZCoords[ix] = line.Tokens.Find(t => t.Code == previousXYZCoords[ix].Code) ?? previousXYZCoords[ix];
                     }
 
                     yield return line;
@@ -477,7 +477,7 @@ namespace GCodeClean.Processing
 
                 for (var ix = 0; ix < previousXYZCoords.Count; ix++)
                 {
-                    previousXYZCoords[ix] = line.Tokens.FirstOrDefault(t => t.Code == previousXYZCoords[ix].Code) ?? previousXYZCoords[ix];
+                    previousXYZCoords[ix] = line.Tokens.Find(t => t.Code == previousXYZCoords[ix].Code) ?? previousXYZCoords[ix];
                 }
 
                 yield return line;
@@ -552,9 +552,10 @@ namespace GCodeClean.Processing
         public static async IAsyncEnumerable<Line> DetectTravelling(this IAsyncEnumerable<Line> tokenisedLines) {
             var context = Default.Preamble();
             var isTravelling = true; // Assuming that things start with +ve z-axis value
-            var entry = new Coord(0M, 0M);
-            var exit = new Coord(0M, 0M);
+            var entryLine = new Line();
+            var exitLine = new Line();
             var entrySet = false;
+            var blockIx = 0;
             Line travellingLine;
 
             await foreach (var line in tokenisedLines) {
@@ -562,10 +563,10 @@ namespace GCodeClean.Processing
 
                 if (line.HasToken('X') || line.HasToken('Y')) {
                     if (!entrySet) {
-                        entry = new Coord(line);
+                        entryLine = new Line(line);
                         entrySet = true;
                     }
-                    exit = new Coord(line);
+                    exitLine = new Line(line);
                 }
 
                 if (line.HasToken('Z')) {
@@ -575,9 +576,9 @@ namespace GCodeClean.Processing
                             travellingLine = new Line(line);
                             travellingLine.ReplaceToken(new Token("G1"), new Token("G0"));
 
-                            line.AppendToken(new Token($"(|| Travelling {entry} >> {exit})"));
-                            entry = new Coord(0M, 0M);
-                            exit = new Coord(0M, 0M);
+                            line.AppendToken(new Token($"(||Travelling||{blockIx++}||>>{entryLine}>>{exitLine}>>||)"));
+                            entryLine = new Line();
+                            exitLine = new Line();
                             entrySet = false;
                         }
 

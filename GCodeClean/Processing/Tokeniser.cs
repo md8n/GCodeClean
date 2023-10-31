@@ -10,30 +10,43 @@ using GCodeClean.Structure;
 
 namespace GCodeClean.Processing
 {
-    public static class Tokeniser {
+    public static partial class Tokeniser {
         /// <summary>
         /// A GCode parser pattern for full line statements only (file terminators and full line comments)
         /// </summary>
         /// <remarks>This supports the illegal comment form that uses a semi-colon.</remarks>
-        private const string FullLinePattern = @"(?<fileterminator>^\%$)|(?<fullcomment>^\(.*?\)$)|(?<badfullcomment>^\;.*$)";
+        [GeneratedRegex("(?<fileterminator>^\\%$)|(?<fullcomment>^\\(.*?\\)$)|(?<badfullcomment>^\\;.*$)", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, "en-AU")]
+        private static partial Regex RegexFullLinePattern();
 
         /// <summary>
         /// A GCode parser pattern for line numbers only
         /// </summary>
-        private const string LineNumberPattern = @"(?<linenumber>N\s*\d{1,5})";
+        [GeneratedRegex("(?<linenumber>N\\s*\\d{1,5})", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, "en-AU")]
+        private static partial Regex RegexLineNumberPattern();
+
+        [GeneratedRegex("(?<linenumber>N\\s*\\d{1,5})")]
+        private static partial Regex RegexLineNumberReplace();
 
         /// <summary>
         /// A GCode parser for comment statements only
         /// </summary>
         /// <remarks>This supports the illegal comment form that uses a semi-colon.</remarks>
-        private const string CommentPattern = @"(?<comment>\(.*?\))|(?<badcomment>\;.*)";
+        [GeneratedRegex("(?<comment>\\(.*?\\))|(?<badcomment>\\;.*)", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, "en-AU")]
+        private static partial Regex RegexCommentPattern();
+
+        [GeneratedRegex("(?<comment>\\(.*?\\))|(?<badcomment>\\;.*)")]
+        private static partial Regex RegexCommentSubstitute();
+
+        [GeneratedRegex("\\s*")]
+        private static partial Regex RegexWhitespace();
 
         /// <summary>
         /// A 'basic' GCode parser pattern,
         /// this expects all whitespace to have been removed and all comments replaced with "|||",
         /// this does not support expressions that equate to numbers
         /// </summary>
-        private const string WordPattern = @"(?<word>((([A-Z]|(#+\d{1,4}=))[+-]?)((#+\d{1,4})|(\d*\.?\d*)))|(\|\|\|))";
+        [GeneratedRegex("(?<word>((([A-Z]|(#+\\d{1,4}=))[+-]?)((#+\\d{1,4})|(\\d*\\.?\\d*)))|(\\|\\|\\|))", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, "en-AU")]
+        private static partial Regex RegexWordPattern();
 
         // ((\%)|((?<linenumber>N\s*\d{1,5})?\s*(?:(?<word>[A-Z]\s*[+-]?(\d|\s)*\.?(\d|\s)*\s*)|(?<comment>\(.*?\)\s*))*|(?<fullcomment>\;.*$)))
 
@@ -53,7 +66,7 @@ namespace GCodeClean.Processing
         public static List<string> Tokenise(this string line) {
             var tokens = new List<string>();
 
-            var matches = Regex.Matches(line, FullLinePattern, RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture);
+            var matches = RegexFullLinePattern().Matches(line);
             if (matches.Count > 0)
             {
                 foreach (Match match in matches)
@@ -77,7 +90,7 @@ namespace GCodeClean.Processing
                 return tokens;
             }
 
-            matches = Regex.Matches(line, LineNumberPattern, RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture);
+            matches = RegexLineNumberPattern().Matches(line);
             if (matches.Count > 0)
             {
                 foreach (Match match in matches)
@@ -97,11 +110,11 @@ namespace GCodeClean.Processing
                     }
                 }
 
-                line = Regex.Replace(line, LineNumberPattern, "");
+                line = RegexLineNumberReplace().Replace(line, "");
             }
 
             var commentTokens = new List<string>();
-            matches = Regex.Matches(line, CommentPattern, RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture);
+            matches = RegexCommentPattern().Matches(line);
             if (matches.Count > 0)
             {
                 foreach (Match match in matches)
@@ -121,13 +134,13 @@ namespace GCodeClean.Processing
                     }
                 }
 
-                line = Regex.Replace(line, CommentPattern, "|||");
+                line = RegexCommentSubstitute().Replace(line, "|||");
             }
 
             // Eliminate all whitespace
-            line = Regex.Replace(line, @"\s*", "");
+            line = RegexWhitespace().Replace(line, "");
             // Identify all of the Tokens
-            matches = Regex.Matches(line, WordPattern, RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture);
+            matches = RegexWordPattern().Matches(line);
             var commentCounter = 0;
 
             foreach (Match match in matches)

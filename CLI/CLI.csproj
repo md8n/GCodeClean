@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net7.0</TargetFramework>
@@ -14,11 +13,14 @@ The primary objective is to be a `GCode Linter`.</Description>
     <!-- <UseSystemResourceKeys>true</UseSystemResourceKeys> -->
     <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <Title>GCode Clean CLI</Title>
+    <AssemblyName>GCC</AssemblyName>
+    <RootNamespace>GCodeClean.CLI</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Spectre.Console" Version="0.45.1-preview.0.46" />
-    <PackageReference Include="Spectre.Console.Cli" Version="0.45.1-preview.0.46" />
+    <PackageReference Include="Spectre.Console" Version="0.47.0" />
+    <PackageReference Include="Spectre.Console.Cli" Version="0.47.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -26,7 +28,6 @@ The primary objective is to be a `GCode Linter`.</Description>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="SonarAnalyzer.CSharp" Version="8.50.0.58025" />
+    <PackageReference Update="SonarAnalyzer.CSharp" Version="9.8.0.76515" />
   </ItemGroup>
-
 </Project>

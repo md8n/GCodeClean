@@ -105,15 +105,11 @@ namespace GCodeClean.Structure
 
         public PointF ToPointF(CoordSet dropCoord = CoordSet.Z)
         {
-            switch (dropCoord)
-            {
-                case CoordSet.X:
-                    return new PointF((float) Y, (float) Z);
-                case CoordSet.Y:
-                    return new PointF((float) X, (float) Z);
-                default:
-                    return new PointF((float) X, (float) Y);
-            }
+            return dropCoord switch {
+                CoordSet.X => new PointF((float)Y, (float)Z),
+                CoordSet.Y => new PointF((float)X, (float)Z),
+                _ => new PointF((float)X, (float)Y),
+            };
         }
 
         /// <summary>
