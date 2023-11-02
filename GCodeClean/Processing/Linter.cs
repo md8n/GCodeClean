@@ -37,7 +37,7 @@ namespace GCodeClean.Processing
 
                 // 1A. line numbers - we'll prepend these to the first set of yieldableTokens we return
                 (currentLine, yieldableLines) = currentLine.SplitOutSelectedCode('N');
-                var lineNumberToken = yieldableLines.Count > 0 ? yieldableLines.First().AllTokens.First() : new Token("");
+                var lineNumberToken = yieldableLines.Count > 0 ? yieldableLines[0].AllTokens[0] : new Token("");
 
                 // 2. set feed rate mode (G93, G94 — inverse time or per minute).
                 (currentLine, yieldableLines) = currentLine.SplitOutSelectedCommands(ModalGroup.ModalFeedRate);
@@ -183,13 +183,6 @@ namespace GCodeClean.Processing
             line.AllTokens = line.AllTokens.Where(t => t.Code != code).ToList();
 
             return (line, yieldableLines);
-        }
-
-        private static (Line line, List<Line> yieldableLines) SplitOutSelectedCommands(this Line line, IEnumerable<string> commands)
-        {
-            var tokens = commands.Select(c => new Token(c)).ToList();
-
-            return line.SplitOutSelectedCommands(tokens);
         }
 
         private static (Line line, List<Line> yieldableLines) SplitOutSelectedCommands(this Line line, ICollection<Token> commands)

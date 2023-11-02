@@ -70,7 +70,7 @@ namespace GCodeClean.Tests
 
             // Note: that cleaning up the redundant preamble context above is performed by DedupContext
 
-            var firstPhaseLines = sourceLines.ProcessLinesFirstPhase(false);
+            var firstPhaseLines = sourceLines.CleanLinesFirstPhase(false);
             var preambleContext = await firstPhaseLines.BuildPreamble();
 
             var resultLines = await lines.InjectPreamble(preambleContext, zClamp).ToListAsync();
@@ -116,7 +116,7 @@ namespace GCodeClean.Tests
             var lines = AsyncLines(testLines);
             var setHeight = 1.1M;
 
-            var firstPhaseLines = sourceLines.ProcessLinesFirstPhase(false);
+            var firstPhaseLines = sourceLines.CleanLinesFirstPhase(false);
             var preambleContext = await firstPhaseLines.BuildPreamble();
 
             var adjustedHeight = Utility.ConstrictZClamp(Utility.GetLengthUnits(preambleContext), setHeight);

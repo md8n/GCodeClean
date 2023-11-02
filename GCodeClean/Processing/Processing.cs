@@ -105,36 +105,27 @@ namespace GCodeClean.Processing
 
             var context = Default.Preamble();
 
-            await foreach (var line in tokenisedLines)
-            {
+            await foreach (var line in tokenisedLines) {
                 context.Update(line);
 
                 var hasZ = line.HasToken('Z');
                 var hasTravelling = line.HasTokens(ModalGroup.ModalAllMotion);
 
-                if (hasZ && hasTravelling)
-                {
+                if (hasZ && hasTravelling) {
                     var zToken = line.AllTokens.First(t => t.Code == 'Z');
                     currentZ = zToken.Number.Value;
                 }
 
-                if (!leadingBlankLinesStripped)
-                {
-                    if (line.AllTokens.Count == 0)
-                    {
+                if (!leadingBlankLinesStripped) {
+                    if (line.AllTokens.Count == 0) {
                         // Strip the leading blank line
                         continue;
-                    }
-                    else
-                    {
+                    } else {
                         leadingBlankLinesStripped = true;
                         hasLeadingFileTerminator = line.HasToken('%');
                     }
-                }
-                else
-                {
-                    if (line.HasToken('%'))
-                    {
+                } else {
+                    if (line.HasToken('%')) {
                         commentOutAllRemainingCommands = true;
                         if (!hasLeadingFileTerminator)
                         {
@@ -142,21 +133,16 @@ namespace GCodeClean.Processing
                             // Note that all commands after this point are still commented out on the assumption that 
                             // the mismatched trailling terminator was intentional.
                             continue;
-                        }
-                        else
-                        {
+                        } else {
                             hasTrailingFileTerminator = true;
                         }
                     }
-                    if (line.HasTokens(ModalGroup.ModalStopping))
-                    {
+                    if (line.HasTokens(ModalGroup.ModalStopping)) {
                         hasStopping = true;
-                        if (!commentOutAllRemainingCommands)
-                        {
+                        if (!commentOutAllRemainingCommands) {
                             commentOutAllRemainingCommands = true;
 
-                            if (currentZ < 0)
-                            {
+                            if (currentZ < 0) {
                                 // If the current tool height is less than zero then it needs to be raised
                                 // before the stop command
                                 var zClampConstrained = Utility.ConstrictZClamp(context.GetLengthUnits(), zClamp);
@@ -169,8 +155,7 @@ namespace GCodeClean.Processing
                     }
                 }
 
-                if (commentOutAllRemainingCommands)
-                {
+                if (commentOutAllRemainingCommands) {
                     line.AllTokens = line.AllTokens.Select(t => t.ToComment()).ToList();
                 }
 
