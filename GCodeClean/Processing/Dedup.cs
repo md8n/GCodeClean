@@ -535,7 +535,7 @@ namespace GCodeClean.Processing
                 line.RemoveTokens(previousSelectedTokens);
 
                 for (var ix = 0; ix < previousSelectedTokens.Count; ix++) {
-                    var newToken = line.AllTokens.FirstOrDefault(t => t.Code == previousSelectedTokens[ix].Code);
+                    var newToken = line.AllTokens.Find(t => t.Code == previousSelectedTokens[ix].Code);
                     if (newToken != null) {
                         previousSelectedTokens[ix] = newToken;
                     }

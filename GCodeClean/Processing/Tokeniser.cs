@@ -67,15 +67,11 @@ namespace GCodeClean.Processing
             var tokens = new List<string>();
 
             var matches = RegexFullLinePattern().Matches(line);
-            if (matches.Count > 0)
-            {
-                foreach (Match match in matches)
-                {
+            if (matches.Count > 0) {
+                foreach (Match match in matches.Cast<Match>()) {
                     var groupCtr = 0;
-                    foreach (Group group in match.Groups)
-                    {
-                        if (group.Name == groupCtr.ToString() || !group.Success)
-                        {
+                    foreach (Group group in match.Groups.Cast<Group>()) {
+                        if (group.Name == groupCtr.ToString() || !group.Success) {
                             continue;
                         }
                         groupCtr++;
@@ -91,15 +87,11 @@ namespace GCodeClean.Processing
             }
 
             matches = RegexLineNumberPattern().Matches(line);
-            if (matches.Count > 0)
-            {
-                foreach (Match match in matches)
-                {
+            if (matches.Count > 0) {
+                foreach (Match match in matches.Cast<Match>()) {
                     var groupCtr = 0;
-                    foreach (Group group in match.Groups)
-                    {
-                        if (group.Name == groupCtr.ToString() || !group.Success)
-                        {
+                    foreach (Group group in match.Groups.Cast<Group>()) {
+                        if (group.Name == groupCtr.ToString() || !group.Success) {
                             continue;
                         }
                         groupCtr++;
@@ -115,15 +107,11 @@ namespace GCodeClean.Processing
 
             var commentTokens = new List<string>();
             matches = RegexCommentPattern().Matches(line);
-            if (matches.Count > 0)
-            {
-                foreach (Match match in matches)
-                {
+            if (matches.Count > 0) {
+                foreach (Match match in matches.Cast<Match>()) {
                     var groupCtr = 0;
-                    foreach (Group group in match.Groups)
-                    {
-                        if (group.Name == groupCtr.ToString() || !group.Success)
-                        {
+                    foreach (Group group in match.Groups.Cast<Group>()) {
+                        if (group.Name == groupCtr.ToString() || !group.Success) {
                             continue;
                         }
                         groupCtr++;
@@ -143,10 +131,9 @@ namespace GCodeClean.Processing
             matches = RegexWordPattern().Matches(line);
             var commentCounter = 0;
 
-            foreach (Match match in matches)
-            {
+            foreach (Match match in matches.Cast<Match>()) {
                 var groupCtr = 0;
-                foreach(Group group in match.Groups) {
+                foreach(Group group in match.Groups.Cast<Group>()) {
                     if (group.Name == groupCtr.ToString() || !group.Success) {
                         continue;
                     }
@@ -154,38 +141,30 @@ namespace GCodeClean.Processing
 
                     var token = group.Value.Trim();
                     if (token != "|||") {
-                        if (token.Length == 1)
-                        {
+                        if (token.Length == 1) {
                             // Invalid command, argument or parameter setting
                             // this token will be dumped
                             continue;
                         }
-                        if (Token.Parameters.Any(p => p == token[0]))
-                        {
+                        if (Token.Parameters.Any(p => p == token[0])) {
                             // Parameter setting requires special check
                             var parameterParts = token[1..].Split('=', StringSplitOptions.RemoveEmptyEntries);
 
-                            if (parameterParts.Length != 2 || !int.TryParse(parameterParts[0], out var _) || !decimal.TryParse(parameterParts[1], out _))
-                            {
+                            if (parameterParts.Length != 2 || !int.TryParse(parameterParts[0], out var _) || !decimal.TryParse(parameterParts[1], out _)) {
                                 // Not enough parts for parameter setting - or the parameter id or number are not valid
                                 // this token will be dumped
                                 continue;
                             }
-                        }
-                        else
-                        {
+                        } else {
                             var usesParameter = Token.Parameters.Any(p => p == token[1]) ? 2 : 1;
-                            if (!decimal.TryParse(token[usesParameter..], out var _))
-                            {
+                            if (!decimal.TryParse(token[usesParameter..], out var _)) {
                                 // Invalid command or argument - doesn't have a valid number
                                 // this token will be dumped
                                 continue;
                             }
                         }
                         token = token.ToUpperInvariant();
-                    }
-                    else
-                    {
+                    } else {
                         // Substitute the original comments back into their original places
                         token = commentTokens[commentCounter++];
                     }
@@ -207,8 +186,7 @@ namespace GCodeClean.Processing
                 }
                 isFirstLine = false;
 
-                if (!(string.IsNullOrWhiteSpace(prevLine) && string.IsNullOrWhiteSpace(joinedLine)))
-                {
+                if (!(string.IsNullOrWhiteSpace(prevLine) && string.IsNullOrWhiteSpace(joinedLine))) {
                     yield return joinedLine;
                 }
 
