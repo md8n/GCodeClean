@@ -16,7 +16,7 @@ namespace GCodeClean.Processing
         /// <summary>
         /// Finds GCodeClean's special 'Travelling' comments
         /// </summary>
-        [GeneratedRegex("\\(\\|{2}Travelling\\|{2}\\d+\\|{2}>>G0.*>>G0.*>>\\|{2}\\)$")]
+        [GeneratedRegex("\\(\\|{2}Travelling\\|{2}\\d+\\|{2}>>G\\d+.*>>G\\d+.*>>\\|{2}\\)$")]
         private static partial Regex RegexTravellingPattern();
 
         public static async IAsyncEnumerable<string> CleanLines(
@@ -160,9 +160,9 @@ namespace GCodeClean.Processing
                 var tDetails = travelling.Replace("(||Travelling||", "").Replace("||)", "").Split("||");
                 var tId = tDetails[0];
                 var tSE = tDetails[1].Split(">>", StringSplitOptions.RemoveEmptyEntries);
-                var tStart = tSE[0];
-                var tEnd = tSE[1];
-                AnsiConsole.MarkupLine($"Output lines: [bold yellow]{tId}: start '{tStart}' end '{tEnd}'[/]");
+                var lStart = new Line(tSE[0]);
+                var lEnd = new Line(tSE[1]);
+                AnsiConsole.MarkupLine($"Output lines: [bold yellow]{tId}: start '{lStart}' end '{lEnd}'[/]");
             }
 
             // Take the first enry in the table, and use that to figure out the complete preamble for all extracted files
