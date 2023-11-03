@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using GCodeClean.Structure;
+using Spectre.Console;
 
 namespace GCodeClean.Processing
 {
@@ -282,6 +283,8 @@ namespace GCodeClean.Processing
             var prevY = 0M;
             var prevZ = zClamp;
 
+            var zClampConstrained = Utility.ConstrictZClamp(context.GetLengthUnits(), zClamp);
+
             await foreach (var line in tokenisedLines) {
                 context.Update(line);
 
@@ -300,17 +303,23 @@ namespace GCodeClean.Processing
 
                     var travelingToken = line.AllTokens.Intersect(ModalGroup.ModalSimpleMotion).First();
 
-                    if (zToken.Number >= 0) {
-                        // If Z >= 0 then the z value should be constrained
-                        var zClampConstrained = Utility.ConstrictZClamp(context.GetLengthUnits(), zClamp);
+                    if (zToken.Number > 0) {
+                        // If Z > 0 then the z value should be constrained
                         zToken.Number = zClampConstrained;
                         var xUnchanged = !hasX || line.AllTokens.First(t => t.Code == 'X').Number.Value == prevX;
                         var yUnchanged = !hasY || line.AllTokens.First(t => t.Code == 'Y').Number.Value == prevY;
-                        if (prevZ >= 0 || (xUnchanged || yUnchanged)) {
-                            // If the previous Z value is also >= 0 or there's no X or Y movement then the motion should be G0
+                        if (prevZ > 0 || (xUnchanged || yUnchanged)) {
+                            // If the previous Z value is also > 0 or there's no X or Y movement then the motion should be G0
                             travelingToken.Source = "G0";
                         }
-                    } else if (travelingToken.Source == "G0") {
+                    } else if (zToken.Number == 0 && travelingToken.ToString() == "G1") {
+                        // If Z == 0 and the source is G1, then triple it for later File split markup
+                        yield return line;
+                        var zeroLine = new Line(line);
+                        zeroLine.AllTokens.Intersect(ModalGroup.ModalSimpleMotion).First().Source = "G0";
+                        zeroLine.AllTokens.First(t => t.Code == 'Z').Number = zClampConstrained;
+                        yield return zeroLine;
+                    } else if (zToken.Number < 0 && travelingToken.ToString() == "G0") {
                         // If Z < 0 and source is G0 then the motion should be G1 (probably)
                         travelingToken.Source = "G1";
                     }
@@ -548,7 +557,13 @@ namespace GCodeClean.Processing
 
                 if (line.HasToken('X') || line.HasToken('Y')) {
                     if (!entrySet) {
-                        entryLine = new Line(line);
+                        var possibleEntryLine = new Line(line);
+                        if (possibleEntryLine.HasToken('Z')) {
+                            var zToken = possibleEntryLine.AllTokens.First(t => t.Code == 'Z');
+                            // Determine if the possible entryLine is actually a cutting line
+                            // and change accordingly
+                            entryLine = (zToken.Number > 0) ? possibleEntryLine : new Line(exitLine);
+                        }
                         entrySet = true;
                     }
                     exitLine = new Line(line);
@@ -556,14 +571,13 @@ namespace GCodeClean.Processing
 
                 if (line.HasToken('Z')) {
                     var zToken = line.AllTokens.First(t => t.Code == 'Z');
-                    if (zToken.Number >= 0) {
+                    if (zToken.Number > 0) {
                         if (!isTravelling) {
                             travellingLine = new Line(line);
                             travellingLine.ReplaceToken(new Token("G1"), new Token("G0"));
 
                             line.AppendToken(new Token($"(||Travelling||{blockIx++}||>>{entryLine}>>{exitLine}>>||)"));
                             entryLine = new Line();
-                            exitLine = new Line();
                             entrySet = false;
                         }
 
