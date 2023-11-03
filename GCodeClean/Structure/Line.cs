@@ -160,26 +160,45 @@ namespace GCodeClean.Structure
             return !IsArgumentsOnly() && HasTokens(ModalGroup.ModalAllMotion);
         }
 
+        /// <summary>
+        /// Create an empty line of GCode
+        /// </summary>
         public Line()
         {
             Source = "";
         }
 
+        /// <summary>
+        /// Create a new line of GCode from the supplied string
+        /// </summary>
+        /// <param name="source"></param>
         public Line(string source)
         {
             Source = source;
         }
 
+        /// <summary>
+        /// Create a new line of GCode by copying an existing line
+        /// </summary>
+        /// <param name="line"></param>
         public Line(Line line)
         {
             Source = line.ToString();
         }
 
+        /// <summary>
+        /// Create a new line of GCode from a single GCode token
+        /// </summary>
+        /// <param name="token"></param>
         public Line(Token token)
         {
             Source = token.ToString();
         }
 
+        /// <summary>
+        /// Create a new line of GCode from a list of GCode tokens
+        /// </summary>
+        /// <param name="tokens"></param>
         public Line(IEnumerable<Token> tokens)
         {
             Source = string.Join(' ', tokens);
