@@ -149,6 +149,7 @@ namespace GCodeClean.Structure
             return !IsArgumentsOnly() && HasTokens(ModalGroup.ModalAllMotion);
         }
 
+        #region Constructors
         /// <summary>
         /// Create an empty line of GCode
         /// </summary>
@@ -192,6 +193,7 @@ namespace GCodeClean.Structure
         {
             Source = string.Join(' ', tokens);
         }
+        #endregion
 
         public void ClearTokens()
         {

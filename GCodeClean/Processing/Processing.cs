@@ -445,7 +445,7 @@ namespace GCodeClean.Processing {
             this IAsyncEnumerable<Line> tokenisedLines,
             decimal tolerance = 0.0005M
         ) {
-            var arcArguments = new[] { 'I', 'J', 'K' };
+            char[] arcArguments = ['I', 'J', 'K'];
 
             var context = Default.Preamble();
 

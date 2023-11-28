@@ -152,7 +152,7 @@ namespace GCodeClean.Processing
             };
             if (ortho == CoordSet.None)
             {
-                ortho = Coord.Ortho(new List<Coord> { a, b, c });
+                ortho = Coord.Ortho([a, b, c]);
             }
             if (ortho == CoordSet.None)
             {
