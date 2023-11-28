@@ -365,25 +365,22 @@ namespace GCodeClean.Structure
         /// <param name="a"></param>
         /// <param name="b"></param>
         /// <returns></returns>
-        //public static bool operator ==(Line a, Line b)
-        //{
-        //    if (a is null || b is null)
-        //    {
-        //        return a is null && b is null;
-        //    }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Blocker Code Smell", "S3875:\"operator==\" should not be overloaded on reference types", Justification = "<Pending>")]
+        public static bool operator ==(Line a, Line b) {
+            if (a is null || b is null) {
+                return a is null && b is null;
+            }
 
-        //    if (a.Tokens.Count != b.Tokens.Count)
-        //    {
-        //        return false;
-        //    }
+            if (a.Tokens.Count != b.Tokens.Count) {
+                return false;
+            }
 
-        //    return !b.Tokens.Where((t, ix) => a.Tokens[ix] != t).Any();
-        //}
+            return !b.Tokens.Where((t, ix) => a.Tokens[ix] != t).Any();
+        }
 
-        //public static bool operator !=(Line a, Line b)
-        //{
-        //    return !(a == b);
-        //}
+        public static bool operator !=(Line a, Line b) {
+            return !(a == b);
+        }
 
         public override bool Equals(object obj)
         {

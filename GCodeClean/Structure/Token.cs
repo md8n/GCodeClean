@@ -267,35 +267,30 @@ namespace GCodeClean.Structure
             return this;
         }
 
-        //public static bool operator ==(Token a, Token b)
-        //{
-        //    if (a is null || b is null)
-        //    {
-        //        return a is null && b is null;
-        //    }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Blocker Code Smell", "S3875:\"operator==\" should not be overloaded on reference types", Justification = "<Pending>")]
+        public static bool operator ==(Token a, Token b) {
+            if (a is null || b is null) {
+                return a is null && b is null;
+            }
 
-        //    if (a.Code != b.Code)
-        //    {
-        //        return false;
-        //    }
+            if (a.Code != b.Code) {
+                return false;
+            }
 
-        //    if (a.IsComment)
-        //    {
-        //        return a.Source == b.Source;
-        //    }
+            if (a.IsComment) {
+                return a.Source == b.Source;
+            }
 
-        //    if (a.IsFileTerminator)
-        //    {
-        //        return true;
-        //    }
+            if (a.IsFileTerminator) {
+                return true;
+            }
 
-        //    return a.Number == b.Number;
-        //}
+            return a.Number == b.Number;
+        }
 
-        //public static bool operator !=(Token a, Token b)
-        //{
-        //    return !(a == b);
-        //}
+        public static bool operator !=(Token a, Token b) {
+            return !(a == b);
+        }
 
         public override bool Equals(object obj)
         {
