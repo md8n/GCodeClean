@@ -34,12 +34,12 @@ namespace GCodeClean.Tests
 
         [Fact]
         public async Task DedupContext() {
-            var sourceTextLines = new List<string> { "G17", "G40", "G90", "G20", "T1", "S10000", "M3", "G19", "G0 Z3", "G0 X35.747 Y46.824", "G17" };
+            List<string> sourceTextLines = ["G17", "G40", "G90", "G20", "T1", "S10000", "M3", "G19", "G0 Z3", "G0 X35.747 Y46.824", "G17"];
             var sourceLineLines = sourceTextLines.ConvertAll(l => new Line(l));
 
             var testLines = sourceLineLines.ConvertAll(l => new Line(l));
             var lines = AsyncLines(testLines);
-            var expectedLines = new List<Line> {
+            List<Line> expectedLines = [
                 new Line("G20"),
                 new Line("T1"),
                 new Line("S10000"),
@@ -47,7 +47,7 @@ namespace GCodeClean.Tests
                 new Line("G0 Z3"),
                 new Line("G0 X35.747 Y46.824"),
                 new Line("G17")
-            };
+            ];
 
             var resultLines = await lines.DedupContext().ToListAsync();
             Assert.False(sourceLineLines.SequenceEqual(resultLines));
@@ -57,7 +57,7 @@ namespace GCodeClean.Tests
         [Fact]
         public async Task DedupLinear()
         {
-            var sourceLines = new List<Line> {
+            List<Line> sourceLines = [
                 new Line("G17"),
                 new Line("G21"),
                 new Line("G90"),
@@ -73,11 +73,11 @@ namespace GCodeClean.Tests
                 new Line("G1 X9 Y9 Z-0.15"),
                 new Line("M5"),
                 new Line("M30"),
-            };
+            ];
 
             var testLines = sourceLines.ConvertAll(l => new Line(l));
             var lines = AsyncLines(testLines);
-            var expectedLinesA = new List<Line> {
+            List<Line> expectedLinesA = [
                 new Line("G17"),
                 new Line("G21"),
                 new Line("G90"),
@@ -88,8 +88,8 @@ namespace GCodeClean.Tests
                 new Line("G1 X9 Y9 Z-0.15"),
                 new Line("M5"),
                 new Line("M30"),
-            };
-            var expectedLinesB = new List<Line> {
+            ];
+            List<Line> expectedLinesB = [
                 new Line("G17"),
                 new Line("G21"),
                 new Line("G90"),
@@ -97,7 +97,7 @@ namespace GCodeClean.Tests
                 new Line("G1 X9 Y9 Z-0.15"),
                 new Line("M5"),
                 new Line("M30"),
-            };
+            ];
 
             // A Test with fine tolerance
             var resultLinesA = await lines.DedupLinear(0.005M).ToListAsync();
@@ -113,7 +113,7 @@ namespace GCodeClean.Tests
         [Fact]
         public async Task DedupLinearToArc()
         {
-            var sourceLines = new List<Line> {
+            List<Line> sourceLines = [
                 new Line("G17"),
                 new Line("G21"),
                 new Line("G90"),
@@ -131,12 +131,12 @@ namespace GCodeClean.Tests
                 new Line("G1 X21.6506 Y12.5 Z-0.15"),
                 new Line("M5"),
                 new Line("M30"),
-            };
+            ];
 
             var testLines = sourceLines.ConvertAll(l => new Line(l));
             var lines = AsyncLines(testLines);
 
-            var expectedLinesA = new List<Line> {
+            List<Line> expectedLinesA = [
                 new Line("G17"),
                 new Line("G21"),
                 new Line("G90"),
@@ -146,9 +146,9 @@ namespace GCodeClean.Tests
                 new Line("G2 X21.6506 Y12.5 Z-0.15 I-16.0687 J-19.1501"),
                 new Line("M5"),
                 new Line("M30"),
-            };
+            ];
 
-            var expectedLinesB = new List<Line> {
+            List<Line> expectedLinesB = [
                 new Line("G17"),
                 new Line("G21"),
                 new Line("G90"),
@@ -156,7 +156,7 @@ namespace GCodeClean.Tests
                 new Line("G2 X21.6506 Y12.5 Z-0.15 I0.0002 J-24.9995"),
                 new Line("M5"),
                 new Line("M30"),
-            };
+            ];
 
             // A Test with fine tolerance
             var resultLinesA = await lines.DedupLinearToArc(0.005M).ToListAsync();

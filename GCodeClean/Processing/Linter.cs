@@ -179,7 +179,7 @@ namespace GCodeClean.Processing
                 return (line, yieldableLines);
             }
 
-            yieldableLines.Add(new Line ( selectedTokens.Last().ToString() ));
+            yieldableLines.Add(new Line (selectedTokens[-1].ToString() ));
             line.AllTokens = line.AllTokens.Where(t => t.Code != code).ToList();
 
             return (line, yieldableLines);

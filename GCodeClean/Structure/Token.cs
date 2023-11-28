@@ -111,28 +111,28 @@ namespace GCodeClean.Structure
                 {
                     IsComment = true;
                 }
-                else if (Commands.Any(c => c == _code))
+                else if (Array.Exists(Commands, c => c == _code))
                 {
                     IsCommand = true;
                 }
-                else if (Codes.Any(c => c == _code))
+                else if (Array.Exists(Codes, c => c == _code))
                 {
                     IsCode = true;
                 }
-                else if (Arguments.Any(a => a == _code))
+                else if (Array.Exists(Arguments, a => a == _code))
                 {
                     IsArgument = true;
                 }
-                else if (LineNumbers.Any(l => l == _code))
+                else if (Array.Exists(LineNumbers, l => l == _code))
                 {
                     IsLineNumber = true;
                 }
-                else if (Parameters.Any(p => p == _code))
+                else if (Array.Exists(Parameters, p => p == _code))
                 {
                     // Parameter Setting is technically a command, however we handle it separately from commands
                     IsParameterSetting = true;
                 }
-                else if (Other.Any(a => a == _code))
+                else if (Array.Exists(Other, a => a == _code))
                 {
                     IsOther = true;
                 }
@@ -267,35 +267,35 @@ namespace GCodeClean.Structure
             return this;
         }
 
-        public static bool operator ==(Token a, Token b)
-        {
-            if (a is null || b is null)
-            {
-                return a is null && b is null;
-            }
+        //public static bool operator ==(Token a, Token b)
+        //{
+        //    if (a is null || b is null)
+        //    {
+        //        return a is null && b is null;
+        //    }
 
-            if (a.Code != b.Code)
-            {
-                return false;
-            }
+        //    if (a.Code != b.Code)
+        //    {
+        //        return false;
+        //    }
 
-            if (a.IsComment)
-            {
-                return a.Source == b.Source;
-            }
+        //    if (a.IsComment)
+        //    {
+        //        return a.Source == b.Source;
+        //    }
 
-            if (a.IsFileTerminator)
-            {
-                return true;
-            }
+        //    if (a.IsFileTerminator)
+        //    {
+        //        return true;
+        //    }
 
-            return a.Number == b.Number;
-        }
+        //    return a.Number == b.Number;
+        //}
 
-        public static bool operator !=(Token a, Token b)
-        {
-            return !(a == b);
-        }
+        //public static bool operator !=(Token a, Token b)
+        //{
+        //    return !(a == b);
+        //}
 
         public override bool Equals(object obj)
         {
