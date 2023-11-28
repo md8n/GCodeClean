@@ -75,17 +75,11 @@ namespace GCodeCleanCLI.Clean
             var inputLines = inputFile.ReadLinesAsync();
 
             var (minimisationStrategy, dedupSelection) = GetMinimisationStrategy(settings.Minimise, ['F', 'Z']);
-            //AnsiConsole.MarkupLine($"Minimisation strategy: [bold yellow]{minimisationStrategy}[/]");
-            //AnsiConsole.MarkupLine($"Deduoplication selection: [bold yellow]{dedupSelection}[/]");
 
             var tokenDefsPath = CleanSettings.GetCleanTokenDefsPath(settings.TokenDefs);
-            AnsiConsole.MarkupLine("blag");
             var (tokenDefinitions, _) = CleanSettings.LoadAndVerifyTokenDefs(tokenDefsPath);
-            AnsiConsole.MarkupLine("bleg");
             var reassembledLines = inputLines.CleanLines(dedupSelection, minimisationStrategy, settings.LineNumbers, settings.EliminateNeedlessTravelling, zClamp, arcTolerance, tolerance, settings.Annotate, tokenDefinitions);
-            AnsiConsole.MarkupLine("blig");
             var lineCount = outputFile.WriteLinesAsync(reassembledLines);
-            AnsiConsole.MarkupLine($"{lineCount}");
 
             await foreach (var line in lineCount) {
                 AnsiConsole.MarkupLine($"Output lines: [bold yellow]{line}[/]");
