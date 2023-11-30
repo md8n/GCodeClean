@@ -26,11 +26,8 @@ namespace GCodeCleanCLI
                     .WithDescription("Split your GCode file into individual cutting actions");
             });
 
-            foreach (var arg in args) {
-                AnsiConsole.MarkupLine($"Arg: [bold yellow]{arg}[/]");
-            }
             if (args.Length == 0) {
-                args = new[] { "-h" };
+                args = ["-h"];
             }
 
             return await app.RunAsync(args);

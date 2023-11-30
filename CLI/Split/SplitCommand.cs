@@ -17,14 +17,8 @@ namespace GCodeCleanCLI.Split
 
         public static string DetermineOutputFoldername(SplitSettings options) {
             var inputFile = options.Filename;
-            var outputFolder = inputFile;
 
-            var inputExtension = Path.GetExtension(inputFile);
-            if (string.IsNullOrEmpty(inputExtension)) {
-                outputFolder += "-gcc.nc";
-            } else {
-                outputFolder = outputFolder.Replace(inputExtension, "-gcc" + inputExtension, StringComparison.InvariantCultureIgnoreCase);
-            }
+            var outputFolder = Path.GetFileNameWithoutExtension(inputFile);
 
             return outputFolder;
         }
@@ -38,10 +32,9 @@ namespace GCodeCleanCLI.Split
 
             var reassembledLines = inputLines.SplitFile();
 
-            await foreach (var line in reassembledLines) {
-                AnsiConsole.MarkupLine($"Output lines: [bold yellow]{line}[/]");
-                break;
-            }
+            // await foreach (var line in reassembledLines) {
+            //     AnsiConsole.MarkupLine($"Output lines: [bold yellow]{line}[/]");
+            // }
 
             return 0;
         }
