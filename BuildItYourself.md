@@ -4,22 +4,22 @@
 
 There are standalone release builds available, for Linux, Raspberry Pi (linux-arm), and Windows at [GCodeClean releases](https://github.com/md8n/GCodeClean/releases). It is very easy to a build for MacOS / OSX (osx-64) (see #Deployment below).
 
-The standalone releases include all the relevant .NET 7.0 libraries for this application.
+The standalone releases include all the relevant .NET 8.0 libraries for this application.
 
-But can build and run this project yourself, and for that you would need the .NET 7.0 SDK.
+But can build and run this project yourself, and for that you would need the .NET 8.0 SDK.
 
 And if you do build it yourself then there are a very large number of possible targets including 32bit, and many specific Linux distros, etc.
 
 ## Prerequisites for Building it Yourself
 
-.NET 7.0 SDK - get the correct version for your OS and architecture here: [.NET SDK downloads](https://dotnet.microsoft.com/download/)
+.NET 8.0 SDK - get the correct version for your OS and architecture here: [.NET SDK downloads](https://dotnet.microsoft.com/download/)
 
 A text editor if you want to change something. I recommend Visual Studio Code, or alternatively go the whole hog and use full Visual Studio.
 The 'community edition' of Visual Studio is free. But anything so long as you can edit text files with it is fine.
 
 ## Building and Running it Yourself
 
-Once you've got the .NET 7.0 SDK installed.
+Once you've got the .NET 8.0 SDK installed.
 
 Get yourself to a command line prompt, change to the folder where you've cloned this repository to, and then to the CLI folder, and enter:
 ```
@@ -50,12 +50,12 @@ Take a note of the `publish` folder, the `CLI` executable will be located there.
 And then run the `CLI` executable.
 e.g. for Windows that might look like:
 ```
-.\bin\Debug\net7.0\publish\cli --filename FacadeFullAlternate.nc --minimise hard --annotate
+.\bin\Debug\net8.0\publish\cli --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
 
-or for Linux (Ubuntu 18.04 / 20.04)
+or for Linux (Ubuntu 18.04 / 20.04 / 22.04)
 ```
-./bin/Debug/net7.0/publish/CLI --filename FacadeFullAlternate.nc --minimise hard --annotate
+./bin/Debug/net8.0/publish/CLI --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
 
 ## GCodeClean Solution Organisation

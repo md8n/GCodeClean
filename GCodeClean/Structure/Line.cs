@@ -25,7 +25,9 @@ namespace GCodeClean.Structure
                 // Even though we are doing this below in the set
                 var lineNumberToken = _tokens.Where(t => t.IsLineNumber).Take(1);
                 var allOtherTokens = _tokens.Where(t => !t.IsLineNumber);
+#pragma warning disable S2365 // Properties should not make collection or array copies
                 return lineNumberToken.Concat(allOtherTokens).ToList();
+#pragma warning restore S2365 // Properties should not make collection or array copies
             }
             set
             {
@@ -41,7 +43,9 @@ namespace GCodeClean.Structure
         public List<Token> Tokens {
             get
             {
+#pragma warning disable S2365 // Properties should not make collection or array copies
                 return _tokens.Where(t => !t.IsLineNumber).ToList();
+#pragma warning restore S2365 // Properties should not make collection or array copies
             }
         }
 
@@ -56,10 +60,7 @@ namespace GCodeClean.Structure
                 IsFileTerminator = false;
                 HasLineNumber = false;
 
-                if (_tokens is null)
-                {
-                    _tokens = new List<Token>();
-                }
+                _tokens ??= [];
 
                 if (string.IsNullOrWhiteSpace(_source))
                 {
@@ -69,7 +70,7 @@ namespace GCodeClean.Structure
 
                 AllTokens = _source.Tokenise().Select(s => new Token(s)).ToList();
 
-                if (Tokens.Any(t => t.IsFileTerminator))
+                if (Tokens.Exists(t => t.IsFileTerminator))
                 {
                     // Check the file terminator character is the only thing on the line
                     IsFileTerminator = true;
@@ -77,7 +78,7 @@ namespace GCodeClean.Structure
                     return;
                 }
 
-                if (!AllTokens.Any(t => t.IsLineNumber))
+                if (!AllTokens.Exists(t => t.IsLineNumber))
                 {
                     return;
                 }
@@ -95,10 +96,7 @@ namespace GCodeClean.Structure
 
         public bool HasLineNumber { get; private set; }
 
-        public bool HasTokens(List<char> codes)
-        {
-            return AllTokens.Any(t => codes.Contains(t.Code));
-        }
+        public bool HasTokens(List<char> codes) => AllTokens.Exists(t => codes.Contains(t.Code));
 
         public bool HasTokens(IEnumerable<string> tokens)
         {
@@ -106,15 +104,9 @@ namespace GCodeClean.Structure
             return HasTokens(parsedTokens);
         }
 
-        public bool HasTokens(IEnumerable<Token> tokens)
-        {
-            return AllTokens.Any(tokens.Contains);
-        }
+        public bool HasTokens(IEnumerable<Token> tokens) => AllTokens.Exists(tokens.Contains);
 
-        public bool HasToken(char code)
-        {
-            return AllTokens.Any(t => t.Code == code);
-        }
+        public bool HasToken(char code) => AllTokens.Exists(t => t.Code == code);
 
         public bool HasToken(string token)
         {
@@ -122,10 +114,7 @@ namespace GCodeClean.Structure
             return HasToken(parsedToken);
         }
 
-        public bool HasToken(Token token)
-        {
-            return AllTokens.Any(t => t == token);
-        }
+        public bool HasToken(Token token) => AllTokens.Exists(t => t == token);
 
         /// <summary>
         /// Roughly equivalent to `IsNullOrWhiteSpace` this returns true if there are:
@@ -135,7 +124,7 @@ namespace GCodeClean.Structure
         /// </summary>
         public bool IsNotCommandCodeOrArguments()
         {
-            return AllTokens.Count == 0 || AllTokens.All(t => t.IsFileTerminator) || AllTokens.All(t => t.IsComment);
+            return AllTokens.Count == 0 || AllTokens.TrueForAll(t => t.IsFileTerminator) || AllTokens.TrueForAll(t => t.IsComment);
         }
 
         /// <summary>
@@ -160,6 +149,7 @@ namespace GCodeClean.Structure
             return !IsArgumentsOnly() && HasTokens(ModalGroup.ModalAllMotion);
         }
 
+        #region Constructors
         /// <summary>
         /// Create an empty line of GCode
         /// </summary>
@@ -203,6 +193,7 @@ namespace GCodeClean.Structure
         {
             Source = string.Join(' ', tokens);
         }
+        #endregion
 
         public void ClearTokens()
         {
@@ -376,23 +367,20 @@ namespace GCodeClean.Structure
         /// <param name="a"></param>
         /// <param name="b"></param>
         /// <returns></returns>
-        public static bool operator ==(Line a, Line b)
-        {
-            if (a is null || b is null)
-            {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Blocker Code Smell", "S3875:\"operator==\" should not be overloaded on reference types", Justification = "<Pending>")]
+        public static bool operator ==(Line a, Line b) {
+            if (a is null || b is null) {
                 return a is null && b is null;
             }
 
-            if (a.Tokens.Count != b.Tokens.Count)
-            {
+            if (a.Tokens.Count != b.Tokens.Count) {
                 return false;
             }
 
             return !b.Tokens.Where((t, ix) => a.Tokens[ix] != t).Any();
         }
 
-        public static bool operator !=(Line a, Line b)
-        {
+        public static bool operator !=(Line a, Line b) {
             return !(a == b);
         }
 

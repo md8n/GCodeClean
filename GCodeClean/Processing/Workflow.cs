@@ -148,22 +148,9 @@ namespace GCodeClean.Processing
             }
         }
 
-        public static async IAsyncEnumerable<string> SplitFile(this IAsyncEnumerable<string> inputLines) {
+        public static async IAsyncEnumerable<(int id, Line start, Line end)> SplitFile(this IAsyncEnumerable<string> inputLines) {
             // Scan through the file for 'travelling' comments and build a table out of them
-            // if there are none, return with a relevant error message
-            await foreach(var line in inputLines) {
-                var match = RegexTravellingPattern().Match(line);
-                if (!match.Success) {
-                    continue;
-                }
-                var travelling = match.Value;
-                var tDetails = travelling.Replace("(||Travelling||", "").Replace("||)", "").Split("||");
-                var tId = tDetails[0];
-                var tSE = tDetails[1].Split(">>", StringSplitOptions.RemoveEmptyEntries);
-                var lStart = new Line(tSE[0]);
-                var lEnd = new Line(tSE[1]);
-                AnsiConsole.MarkupLine($"Output lines: [bold yellow]{tId}: start '{lStart}' end '{lEnd}'[/]");
-            }
+            var cuttingPaths = inputLines.SplitFileFirstPhase();
 
             // Take the first enry in the table, and use that to figure out the complete preamble for all extracted files
 
@@ -172,8 +159,29 @@ namespace GCodeClean.Processing
             // Process the table, for each entry, build an individual file of preamble, cutting actions, and postamble
 
             // This is just a dummy loop for now
-            await foreach (var line in inputLines) {
+            await foreach (var line in cuttingPaths) {
                 yield return line;
+            }
+        }
+
+        public static async IAsyncEnumerable<(int id, Line start, Line end)> SplitFileFirstPhase(this IAsyncEnumerable<string> inputLines) {
+            // Scan through the file for 'travelling' comments and build a table out of them
+            // if there are none, return with a relevant error message
+            await foreach (var line in inputLines) {
+                var match = RegexTravellingPattern().Match(line);
+                if (!match.Success) {
+                    continue;
+                }
+
+                var travelling = match.Value;
+                var tDetails = travelling.Replace("(||Travelling||", "").Replace("||)", "").Split("||");
+                var tId = Convert.ToInt32(tDetails[0]);
+                var tSE = tDetails[1].Split(">>", StringSplitOptions.RemoveEmptyEntries);
+                var lStart = new Line(tSE[0]);
+                var lEnd = new Line(tSE[1]);
+                AnsiConsole.MarkupLine($"Output lines: [bold yellow]{tId}: start '{lStart}' end '{lEnd}'[/]");
+
+                yield return (tId, lStart, lEnd);
             }
         }
 

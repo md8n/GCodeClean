@@ -58,7 +58,7 @@ namespace GCodeClean.Processing
 
         public static async IAsyncEnumerable<Line> EliminateLineNumbers(this IAsyncEnumerable<Line> tokenisedLines) {
             await foreach (var line in tokenisedLines) {
-                line.RemoveTokens(new List<char>{'N'});
+                line.RemoveTokens(['N']);
                 yield return line;
             }
         }
@@ -146,7 +146,7 @@ namespace GCodeClean.Processing
                             // this token will be dumped
                             continue;
                         }
-                        if (Token.Parameters.Any(p => p == token[0])) {
+                        if (Array.Exists(Token.Parameters, p => p == token[0])) {
                             // Parameter setting requires special check
                             var parameterParts = token[1..].Split('=', StringSplitOptions.RemoveEmptyEntries);
 
@@ -156,7 +156,7 @@ namespace GCodeClean.Processing
                                 continue;
                             }
                         } else {
-                            var usesParameter = Token.Parameters.Any(p => p == token[1]) ? 2 : 1;
+                            var usesParameter = Array.Exists(Token.Parameters, p => p == token[1]) ? 2 : 1;
                             if (!decimal.TryParse(token[usesParameter..], out var _)) {
                                 // Invalid command or argument - doesn't have a valid number
                                 // this token will be dumped

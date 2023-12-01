@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using GCodeCleanCLI.Clean;
 using GCodeCleanCLI.Split;
 
+using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace GCodeCleanCLI
@@ -15,23 +16,18 @@ namespace GCodeCleanCLI
         public static async Task<int> Main(string[] args)
         {
             var app = new CommandApp();
-            //app.SetDefaultCommand<CleanCommand>();
+            app.SetDefaultCommand<CleanCommand>();
             app.Configure(config => {
                 config.ValidateExamples();
 
-                config.AddBranch<CleanSettings>("clean", clean => {
-                    clean.AddCommand<Clean.CleanCommand>("clean")
-                        .WithDescription("Clean your GCode file. This is the default command");
-                });
-
-                config.AddBranch<SplitSettings>("split", split => {
-                    split.AddCommand<Split.SplitCommand>("split")
-                        .WithDescription("Split your GCode file into individual cutting actions");
-                });
+                config.AddCommand<CleanCommand>("clean")
+                    .WithDescription("Clean your GCode file. This is the default command");
+                config.AddCommand<SplitCommand>("split")
+                    .WithDescription("Split your GCode file into individual cutting actions");
             });
 
             if (args.Length == 0) {
-                args = new[] { "-h" };
+                args = ["-h"];
             }
 
             return await app.RunAsync(args);

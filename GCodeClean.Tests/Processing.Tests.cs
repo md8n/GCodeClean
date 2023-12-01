@@ -38,14 +38,14 @@ namespace GCodeClean.Tests
         [Fact]
         public async Task TestInjectPreamble()
         {
-            var sourceTextLines = new List<string> { "G17", "G40", "G90", "G21", "T1", "S10000", "M3", "G0 X35.747 Y46.824" };
+            List<string> sourceTextLines = ["G17", "G40", "G90", "G21", "T1", "S10000", "M3", "G0 X35.747 Y46.824"];
             var sourceLineLines = sourceTextLines.ConvertAll(l => new Line(l));
             var sourceLines = sourceTextLines.ToAsyncEnumerable();
 
             var testLines = sourceLineLines.ConvertAll(l => new Line(l));
             var lines = AsyncLines(testLines);
             var zClamp = 3M;
-            var expectedLines = new List<Line> {
+            List<Line> expectedLines = [
                 new Line("G17"),
                 new Line("G40"),
                 new Line("G90"),
@@ -66,7 +66,7 @@ namespace GCodeClean.Tests
                 new Line(""),
                 new Line($"G0 Z{zClamp}"),
                 new Line("G0 X35.747 Y46.824")
-            };
+            ];
 
             // Note: that cleaning up the redundant preamble context above is performed by DedupContext
 
@@ -81,11 +81,23 @@ namespace GCodeClean.Tests
         [Fact]
         public async Task TestAugment()
         {
-            var sourceLines = new List<Line> { new Line("G21"), new Line("G90"), new Line("G1 Z-0.15"), new Line("X26.6059 Z - 0.1539 F60"), new Line("X26.6068 Z - 0.1577") };
+            List<Line> sourceLines = [
+                new Line("G21"),
+                new Line("G90"),
+                new Line("G1 Z-0.15"),
+                new Line("X26.6059 Z - 0.1539 F60"),
+                new Line("X26.6068 Z - 0.1577")
+            ];
             var testLines = sourceLines.ConvertAll(l => new Line(l));
             var lines = AsyncLines(testLines);
-            var expectedLines = new List<Line> { new Line("G21"), new Line("G90"), new Line("G1 Z-0.15"), new Line("G1 F60 X26.6059 Z-0.1539"), new Line("G1 X26.6068 Z-0.1577") };
-
+            List<Line> expectedLines = [
+                new Line("G21"),
+                new Line("G90"),
+                new Line("G1 Z-0.15"),
+                new Line("G1 F60 X26.6059 Z-0.1539"),
+                new Line("G1 X26.6068 Z-0.1577")
+            ];
+                
             var resultLines = await lines.Augment().ToListAsync();
             Assert.False(sourceLines.SequenceEqual(resultLines));
             Assert.True(expectedLines.SequenceEqual(resultLines));
@@ -94,11 +106,25 @@ namespace GCodeClean.Tests
         [Fact]
         public async Task TestZClampMM()
         {
-            var sourceLines = new List<Line> { new Line("G21"), new Line("G90"), new Line("G0 Z0.15"), new Line("G0 Z0.05"), new Line("G1 Z0.0394 F30"), new Line("G1 Z-0.15") };
+            List<Line> sourceLines = [
+                new Line("G21"),
+                new Line("G90"),
+                new Line("G0 Z0.15"),
+                new Line("G0 Z0.05"),
+                new Line("G1 Z0.0394 F30"),
+                new Line("G1 Z-0.15")
+            ];
             var testLines = sourceLines.ConvertAll(l => new Line(l));
             var lines = AsyncLines(testLines);
             var setHeight = 1.1M;
-            var expectedLines = new List<Line> { new Line("G21"), new Line("G90"), new Line($"G0 Z{setHeight}"), new Line($"G0 Z{setHeight}"), new Line($"G0 Z{setHeight} F30"), new Line("G1 Z-0.15") };
+            List<Line> expectedLines = [
+                new Line("G21"),
+                new Line("G90"),
+                new Line($"G0 Z{setHeight}"),
+                new Line($"G0 Z{setHeight}"),
+                new Line($"G0 Z{setHeight} F30"),
+                new Line("G1 Z-0.15")
+            ];
 
             var resultLines = await lines.ZClamp(setHeight).ToListAsync();
             Assert.False(sourceLines.SequenceEqual(resultLines));
@@ -108,7 +134,7 @@ namespace GCodeClean.Tests
         [Fact]
         public async Task TestZClampInch()
         {
-            var sourceTextLines = new List<string> {"G20", "G90", "G0 Z0.15", "G0 Z0.05", "G1 Z0.0394 F30", "G1 Z-0.15" };
+            List<string> sourceTextLines = ["G20", "G90", "G0 Z0.15", "G0 Z0.05", "G1 Z0.0394 F30", "G1 Z-0.15"];
             var sourceLineLines = sourceTextLines.ConvertAll(l => new Line(l));
             var sourceLines = sourceTextLines.ToAsyncEnumerable();
 
@@ -120,7 +146,14 @@ namespace GCodeClean.Tests
             var preambleContext = await firstPhaseLines.BuildPreamble();
 
             var adjustedHeight = Utility.ConstrictZClamp(Utility.GetLengthUnits(preambleContext), setHeight);
-            var expectedLines = new List<Line> { new Line("G20"), new Line("G90"), new Line($"G0 Z{adjustedHeight}"), new Line($"G0 Z{adjustedHeight}"), new Line($"G0 Z{adjustedHeight} F30"), new Line("G1 Z-0.15") };
+            List<Line> expectedLines = [
+                new Line("G20"),
+                new Line("G90"),
+                new Line($"G0 Z{adjustedHeight}"),
+                new Line($"G0 Z{adjustedHeight}"),
+                new Line($"G0 Z{adjustedHeight} F30"),
+                new Line("G1 Z-0.15")
+            ];
 
             var resultLines = await lines.ZClamp(adjustedHeight).ToListAsync();
             Assert.False(sourceLineLines.SequenceEqual(resultLines));
@@ -130,7 +163,11 @@ namespace GCodeClean.Tests
         [Fact]
         public async Task TestClip()
         {
-            var sourceLines = new List<Line> { new Line("G21"), new Line("G90"), new Line("G1 Z0.15678 F9.0") };
+            List<Line> sourceLines =[
+                new Line("G21"),
+                new Line("G90"),
+                new Line("G1 Z0.15678 F9.0")
+            ];
 
             var testLines = sourceLines.ConvertAll(l => new Line(l));
             var lines = AsyncLines(testLines);
@@ -169,13 +206,18 @@ namespace GCodeClean.Tests
                 throw;
             }
 
-            var sourceLines = new List<Line> { new Line("G21"), new Line("G90"), new Line("G1 Z0.15678 F9.0"), new Line("G1234") };
-            var expectedLines = new List<string> {
+            List<Line> sourceLines = [
+                new Line("G21"),
+                new Line("G90"),
+                new Line("G1 Z0.15678 F9.0"),
+                new Line("G1234")
+            ];
+            List<string> expectedLines = [
                 "G21 (Length units: Millimeters)",
                 "G90 (Set Distance Mode: Absolute)",
                 "G1 Z0.1568 F9 (Linear motion: at Feed Rate, Z0.1568mm, Set Feed Rate to 9 {feedRateMode})",
                 "G1234"
-            };
+            ];
 
 
             var testLines = sourceLines.ConvertAll(l => new Line(l));
