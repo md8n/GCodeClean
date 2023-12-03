@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2020-2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System.Collections.Generic;
@@ -405,6 +405,20 @@ namespace GCodeClean.Structure
                 .Concat(_tokens.Where(t => !(t.IsLineNumber || t.IsComment)))
                 .Concat(_tokens.Where(t => t.IsComment));
             return string.Join(" ", allTokensOrdered).Trim();
+        }
+
+        /// <summary>
+        /// Return the line as a formatted string, but without any line number or comment
+        /// </summary>
+        /// <returns></returns>
+        public string ToSimpleString() {
+            var allTokensOrdered = _tokens.Where(t => !(t.IsLineNumber || t.IsComment));
+            return string.Join(" ", allTokensOrdered).Trim();
+        }
+
+        public string ToXYCoord() {
+            var xyz = (Coord)this;
+            return $"X{xyz.X}Y{xyz.Y}";
         }
     }
 }

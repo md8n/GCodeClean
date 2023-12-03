@@ -1,24 +1,14 @@
-// Copyright (c) 2022 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2022-2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
-using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 
 using GCodeClean.Structure;
-
-using Spectre.Console;
 
 namespace GCodeClean.Processing
 {
     public static partial class Workflow {
-        /// <summary>
-        /// Finds GCodeClean's special 'Travelling' comments
-        /// </summary>
-        [GeneratedRegex("\\(\\|{2}Travelling\\|{2}\\d+\\|{2}>>G\\d+.*>>G\\d+.*>>\\|{2}\\)$")]
-        private static partial Regex RegexTravellingPattern();
-
         public static async IAsyncEnumerable<string> CleanLines(
             this IAsyncEnumerable<string> inputLines,
             List<char> dedupSelection,
@@ -145,43 +135,6 @@ namespace GCodeClean.Processing
 
             await foreach (var line in annotatedLines) {
                 yield return line;
-            }
-        }
-
-        public static async IAsyncEnumerable<(int id, Line start, Line end)> SplitFile(this IAsyncEnumerable<string> inputLines) {
-            // Scan through the file for 'travelling' comments and build a table out of them
-            var cuttingPaths = inputLines.SplitFileFirstPhase();
-
-            // Take the first enry in the table, and use that to figure out the complete preamble for all extracted files
-
-            // Take the last entry in the table, and use that to figure out the complete postamble for all extracted files
-
-            // Process the table, for each entry, build an individual file of preamble, cutting actions, and postamble
-
-            // This is just a dummy loop for now
-            await foreach (var line in cuttingPaths) {
-                yield return line;
-            }
-        }
-
-        public static async IAsyncEnumerable<(int id, Line start, Line end)> SplitFileFirstPhase(this IAsyncEnumerable<string> inputLines) {
-            // Scan through the file for 'travelling' comments and build a table out of them
-            // if there are none, return with a relevant error message
-            await foreach (var line in inputLines) {
-                var match = RegexTravellingPattern().Match(line);
-                if (!match.Success) {
-                    continue;
-                }
-
-                var travelling = match.Value;
-                var tDetails = travelling.Replace("(||Travelling||", "").Replace("||)", "").Split("||");
-                var tId = Convert.ToInt32(tDetails[0]);
-                var tSE = tDetails[1].Split(">>", StringSplitOptions.RemoveEmptyEntries);
-                var lStart = new Line(tSE[0]);
-                var lEnd = new Line(tSE[1]);
-                AnsiConsole.MarkupLine($"Output lines: [bold yellow]{tId}: start '{lStart}' end '{lEnd}'[/]");
-
-                yield return (tId, lStart, lEnd);
             }
         }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2020 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2020-2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -53,7 +53,7 @@ namespace GCodeClean.Tests
                 new Line("T1"),
                 new Line("S10000"),
                 new Line("M3"),
-                new Line("(Preamble completion by GCodeClean)"),
+                new Line(Default.PreambleCompletion),
                 new Line("G21"),
                 new Line("G90"),
                 new Line("G94"),
@@ -62,7 +62,7 @@ namespace GCodeClean.Tests
                 new Line("G49"),
                 new Line("G54"),
                 new Line("M3"),
-                new Line("(Preamble completed by GCodeClean)"),
+                new Line(Default.PreambleCompleted),
                 new Line(""),
                 new Line($"G0 Z{zClamp}"),
                 new Line("G0 X35.747 Y46.824")
