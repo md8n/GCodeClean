@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2020-2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System.Collections.Generic;
@@ -66,5 +66,8 @@ namespace GCodeClean.Processing
 
             return context;
         }
+
+        public const string PreambleCompletion = "(Preamble completion by GCodeClean)";
+        public const string PreambleCompleted = "(Preamble completed by GCodeClean)";
     }
 }

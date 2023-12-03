@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2020-2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -51,8 +51,8 @@ namespace GCodeClean.Processing {
                     var linesToOutput = preamble.NonOutputLines();
                     if (linesToOutput.Count > 0) {
                         premableCompletionByGCodeClean = true;
-                        linesToOutput.Insert(0, new Line("(Preamble completion by GCodeClean)"));
-                        linesToOutput.Add(new Line("(Preamble completed by GCodeClean)"));
+                        linesToOutput.Insert(0, new Line(Default.PreambleCompletion));
+                        linesToOutput.Add(new Line(Default.PreambleCompleted));
                         linesToOutput.Add(new Line(""));
                         // Inject a +ve Z after the preamble, and before or with the movement
                         if (line.HasToken("G0")) {

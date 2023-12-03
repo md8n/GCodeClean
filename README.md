@@ -130,6 +130,29 @@ Note: If the input file does not exist (or can't be found, i.e. your typo) then 
 * `0` - Success
 * `2` - File or Directory not found exception - check for typos etc.
 
+
+#### The `split` Command
+
+Repeat the above `--help` command, but specify `split` as the command (in other words type in `GCC split --help`) and you'll get back the following:
+
+```
+DESCRIPTION:
+Split your GCode file into individual cutting actions
+
+USAGE:
+    GCC.dll split [OPTIONS]
+
+OPTIONS:
+    -h, --help                   Prints help information
+    -f, --filename <FILENAME>    Full path to the input filename. This is the only required option
+```
+
+`split` assumes the `filename` provided, is for a GCode file that has already been `clean`ed. It will create a folder with the same name as `filename` but minus the filename extension (`.nc` etc.). And within that file it will create one individual file for each cutting path in the original file.
+
+Each individual file should be a valid GCode file that can be run independently.
+
+The name of these files will be made up of 3 parts, the index of the cutting path from the original file (starting at 0), the starting XY coordinate of the cutting path, and the finishing XY coordinate of the cutting path. Each part of the filename is delimited with an underscore `_`.
+
 ## What's Special about GCodeClean?
 
 GCodeClean uses async streaming throughout from input to output. Hopefully this should keep memory consumption and the number of threads to a minimum regardless of what OS / Architecture you use.
