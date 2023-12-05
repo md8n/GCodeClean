@@ -61,24 +61,28 @@ namespace GCodeCleanCLI.Clean
 
         public override async Task<int> ExecuteAsync([NotNull] CommandContext context, [NotNull] CleanSettings settings) {
             var inputFile = settings.Filename;
+
             if (!File.Exists(inputFile)) {
                 return 1;
             }
-            var outputFile = DetermineOutputFilename(settings);
-            AnsiConsole.MarkupLine($"Outputting to: [bold green]{outputFile}[/]");
 
             var tolerance = ConstrainOption(settings.Tolerance, 0.00005M, 0.5M, "Clipping and general mathematical tolerance:");
             var arcTolerance = ConstrainOption(settings.ArcTolerance, 0.00005M, 0.5M, "Arc simplification tolerance:");
             var zClamp = ConstrainOption(settings.ZClamp, 0.02M, 10.0M, "Z-axis clamping value (max traveling height):");
             AnsiConsole.MarkupLine("[blue]All tolerance and clamping values may be further adjusted to allow for inches vs. millimeters[/]");
 
-            var inputLines = inputFile.ReadLinesAsync();
-
             var (minimisationStrategy, dedupSelection) = GetMinimisationStrategy(settings.Minimise, ['F', 'Z']);
-
             var tokenDefsPath = CleanSettings.GetCleanTokenDefsPath(settings.TokenDefs);
             var (tokenDefinitions, _) = CleanSettings.LoadAndVerifyTokenDefs(tokenDefsPath);
-            var reassembledLines = inputLines.CleanLines(dedupSelection, minimisationStrategy, settings.LineNumbers, settings.EliminateNeedlessTravelling, zClamp, arcTolerance, tolerance, settings.Annotate, tokenDefinitions);
+
+            var outputFile = DetermineOutputFilename(settings);
+            AnsiConsole.MarkupLine($"Outputting to: [bold green]{outputFile}[/]");
+
+            // Determine our starting context
+            var preambleContext = await inputFile.GetPreambleContext();
+
+            var inputLines = inputFile.ReadLinesAsync();
+            var reassembledLines = inputLines.CleanLines(preambleContext, dedupSelection, minimisationStrategy, settings.LineNumbers, settings.EliminateNeedlessTravelling, zClamp, arcTolerance, tolerance, settings.Annotate, tokenDefinitions);
             var lineCount = outputFile.WriteLinesAsync(reassembledLines);
 
             await foreach (var line in lineCount) {

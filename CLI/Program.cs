@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using GCodeCleanCLI.Clean;
 using GCodeCleanCLI.Split;
 
-using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace GCodeCleanCLI

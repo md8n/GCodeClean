@@ -4,6 +4,6 @@
     <DebuggerFlavor>ProjectDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup>
-    <ActiveDebugProfile>CLI</ActiveDebugProfile>
+    <ActiveDebugProfile>Clean</ActiveDebugProfile>
   </PropertyGroup>
 </Project>
