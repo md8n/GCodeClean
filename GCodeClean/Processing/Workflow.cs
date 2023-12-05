@@ -2,8 +2,11 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 
+using GCodeClean.IO;
 using GCodeClean.Structure;
 
 namespace GCodeClean.Processing
@@ -11,6 +14,7 @@ namespace GCodeClean.Processing
     public static partial class Workflow {
         public static async IAsyncEnumerable<string> CleanLines(
             this IAsyncEnumerable<string> inputLines,
+            Context preambleContext,
             List<char> dedupSelection,
             string minimisationStrategy,
             bool lineNumbers,
@@ -22,19 +26,29 @@ namespace GCodeClean.Processing
             JsonDocument tokenDefinitions
         ) {
             var firstPhaseLines = inputLines.CleanLinesFirstPhase(lineNumbers);
-            // Determine our starting context
-            var preambleContext = await firstPhaseLines.BuildPreamble();
- 
             var processedLines = firstPhaseLines
                 .PreAndPostamblePhase(preambleContext, zClamp)
                 .CleanLinesSecondPhase(eliminateNeedlessTravel, zClamp, arcTolerance, tolerance)
                 .CleanLinesThirdPhase(dedupSelection, annotate, tokenDefinitions);
-
             var reassembledLines = processedLines.ReassembleLines(minimisationStrategy);
 
             await foreach (var line in reassembledLines) {   
                 yield return line;
             }
+        }
+
+        public static async Task<Context> GetPreambleContext(this string inputFilename) {
+            // Determine our starting context
+            var preambleSourceLines = inputFilename.ReadLinesAsync();
+            var preambleContextUnclean = await preambleSourceLines.TokeniseToLine(ModalGroup.ModalAllMotion).BuildPreamble();
+            var preambleContextCleanLines = preambleContextUnclean.Lines.Select(cl => cl.line).ToAsyncEnumerable()
+                .DedupRepeatedTokens()
+                .Augment()
+                .SingleCommandPerLine()
+                .DedupContext();
+            var preambleContext = await preambleContextCleanLines.BuildPreamble();
+
+            return preambleContext;
         }
 
         /// <summary>

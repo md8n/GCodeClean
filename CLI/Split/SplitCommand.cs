@@ -1,10 +1,8 @@
 // Copyright (c) 2020-2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
-using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Threading.Tasks;
 
 using GCodeClean.IO;
 using GCodeClean.Processing;
@@ -13,7 +11,7 @@ using Spectre.Console.Cli;
 
 namespace GCodeCleanCLI.Split
 {
-    public class SplitCommand : AsyncCommand<SplitSettings> {
+    public class SplitCommand : Command<SplitSettings> {
 
         public static string DetermineOutputFoldername(SplitSettings options) {
             var inputFile = options.Filename;
@@ -23,18 +21,20 @@ namespace GCodeCleanCLI.Split
             return outputFolder;
         }
 
-        public override async Task<int> ExecuteAsync([NotNull] CommandContext context, [NotNull] SplitSettings settings) {
+        public override int Execute([NotNull] CommandContext context, [NotNull] SplitSettings settings) {
             var outputFolder = DetermineOutputFoldername(settings);
             AnsiConsole.MarkupLine($"Outputting to folder: [bold green]{outputFolder}[/]");
 
             var inputFile = settings.Filename;
-            var inputLines = inputFile.ReadLinesAsync();
+            var inputLines = inputFile.ReadFileLines();
 
-            var reassembledLines = inputLines.SplitFile();
+            var travellingComments = inputLines.GetTravellingComments();
+            var preambleLines = inputLines.GetPreamble();
+            var postambleLines = inputLines.GetPostamble(travellingComments[^1]);
 
-            // await foreach (var line in reassembledLines) {
-            //     AnsiConsole.MarkupLine($"Output lines: [bold yellow]{line}[/]");
-            // }
+            inputLines.SplitFile(outputFolder, travellingComments, preambleLines, postambleLines);
+
+            AnsiConsole.MarkupLine($"Split completed");
 
             return 0;
         }

@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2020-2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System.Collections.Generic;
@@ -20,9 +20,11 @@ namespace GCodeClean.Processing
         {
             await foreach (var line in tokenisedLines)
             {
-                if (line.IsNotCommandCodeOrArguments() 
-                    || line.Tokens.Count(t => t.IsCommand) + line.Tokens.Count(t => t.IsCode) <= 1)
-                {
+                if (line.IsNotCommandCodeOrArguments()) {
+                    yield return line;
+                    continue;
+                }
+                if (line.Tokens.Count(t => t.IsCommand) + line.Tokens.Count(t => t.IsCode) <= 1) {
                     yield return line;
                     continue;
                 }
@@ -122,8 +124,7 @@ namespace GCodeClean.Processing
 
                 // 20. perform motion (G0 to G3, G38.2, G80 to G89), as modified (possibly) by G53.
                 (currentLine, yieldableLines) = currentLine.SplitOutSelectedCommands(ModalGroup.ModalMotion);
-                if (yieldableLines.Count > 0)
-                {
+                if (yieldableLines.Count > 0) {
                     // Note that any G53 will be appended here
                     currentLine.AllTokens = yieldableLines[0].AllTokens.Concat(currentLine.Tokens).ToList();
                 }
@@ -135,10 +136,8 @@ namespace GCodeClean.Processing
 
                 // Specifically not handled are the 'Home' commands G28 and G30
 
-                foreach (var yieldingToken in yieldingLines)
-                {
-                    if (yieldingToken.IsNotCommandCodeOrArguments())
-                    {
+                foreach (var yieldingToken in yieldingLines) {
+                    if (yieldingToken.IsNotCommandCodeOrArguments()) {
                         continue;
                     }
                     yield return yieldingToken;
@@ -146,8 +145,7 @@ namespace GCodeClean.Processing
                 if (currentLine.Tokens.Count > 0) {
                     yield return currentLine;
                 }
-                if (!stopTokens.IsNotCommandCodeOrArguments())
-                {
+                if (!stopTokens.IsNotCommandCodeOrArguments()) {
                     yield return stopTokens;
                 }
             }

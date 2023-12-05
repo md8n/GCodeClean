@@ -98,8 +98,7 @@ namespace GCodeClean.Structure
 
         public bool HasTokens(List<char> codes) => AllTokens.Exists(t => codes.Contains(t.Code));
 
-        public bool HasTokens(IEnumerable<string> tokens)
-        {
+        public bool HasTokens(IEnumerable<string> tokens) {
             var parsedTokens = tokens.Select(t => new Token(t));
             return HasTokens(parsedTokens);
         }
@@ -108,8 +107,7 @@ namespace GCodeClean.Structure
 
         public bool HasToken(char code) => AllTokens.Exists(t => t.Code == code);
 
-        public bool HasToken(string token)
-        {
+        public bool HasToken(string token) {
             var parsedToken = new Token(token);
             return HasToken(parsedToken);
         }
@@ -122,8 +120,7 @@ namespace GCodeClean.Structure
         /// * only a file terminator,
         /// * only one or more comments
         /// </summary>
-        public bool IsNotCommandCodeOrArguments()
-        {
+        public bool IsNotCommandCodeOrArguments() {
             return AllTokens.Count == 0 || AllTokens.TrueForAll(t => t.IsFileTerminator) || AllTokens.TrueForAll(t => t.IsComment);
         }
 
@@ -131,10 +128,8 @@ namespace GCodeClean.Structure
         /// This returns true if there are one or more Arguments but no Commands or Codes.
         /// Line numbers, comments, codes are ignored for this test
         /// </summary>
-        public bool IsArgumentsOnly()
-        {
-            if (IsNotCommandCodeOrArguments())
-            {
+        public bool IsArgumentsOnly() {
+            if (IsNotCommandCodeOrArguments()) {
                 return false;
             }
 
@@ -144,8 +139,7 @@ namespace GCodeClean.Structure
         /// <summary>
         /// This returns true if there are one or more Arguments and a movement Command, comments are ignored for this test
         /// </summary>
-        public bool HasMovementCommand()
-        {
+        public bool HasMovementCommand() {
             return !IsArgumentsOnly() && HasTokens(ModalGroup.ModalAllMotion);
         }
 
@@ -153,8 +147,7 @@ namespace GCodeClean.Structure
         /// <summary>
         /// Create an empty line of GCode
         /// </summary>
-        public Line()
-        {
+        public Line() {
             Source = "";
         }
 
@@ -162,36 +155,38 @@ namespace GCodeClean.Structure
         /// Create a new line of GCode from the supplied string
         /// </summary>
         /// <param name="source"></param>
-        public Line(string source)
-        {
+        public Line(string source) {
             Source = source;
         }
 
         /// <summary>
-        /// Create a new line of GCode by copying an existing line
+        /// Create a new line of GCode by copying an existing line (deep copy)
         /// </summary>
         /// <param name="line"></param>
         public Line(Line line)
         {
-            Source = line.ToString();
+            _source = line.ToString();
+            _tokens = line.AllTokens.Select(t => new Token(t)).ToList();
         }
 
         /// <summary>
-        /// Create a new line of GCode from a single GCode token
+        /// Create a new line of GCode from a single GCode token (deep copy)
         /// </summary>
         /// <param name="token"></param>
         public Line(Token token)
         {
-            Source = token.ToString();
+            _source = token.ToString();
+            _tokens = [new Token(token)];
         }
 
         /// <summary>
-        /// Create a new line of GCode from a list of GCode tokens
+        /// Create a new line of GCode from a list of GCode tokens (deep copy)
         /// </summary>
         /// <param name="tokens"></param>
         public Line(IEnumerable<Token> tokens)
         {
-            Source = string.Join(' ', tokens);
+            _source = string.Join(' ', tokens);
+            _tokens = tokens.Select(t => new Token(t)).ToList();
         }
         #endregion
 
@@ -220,14 +215,11 @@ namespace GCodeClean.Structure
             _tokens.AddRange(tokens);
         }
 
-        public List<Token> RemoveTokens(List<char> codes)
-        {
+        public List<Token> RemoveTokens(List<char> codes) {
             var removedTokens = new List<Token>();
 
-            for (var ix = _tokens.Count - 1; ix >= 0; ix--)
-            {
-                if (!codes.Contains(_tokens[ix].Code))
-                {
+            for (var ix = _tokens.Count - 1; ix >= 0; ix--) {
+                if (!codes.Contains(_tokens[ix].Code)) {
                     continue;
                 }
 
@@ -238,14 +230,11 @@ namespace GCodeClean.Structure
             return removedTokens;
         }
 
-        public List<Token> RemoveTokens(List<Token> tokens)
-        {
+        public List<Token> RemoveTokens(List<Token> tokens) {
             var removedTokens = new List<Token>();
 
-            for (var ix = _tokens.Count - 1; ix >= 0; ix--)
-            {
-                if (!tokens.Contains(_tokens[ix]))
-                {
+            for (var ix = _tokens.Count - 1; ix >= 0; ix--) {
+                if (!tokens.Contains(_tokens[ix])) {
                     continue;
                 }
 
@@ -256,14 +245,26 @@ namespace GCodeClean.Structure
             return removedTokens;
         }
 
-        public List<Token> RemoveToken(Token token)
-        {
+        public List<Token> RemoveToken(char code) {
             var removedTokens = new List<Token>();
 
-            for (var ix = _tokens.Count - 1; ix >= 0; ix--)
-            {
-                if (token != _tokens[ix])
-                {
+            for (var ix = _tokens.Count - 1; ix >= 0; ix--) {
+                if (code != _tokens[ix].Code) {
+                    continue;
+                }
+
+                removedTokens.Add(_tokens[ix]);
+                _tokens.RemoveAt(ix);
+            }
+
+            return removedTokens;
+        }
+
+        public List<Token> RemoveToken(Token token) {
+            var removedTokens = new List<Token>();
+
+            for (var ix = _tokens.Count - 1; ix >= 0; ix--) {
+                if (token != _tokens[ix]) {
                     continue;
                 }
 

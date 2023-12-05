@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2020-2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -50,15 +50,26 @@ namespace GCodeClean.Processing
 
         // ((\%)|((?<linenumber>N\s*\d{1,5})?\s*(?:(?<word>[A-Z]\s*[+-]?(\d|\s)*\.?(\d|\s)*\s*)|(?<comment>\(.*?\)\s*))*|(?<fullcomment>\;.*$)))
 
-        public static async IAsyncEnumerable<Line> TokeniseToLine(this IAsyncEnumerable<string> lines) {
-            await foreach (var line in lines) {
-                yield return new Line(line);
+        public static async IAsyncEnumerable<Line> TokeniseToLine(this IAsyncEnumerable<string> lines, IEnumerable<Token> exitTokens = null) {
+            if (exitTokens == null) {
+                await foreach (var line in lines) {
+                    yield return new Line(line);
+                }
+            } else {
+                await foreach (var line in lines) {
+                    var tokenisedLine = new Line(line);
+                    yield return tokenisedLine;
+
+                    if (tokenisedLine.HasTokens(exitTokens)) {
+                        break;
+                    }
+                }
             }
         }
 
         public static async IAsyncEnumerable<Line> EliminateLineNumbers(this IAsyncEnumerable<Line> tokenisedLines) {
             await foreach (var line in tokenisedLines) {
-                line.RemoveTokens(['N']);
+                line.RemoveToken('N');
                 yield return line;
             }
         }
