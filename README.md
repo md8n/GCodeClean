@@ -147,7 +147,7 @@ OPTIONS:
     -f, --filename <FILENAME>    Full path to the input filename. This is the only required option
 ```
 
-`split` assumes the `filename` provided, is for a GCode file that has already been `clean`ed. It will create a folder with the same name as `filename` but minus the filename extension (`.nc` etc.). And within that file it will create one individual file for each cutting path in the original file.
+`split` assumes the `filename` provided, is for a GCode file that has already been `clean`ed. It will create a folder with the same name as `filename` but minus the filename extension (`.nc` etc.). And within that folder it will create one individual file for each cutting path in the original file.
 
 Each individual file should be a valid GCode file that can be run independently.
 

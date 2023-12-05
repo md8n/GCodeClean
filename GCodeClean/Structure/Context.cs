@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2020-2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System.Collections.Generic;
@@ -17,19 +17,16 @@ namespace GCodeClean.Structure
 
         public List<(Line line, bool isOutput)> Lines
         {
-            get => _lines ??= new List<(Line line, bool isOutput)>();
-            set
-            {
-                if (value == null || value.Count == 0)
-                {
-                    _lines = new List<(Line line, bool isOutput)>();
+            get => _lines ??= [];
+            set {
+                if (value == null || value.Count == 0) {
+                    _lines = [];
                     return;
                 }
 
-                _lines ??= new List<(Line line, bool isOutput)>();
+                _lines ??= [];
 
-                foreach (var (line, isOutput) in value)
-                {
+                foreach (var (line, isOutput) in value) {
                     Update(line, isOutput);
                 }
 
@@ -37,8 +34,7 @@ namespace GCodeClean.Structure
             }
         }
 
-        public Context(List<(Line line, bool isOutput)> lines)
-        {
+        public Context(List<(Line line, bool isOutput)> lines) {
             Lines = lines;
         }
 
@@ -47,8 +43,7 @@ namespace GCodeClean.Structure
         /// </summary>
         /// <param name="line"></param>
         /// <param name="isOutput"></param>
-        public void Update(Line line, bool isOutput = false)
-        {
+        public void Update(Line line, bool isOutput = false) {
             UpdateModal(line, isOutput, ModalGroup.ModalFeedRate);
             UpdateModal(line, isOutput, 'F');
             UpdateModal(line, isOutput, 'S');
@@ -71,17 +66,14 @@ namespace GCodeClean.Structure
             UpdateModal(line, isOutput, ModalGroup.ModalCoolant);
         }
 
-        public Token GetModalState(IReadOnlyCollection<Token> modal)
-        {
-            foreach (var (line, _) in Lines)
-            {
-                var lineTokens = line.Tokens.Intersect(modal).LastOrDefault();
-                if (lineTokens == null)
-                {
+        public Token GetModalState(IReadOnlyCollection<Token> modal) {
+            foreach (var (line, _) in Lines) {
+                var lineTokens = line.Tokens.Intersect(modal);
+                if (!lineTokens.Any()) {
                     continue;
                 }
 
-                return lineTokens;
+                return lineTokens.Last();
             }
 
             return null;
@@ -92,18 +84,15 @@ namespace GCodeClean.Structure
         /// </summary>
         /// <remarks>This does NOT change the isOutput flag to true</remarks>
         /// <returns></returns>
-        public List<Line> NonOutputLines()
-        {
+        public List<Line> NonOutputLines() {
             return Lines.Where(l => !l.isOutput).Select(l => l.line).ToList();
         }
 
         /// <summary>
         /// Flag all lines as output (isOutput == true)
         /// </summary>
-        public void FlagAllLinesAsOutput()
-        {
-            for (var ix = 0; ix < Lines.Count; ix++)
-            {
+        public void FlagAllLinesAsOutput() {
+            for (var ix = 0; ix < Lines.Count; ix++) {
                 var line = _lines[ix];
                 line.isOutput = true;
                 _lines[ix] = line;
@@ -112,68 +101,48 @@ namespace GCodeClean.Structure
             AllLinesOutput = true;
         }
 
-        private void UpdateModal(Line line, bool isOutput, IReadOnlyCollection<Token> modal)
-        {
-            var lineTokens = line.Tokens.Intersect(modal).LastOrDefault();
-            if (lineTokens == null)
-            {
+        private void UpdateModal(Line line, bool isOutput, IReadOnlyCollection<Token> modal) {
+            if (!line.Tokens.Intersect(modal).Any()) {
                 return;
             }
 
             var hasReplaced = false;
-            for (var ix = Lines.Count - 1; ix >= 0; ix--)
-            {
-                var inContext = _lines[ix].line.Tokens.Intersect(modal).ToList();
-                if (inContext.Count <= 0)
-                {
+            for (var ix = Lines.Count - 1; ix >= 0; ix--) {
+                if (!_lines[ix].line.Tokens.Intersect(modal).Any()) {
                     continue;
                 }
 
-                if (!hasReplaced)
-                {
+                if (!hasReplaced) {
                     _lines[ix] = (line, isOutput);
                     hasReplaced = true;
-                }
-                else
-                {
+                } else {
                     _lines.RemoveAt(ix);
                 }
             }
-            if (!hasReplaced)
-            {
+            if (!hasReplaced) {
                 _lines.Add((line, isOutput));
             }
         }
 
-        private void UpdateModal(Line line, bool isOutput, char code)
-        {
-            var lineTokens = line.Tokens.LastOrDefault(t => t.Code == code);
-            if (lineTokens == null)
-            {
+        private void UpdateModal(Line line, bool isOutput, char code) {
+            if (!line.Tokens.Exists(t => t.Code == code)) {
                 return;
             }
 
             var hasReplaced = false;
-            for (var ix = Lines.Count - 1; ix >= 0; ix--)
-            {
-                var inContext = _lines[ix].line.Tokens.Where(t => t.Code == code).ToList();
-                if (inContext.Count <= 0)
-                {
+            for (var ix = Lines.Count - 1; ix >= 0; ix--) {
+                if (!_lines[ix].line.Tokens.Exists(t => t.Code == code)) {
                     continue;
                 }
 
-                if (!hasReplaced)
-                {
+                if (!hasReplaced) {
                     _lines[ix] = (line, isOutput);
                     hasReplaced = true;
-                }
-                else
-                {
+                } else {
                     _lines.RemoveAt(ix);
                 }
             }
-            if (!hasReplaced)
-            {
+            if (!hasReplaced) {
                 _lines.Add((line, isOutput));
             }
         }
