@@ -19,13 +19,34 @@ We also have:
 
 ## Getting Started
 
-There are standalone release builds available, for Linux, Raspberry Pi (linux-arm), and Windows at [GCodeClean releases](https://github.com/md8n/GCodeClean/releases). It is very easy to a build for MacOS / OSX (osx-64) (see #Deployment below).
+There are standalone release builds available, for Linux, Raspberry Pi (linux-arm), and Windows at [GCodeClean releases](https://github.com/md8n/GCodeClean/releases). It is very easy to a build for MacOS / OSX (osx-64) (see `BuildItYourself.md`). Download the release you need and unzip it in a folder that works for you. GCodeClean is a command line application, so you run it by using a 'terminal' and typing the command in to do what you want.
 
-The standalone releases include all the relevant .NET 7.0 libraries for this application.
+The standalone releases include all the relevant .NET 8.0 libraries for this application.
 
-Alternatively you can build and run this project yourself. See `BuildItYourself.md` for instructions and tips. And how to deploy.
+Alternatively you can build and run this project yourself. See `BuildItYourself.md` for instructions and tips. And how to deploy. And if you do build it yourself then there are a very large number of possible targets including 32bit, and many specific Linux distros, etc.
 
-But if you do build it yourself then there are a very large number of possible targets including 32bit, and many specific Linux distros, etc.
+## Running GCodeClean - the tl;dr version
+
+After downloading the release you need for your OS and unpacking it into its own folder (or building it yourself), then it's ready for use.
+
+Change directory to the location where you unpacked (unzipped) the release - you're looking for the file called `GCC.exe`, this is the command line app you'll use.
+
+GCodeClean has two 'commands' `clean` and `split`. `clean` is the one you'll be most interested in.
+
+for Windows you would type in something like and press `enter`:
+```
+.\GCC.exe --filename <full path to your gcode file here>
+```
+
+Or for Linux (e.g. Ubuntu 18.04 / 20.04 / 22.04) it would be:
+
+```
+./GCC --filename <full path to your gcode file here>
+```
+
+For the above `<full path to your gcode file here>` tells `GCC` not just the name of your GCode file, but also where to find it.
+
+`GCC` will find your file and process it, producing a new file that has a very similar name, and telling you how many lines are in the new file.
 
 ### Command Line Parameters
 
@@ -108,23 +129,23 @@ For the tolerance and clamp values, the smallest value (inch or mm specific) is 
 Now find yourself a gcode (`.nc`, `.gcode`, etc.) file to use for the option `--filename <filename>`.
 And replace `<filename>` with the full path to your gcode file (as per what your OS requires).
 
-The GCodeClean `CLI` will require Read access to that file, and Write access to the folder where that file is located.
+The GCodeClean `GCC` will require Read access to that file, and Write access to the folder where that file is located.
 
-And then run the `GCodeCleanCLI` executable.
+And then run the `GCC` executable.
 e.g. for Windows that might look like:
 ```
-.\cli --filename FacadeFullAlternate.nc --minimise soft --annotate
+.\GCC.exe --filename FacadeFullAlternate.nc --minimise soft --annotate
 ```
 
 or for Linux (Ubuntu 18.04 / 20.04)
 ```
-./CLI --filename FacadeFullAlternate.nc --minimise hard --annotate
+./GCC --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
 
-After processing the GCodeClean `CLI` will report the number of lines that it output.
+After processing the GCodeClean `GCC` will report the number of lines that it output.
 The output file will have `-gcc` appended to name of the input file (but before the file extension) that you provided on the command line.
 
-Note: If the input file does not exist (or can't be found, i.e. your typo) then GCodeClean `CLI` will fail, but it won't do any harm.
+Note: If the input file does not exist (or can't be found, i.e. your typo) then GCodeClean `GCC` will fail, but it won't do any harm.
 
 `Exit code`:
 * `0` - Success
