@@ -202,13 +202,13 @@ namespace GCodeClean.Tests
                 new Line("G21"),
                 new Line("G90"),
                 new Line("G1 Z0.15678 F9.0"),
-                new Line("G1234")
+                new Line("/G1234")
             ];
             List<string> expectedLines = [
                 "G21 (Length units: Millimeters)",
                 "G90 (Set Distance Mode: Absolute)",
                 "G1 Z0.1568 F9 (Linear motion: at Feed Rate, Z0.1568mm, Set Feed Rate to 9 {feedRateMode})",
-                "G1234"
+                "/ G1234 (Block Delete)"
             ];
 
 
