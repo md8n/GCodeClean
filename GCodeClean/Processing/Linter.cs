@@ -6,20 +6,16 @@ using System.Linq;
 
 using GCodeClean.Structure;
 
-namespace GCodeClean.Processing
-{
-    public static class Linter
-    {
+namespace GCodeClean.Processing {
+    public static class Linter {
         /// <summary>
         /// Ensures only one 'command' per line
         /// </summary>
         /// <param name="tokenisedLines"></param>
         /// <remarks>This should only be run after `Augment`</remarks>
         /// <returns></returns>
-        public static async IAsyncEnumerable<Line> SingleCommandPerLine(this IAsyncEnumerable<Line> tokenisedLines)
-        {
-            await foreach (var line in tokenisedLines)
-            {
+        public static async IAsyncEnumerable<Line> SingleCommandPerLine(this IAsyncEnumerable<Line> tokenisedLines) {
+            await foreach (var line in tokenisedLines) {
                 if (line.IsNotCommandCodeOrArguments()) {
                     yield return line;
                     continue;
@@ -38,7 +34,7 @@ namespace GCodeClean.Processing
                 // 1. comment (includes message). - These we won't split out for now, but ...
 
                 // 1A. line numbers - we'll prepend these to the first set of yieldableTokens we return
-                (currentLine, yieldableLines) = currentLine.SplitOutSelectedCode('N');
+                (currentLine, yieldableLines) = currentLine.SplitOutSelectedCode(Letter.lineNumber);
                 var lineNumberToken = yieldableLines.Count > 0 ? yieldableLines[0].AllTokens[0] : new Token("");
 
                 // 2. set feed rate mode (G93, G94 — inverse time or per minute).
@@ -46,15 +42,15 @@ namespace GCodeClean.Processing
                 (yieldingLines, lineNumberToken) = yieldingLines.BuildYieldingLines(yieldableLines, lineNumberToken);
 
                 // 3. set feed rate (F).
-                (currentLine, yieldableLines) = currentLine.SplitOutSelectedCode('F');
+                (currentLine, yieldableLines) = currentLine.SplitOutSelectedCode(Letter.feedRate);
                 (yieldingLines, lineNumberToken) = yieldingLines.BuildYieldingLines(yieldableLines, lineNumberToken);
 
                 // 4. set spindle speed (S).
-                (currentLine, yieldableLines) = currentLine.SplitOutSelectedCode('S');
+                (currentLine, yieldableLines) = currentLine.SplitOutSelectedCode(Letter.spindleSpeed);
                 (yieldingLines, lineNumberToken) = yieldingLines.BuildYieldingLines(yieldableLines, lineNumberToken);
 
                 // 5. select tool (T).
-                (currentLine, yieldableLines) = currentLine.SplitOutSelectedCode('T');
+                (currentLine, yieldableLines) = currentLine.SplitOutSelectedCode(Letter.selectTool);
                 (yieldingLines, lineNumberToken) = yieldingLines.BuildYieldingLines(yieldableLines, lineNumberToken);
 
                 // 6. change tool (M6).
@@ -152,10 +148,8 @@ namespace GCodeClean.Processing
         }
 
         private static (List<Line> yieldingLines, Token lineNumberToken) BuildYieldingLines(
-            this List<Line> yieldingLines, IReadOnlyList<Line> yieldableLines, Token lineNumberToken)
-        {
-            if (yieldableLines.Count <= 0)
-            {
+            this List<Line> yieldingLines, IReadOnlyList<Line> yieldableLines, Token lineNumberToken) {
+            if (yieldableLines.Count <= 0) {
                 return (yieldingLines, lineNumberToken);
             }
 
@@ -163,17 +157,15 @@ namespace GCodeClean.Processing
                 yieldableLines[0].PrependToken(lineNumberToken);
                 lineNumberToken.Source = "";
             }
-            yieldingLines = yieldingLines.Concat(yieldableLines).ToList();
+            yieldingLines = [.. yieldingLines, .. yieldableLines];
 
             return (yieldingLines, lineNumberToken);
         }
 
-        private static (Line line, List<Line> yieldableLines) SplitOutSelectedCode(this Line line, char code)
-        {
+        private static (Line line, List<Line> yieldableLines) SplitOutSelectedCode(this Line line, char code) {
             var yieldableLines = new List<Line>();
-            var selectedTokens = line.AllTokens.Where(t => t.Code == code).ToList();
-            if (selectedTokens.Count <= 0)
-            {
+            var selectedTokens = line.AllTokens.Where(t => t.Code == code).ToArray();
+            if (selectedTokens.Length <= 0) {
                 return (line, yieldableLines);
             }
 
@@ -183,17 +175,14 @@ namespace GCodeClean.Processing
             return (line, yieldableLines);
         }
 
-        private static (Line line, List<Line> yieldableLines) SplitOutSelectedCommands(this Line line, ICollection<Token> commands)
-        {
+        private static (Line line, List<Line> yieldableLines) SplitOutSelectedCommands(this Line line, ICollection<Token> commands) {
             var yieldableLines = new List<Line>();
-            var selectedTokens = line.AllTokens.Intersect(commands).ToList();
-            if (selectedTokens.Count <= 0)
-            {
+            var selectedTokens = line.AllTokens.Intersect(commands).ToArray();
+            if (selectedTokens.Length <= 0) {
                 return (line, yieldableLines);
             }
 
-            foreach (var selectedToken in selectedTokens)
-            {
+            foreach (var selectedToken in selectedTokens) {
                 yieldableLines.Add(new Line (selectedToken));
             }
             line.AllTokens = line.AllTokens.Except(commands).ToList();

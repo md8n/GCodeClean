@@ -21,6 +21,15 @@ namespace GCodeClean.Processing
         /// <summary>
         /// A GCode parser pattern for line numbers only
         /// </summary>
+        [GeneratedRegex("(?<blockdelete>/)", RegexOptions.ExplicitCapture, "en-AU")]
+        private static partial Regex RegexBlockDeletePattern();
+
+        [GeneratedRegex("(?<blockdelete>/)")]
+        private static partial Regex RegexBlockDeleteReplace();
+
+        /// <summary>
+        /// A GCode parser pattern for line numbers only
+        /// </summary>
         [GeneratedRegex("(?<linenumber>N\\s*\\d{1,5})", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, "en-AU")]
         private static partial Regex RegexLineNumberPattern();
 
@@ -69,7 +78,7 @@ namespace GCodeClean.Processing
 
         public static async IAsyncEnumerable<Line> EliminateLineNumbers(this IAsyncEnumerable<Line> tokenisedLines) {
             await foreach (var line in tokenisedLines) {
-                line.RemoveToken('N');
+                line.RemoveToken(Letter.lineNumber);
                 yield return line;
             }
         }
@@ -95,6 +104,25 @@ namespace GCodeClean.Processing
 
                 // Found a full line match so exit with that single token
                 return tokens;
+            }
+
+            matches = RegexBlockDeletePattern().Matches(line);
+            if (matches.Count > 0) {
+                foreach (Match match in matches.Cast<Match>()) {
+                    var groupCtr = 0;
+                    foreach (Group group in match.Groups.Cast<Group>()) {
+                        if (group.Name == groupCtr.ToString() || !group.Success) {
+                            continue;
+                        }
+                        groupCtr++;
+
+                        var token = group.Value.Trim();
+
+                        tokens.Add(token);
+                    }
+                }
+
+                line = RegexBlockDeleteReplace().Replace(line, "");
             }
 
             matches = RegexLineNumberPattern().Matches(line);
@@ -157,7 +185,7 @@ namespace GCodeClean.Processing
                             // this token will be dumped
                             continue;
                         }
-                        if (Array.Exists(Token.Parameters, p => p == token[0])) {
+                        if (Array.Exists(Letter.Parameters, p => p == token[0])) {
                             // Parameter setting requires special check
                             var parameterParts = token[1..].Split('=', StringSplitOptions.RemoveEmptyEntries);
 
@@ -167,7 +195,7 @@ namespace GCodeClean.Processing
                                 continue;
                             }
                         } else {
-                            var usesParameter = Array.Exists(Token.Parameters, p => p == token[1]) ? 2 : 1;
+                            var usesParameter = Array.Exists(Letter.Parameters, p => p == token[1]) ? 2 : 1;
                             if (!decimal.TryParse(token[usesParameter..], out var _)) {
                                 // Invalid command or argument - doesn't have a valid number
                                 // this token will be dumped

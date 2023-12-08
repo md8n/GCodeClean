@@ -17,15 +17,7 @@ using Xunit.Abstractions;
 
 namespace GCodeClean.Tests
 {
-    public class Processing
-    {
-        private readonly ITestOutputHelper _testOutputHelper;
-
-        public Processing(ITestOutputHelper testOutputHelper)
-        {
-            _testOutputHelper = testOutputHelper;
-        }
-
+    public class Processing(ITestOutputHelper testOutputHelper) {
         private static async IAsyncEnumerable<Line> AsyncLines(IEnumerable<Line> lines)
         {
             foreach (var line in lines)
@@ -163,7 +155,7 @@ namespace GCodeClean.Tests
         [Fact]
         public async Task TestClip()
         {
-            List<Line> sourceLines =[
+            List<Line> sourceLines = [
                 new Line("G21"),
                 new Line("G90"),
                 new Line("G1 Z0.15678 F9.0")
