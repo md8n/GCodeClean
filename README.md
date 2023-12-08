@@ -172,7 +172,7 @@ OPTIONS:
 
 Each individual file should be a valid GCode file that can be run independently.
 
-The name of these files will be made up of 3 parts, the index of the cutting path from the original file (starting at 0), the starting XY coordinate of the cutting path, and the finishing XY coordinate of the cutting path. Each part of the filename is delimited with an underscore `_`.
+The name of these files will be made up of 4 parts, the tool number, the index of the cutting path from the original file (starting at 0), the starting XY coordinate of the cutting path, and the finishing XY coordinate of the cutting path. Each part of the filename is delimited with an underscore `_`.
 
 ## What's Special about GCodeClean?
 

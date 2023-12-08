@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -122,10 +121,10 @@ namespace GCodeClean.Processing {
                         continue;
                     } else {
                         leadingBlankLinesStripped = true;
-                        hasLeadingFileTerminator = line.HasToken('%');
+                        hasLeadingFileTerminator = line.HasToken(Letter.fileTerminator);
                     }
                 } else {
-                    if (line.HasToken('%')) {
+                    if (line.HasToken(Letter.fileTerminator)) {
                         commentOutAllRemainingCommands = true;
                         if (!hasLeadingFileTerminator) {
                             // throw away the trailing terminator, because there is no leading one
@@ -532,7 +531,7 @@ namespace GCodeClean.Processing {
                             travellingLine = new Line(line);
                             travellingLine.ReplaceToken(new Token("G1"), new Token("G0"));
 
-                            line.AppendToken(new Token($"(||Travelling||{blockIx++}||>>{entryLine}>>{exitLine}>>||)"));
+                            line.AppendToken(new Token($"(||Travelling||{context.GetToolNumber()}||{blockIx++}||>>{entryLine}>>{exitLine}>>||)"));
                             entryLine = new Line();
                             entrySet = false;
                         }
@@ -578,7 +577,7 @@ namespace GCodeClean.Processing {
                         if (tokenDefs.TryGetProperty(subToken, out var subTokenDef)) {
                             annotation = subTokenDef.GetString();
                         }
-                        annotationContext[token.Code + "value"] = token.Number.Value.ToString(CultureInfo.InvariantCulture);
+                        annotationContext[token.Code + "value"] = $"{token.Number:0.####}";
                     } else {
                         tokenCodes.Add(token.ToString());
                     }

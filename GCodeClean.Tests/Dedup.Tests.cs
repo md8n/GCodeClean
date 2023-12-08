@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2020-2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -14,15 +14,7 @@ using Xunit.Abstractions;
 
 namespace GCodeClean.Tests
 {
-    public class Dedup
-    {
-        private readonly ITestOutputHelper _testOutputHelper;
-
-        public Dedup(ITestOutputHelper testOutputHelper)
-        {
-            _testOutputHelper = testOutputHelper;
-        }
-
+    public class Dedup(ITestOutputHelper testOutputHelper) {
         private static async IAsyncEnumerable<Line> AsyncLines(IEnumerable<Line> lines)
         {
             foreach (var line in lines)

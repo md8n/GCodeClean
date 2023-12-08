@@ -7,3 +7,4 @@ Samples/
 .github/workflows/
 /CLI/Properties/launchSettings.json
 cli/Facade-gcc/*_gcc.nc
+GCodeSpec.pdf

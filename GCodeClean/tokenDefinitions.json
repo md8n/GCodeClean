@@ -128,6 +128,7 @@
 		"M98": "Subprogram: Call",
 		"M99": "Subprogram: End",
 
+		"/": "Block Delete",
 		"#": "Set Parameter",
 
 		"D": "Tool Radius Compensation",

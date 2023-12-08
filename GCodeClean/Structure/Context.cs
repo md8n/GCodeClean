@@ -45,9 +45,9 @@ namespace GCodeClean.Structure
         /// <param name="isOutput"></param>
         public void Update(Line line, bool isOutput = false) {
             UpdateModal(line, isOutput, ModalGroup.ModalFeedRate);
-            UpdateModal(line, isOutput, 'F');
-            UpdateModal(line, isOutput, 'S');
-            UpdateModal(line, isOutput, 'T');
+            UpdateModal(line, isOutput, Letter.feedRate);
+            UpdateModal(line, isOutput, Letter.spindleSpeed);
+            UpdateModal(line, isOutput, Letter.selectTool);
             UpdateModal(line, isOutput, ModalGroup.ModalToolChange);
             UpdateModal(line, isOutput, ModalGroup.ModalSpindleTurning);
             // No support for Coolants in the context yet
@@ -62,13 +62,25 @@ namespace GCodeClean.Structure
             UpdateModal(line, isOutput, ModalGroup.ModalDistance);
             UpdateModal(line, isOutput, ModalGroup.ModalReturnMode);
             UpdateModal(line, isOutput, ModalGroup.ModalNon);
-            UpdateModal(line, isOutput, ModalGroup.ModalToolChange);
             UpdateModal(line, isOutput, ModalGroup.ModalCoolant);
         }
 
         public Token GetModalState(IReadOnlyCollection<Token> modal) {
             foreach (var (line, _) in Lines) {
                 var lineTokens = line.Tokens.Intersect(modal);
+                if (!lineTokens.Any()) {
+                    continue;
+                }
+
+                return lineTokens.Last();
+            }
+
+            return null;
+        }
+
+        public Token GetModalState(char code) {
+            foreach (var (line, _) in Lines) {
+                var lineTokens = line.Tokens.Where(t => t.Code == code);
                 if (!lineTokens.Any()) {
                     continue;
                 }

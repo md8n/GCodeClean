@@ -1,9 +1,10 @@
-// Copyright (c) 2020-2022 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2020-2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 
 using GCodeClean.Structure;
 
@@ -14,13 +15,11 @@ namespace GCodeClean.Processing
         /// <summary>
         /// Is B between A and C, inclusive
         /// </summary>
-        public static bool WithinRange(this decimal b, decimal a, decimal c)
-        {
+        public static bool WithinRange(this decimal b, decimal a, decimal c) {
             return a >= b && b >= c || a <= b && b <= c;
         }
 
-        public static double Angle(this double da, double db)
-        {
+        public static double Angle(this double da, double db) {
             var theta = Math.Atan2(da, db); // range (-PI, PI]
             theta *= 180 / Math.PI; // radians to degrees, range (-180, 180]
 
@@ -34,26 +33,22 @@ namespace GCodeClean.Processing
             return (decimal)theta;
         }
 
-        public static decimal Sqr(this decimal value)
-        {
+        public static decimal Sqr(this decimal value) {
             return value * value;
         }
 
-        public static decimal Distance(this (Coord A, Coord B) c)
-        {
+        public static decimal Distance(this (Coord A, Coord B) c) {
             return (decimal)Math.Sqrt((double)((c.B.X - c.A.X).Sqr() + (c.B.Y - c.A.Y).Sqr() + (c.B.Z - c.A.Z).Sqr()));
         }
 
         /// <summary>
         /// Get the number of decimal places in a decimal, ignoring any 'significant' zeros at the end
         /// </summary>
-        public static int GetDecimalPlaces(this decimal n)
-        {
+        public static int GetDecimalPlaces(this decimal n) {
             n = Math.Abs(n); //make sure it is positive.
             n -= (int)n;     //remove the integer part of the number.
             var decimalPlaces = 0;
-            while (n > 0)
-            {
+            while (n > 0) {
                 decimalPlaces++;
                 n *= 10;
                 n -= (int)n;
@@ -67,10 +62,38 @@ namespace GCodeClean.Processing
         /// </summary>
         /// <param name="context"></param>
         /// <returns></returns>
-        public static string GetLengthUnits(this Context context)
-        {
+        public static string GetLengthUnits(this Context context) {
             var unitsCommand = context.GetModalState(ModalGroup.ModalUnits);
             return unitsCommand == null || unitsCommand.ToString() == "G20" ? "inch" : "mm";
+        }
+
+        /// <summary>
+        /// Get the current number of the tool in use
+        /// </summary>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public static string GetToolNumber(this Context context) {
+            // What was the last tool selection before the tool change?
+            var toolNumber = "notset";
+            var toolNumberPending = "";
+            foreach (var (line, _) in context.Lines) {
+                var lineToolSelectTokens = line.Tokens.Where(t => t.Code == Letter.selectTool);
+                var lineToolChangeTokens = line.Tokens.Intersect(ModalGroup.ModalToolChange);
+                var hasToolSelect = lineToolSelectTokens.Any();
+                if (!hasToolSelect && toolNumberPending == "") {
+                    continue;
+                }
+                if (hasToolSelect) {
+                    toolNumberPending = lineToolSelectTokens.Last().Number.ToString();
+                }
+                if (!lineToolChangeTokens.Any()) {
+                    continue;
+                }
+                toolNumber = toolNumberPending;
+                toolNumberPending = "";
+            }
+
+            return toolNumber;
         }
 
         /// <summary>
@@ -107,21 +130,15 @@ namespace GCodeClean.Processing
         public static decimal ConstrainTolerance(this decimal tolerance, string lengthUnits = "mm") {
             // Re-tweak tolerance to allow for lengthUnits
             if (lengthUnits == "mm") {
-                if (tolerance < 0.001M)
-                {
+                if (tolerance < 0.001M) {
                     tolerance = 0.001M;
-                }
-                else if (tolerance > 0.01M)
-                {
+                } else if (tolerance > 0.01M) {
                     tolerance = 0.01M;
                 }
             } else {
-                if (tolerance < 0.00005M)
-                {
+                if (tolerance < 0.00005M) {
                     tolerance = 0.00005M;
-                }
-                else if (tolerance > 0.2M)
-                {
+                } else if (tolerance > 0.2M) {
                     tolerance = 0.2M;
                 }
             }
@@ -137,47 +154,39 @@ namespace GCodeClean.Processing
         /// <param name="c"></param>
         /// <param name="coordPlane"></param>
         /// <returns></returns>
-        public static (Coord center, decimal radius, bool isClockwise) FindCircle(Coord a, Coord b, Coord c, string coordPlane)
-        {
+        public static (Coord center, decimal radius, bool isClockwise) FindCircle(Coord a, Coord b, Coord c, string coordPlane) {
             var center = new Coord();
             var radius = 0M;
             var isClockwise = false;
 
-            var ortho = coordPlane switch
-            {
+            var ortho = coordPlane switch {
                 "G17" => CoordSet.Z,
                 "G18" => CoordSet.Y,
                 "G19" => CoordSet.X,
                 _ => CoordSet.None,
             };
-            if (ortho == CoordSet.None)
-            {
+            if (ortho == CoordSet.None) {
                 ortho = Coord.Ortho([a, b, c]);
             }
-            if (ortho == CoordSet.None)
-            {
+            if (ortho == CoordSet.None) {
                 return (center, radius, isClockwise);
             }
 
             // Determine which coordinate we're dropping
             var dropCoord = CoordSet.Z;
-            if ((ortho & CoordSet.X) == CoordSet.X)
-            {
+            if ((ortho & CoordSet.X) == CoordSet.X) {
                 dropCoord = CoordSet.X;
             }
-            else if ((ortho & CoordSet.Y) == CoordSet.Y)
-            {
+            else if ((ortho & CoordSet.Y) == CoordSet.Y) {
                 dropCoord = CoordSet.Y;
             }
-            var droppedCoordOK = dropCoord switch
-            {
+            var droppedCoordOK = dropCoord switch {
                 CoordSet.Z => a.Z == b.Z && b.Z == c.Z,
                 CoordSet.Y => a.Y == b.Y && b.Y == c.Y,
                 CoordSet.X => a.X == b.X && b.X == c.X,
                 _ => false,
             };
-            if (!droppedCoordOK)
-            {
+            if (!droppedCoordOK) {
                 return (center, radius, isClockwise);
             }
 
@@ -219,8 +228,7 @@ namespace GCodeClean.Processing
                     + syBA * yAC)
                     / (2 * (xCA * yAB - xBA * yAC));
 
-            if (double.IsInfinity(f) || double.IsInfinity(g))
-            {
+            if (double.IsInfinity(f) || double.IsInfinity(g)) {
                 // lines are parallel / co-linear
                 return (center, radius, isClockwise);
             }
@@ -236,8 +244,7 @@ namespace GCodeClean.Processing
             var sqrOfR = h * h + k * k - circ;
 
             radius = (decimal)Math.Round(Math.Sqrt(sqrOfR), 5);
-            center = coordPlane switch
-            {
+            center = coordPlane switch {
                 "G17" => new Coord((decimal)h, (decimal)k, b.Z),
                 "G18" => new Coord((decimal)h, b.Y, (decimal)k),
                 "G19" => new Coord(b.X, (decimal)h, (decimal)k),
@@ -249,8 +256,7 @@ namespace GCodeClean.Processing
             return (center, radius, isClockwise);
         }
 
-        public static int DirectionOfPoint(PointF pA, PointF pB, PointF pC)
-        {
+        public static int DirectionOfPoint(PointF pA, PointF pB, PointF pC) {
             // subtracting co-ordinates of point A  
             // from B and P, to make A as origin
             pB.X -= pA.X;
@@ -262,58 +268,46 @@ namespace GCodeClean.Processing
             var crossProduct = pB.X * pC.Y - pB.Y * pC.X;
 
             // return the sign of the cross product 
-            if (crossProduct > 0)
-            {
+            if (crossProduct > 0) {
                 return 1;
             }
-            if (crossProduct < 0)
-            {
+            if (crossProduct < 0) {
                 return -1;
             }
             return 0;
         }
 
-        public static List<Coord> FindIntersections(Coord cA, Coord cB, decimal radius, string coordPlane)
-        {
+        public static List<Coord> FindIntersections(Coord cA, Coord cB, decimal radius, string coordPlane) {
             var intersections = new List<Coord>();
 
             // We only calculate a circle through one orthogonal plane,
             // therefore at least one of the dimensions must be the same for both coords
-            var ortho = coordPlane switch
-            {
+            var ortho = coordPlane switch {
                 "G17" => CoordSet.Z,
                 "G18" => CoordSet.Y,
                 "G19" => CoordSet.X,
                 _ => CoordSet.None,
             };
-            if (ortho == CoordSet.None)
-            {
-                ortho = Coord.Ortho(new List<Coord> { cA, cB });
+            if (ortho == CoordSet.None) {
+                ortho = Coord.Ortho([cA, cB]);
             }
-            if (ortho == CoordSet.None)
-            {
+            if (ortho == CoordSet.None) {
                 return intersections;
             }
 
             // Determine which coordinate we're dropping
             var dropCoord = CoordSet.Z;
-            if ((ortho & CoordSet.X) == CoordSet.X)
-            {
+            if ((ortho & CoordSet.X) == CoordSet.X) {
                 dropCoord = CoordSet.X;
-            }
-            else if ((ortho & CoordSet.Y) == CoordSet.Y)
-            {
+            } else if ((ortho & CoordSet.Y) == CoordSet.Y) {
                 dropCoord = CoordSet.Y;
             }
-            var droppedCoordOK = dropCoord switch
-            {
+            var droppedCoordOK = dropCoord switch {
                 CoordSet.Z => cA.Z == cB.Z,
                 CoordSet.Y => cA.Y == cB.Y,
-                CoordSet.X => cA.X == cB.X,
-                _ => false,
+                _ => cA.X == cB.X, // CoordSet.X
             };
-            if (!droppedCoordOK)
-            {
+            if (!droppedCoordOK) {
                 return intersections;
             }
 
@@ -328,8 +322,7 @@ namespace GCodeClean.Processing
 
             // See how many solutions there are.
             var tolerance = 0.000000001;
-            if (dist > (double)(radius * 2) || Math.Abs(dist) < tolerance)
-            {
+            if (dist > (double)(radius * 2) || Math.Abs(dist) < tolerance) {
                 // No solutions, the circles are too far apart or coincide, must be malformed
                 return intersections;
             }
@@ -347,8 +340,7 @@ namespace GCodeClean.Processing
                 (float)(pC.Y - h * (pB.X - pA.X) / dist)), dropCoord));
 
             // Do we have 1 or 2 solutions.
-            if (dist < (double)(radius * 2))
-            {
+            if (dist < (double)(radius * 2)) {
                 intersections.Add(new Coord(new PointF(
                 (float)(pC.X - h * (pB.Y - pA.Y) / dist),
                 (float)(pC.Y + h * (pB.X - pA.X) / dist)), dropCoord));

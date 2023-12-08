@@ -20,6 +20,7 @@ namespace GCodeClean.Structure
 
                 IsValid = true;
                 IsFileTerminator = false;
+                IsBlockDelete = false;
                 IsComment = false;
                 IsCommand = false;
                 IsCode = false;
@@ -36,16 +37,15 @@ namespace GCodeClean.Structure
                 var token = _source.Trim();
                 Code = token[0];
                 if (token.Length == 1) {
-                    IsValid = IsFileTerminator;
+                    IsValid = IsFileTerminator || IsBlockDelete;
                     return;
                 }
 
-                if (Code == ';' || token.EndsWith(')')) {
+                if (Code == Letter.commentSemi || token.EndsWith(Letter.commentEnd)) {
                     IsValid = IsComment;
                     return;
                 }
 
-                decimal number;
                 if (IsParameterSetting) {
                     var parameterParts = token[1..].Split('=', StringSplitOptions.RemoveEmptyEntries);
                     if (parameterParts.Length != 2) {
@@ -58,7 +58,7 @@ namespace GCodeClean.Structure
                         return;
                     }
 
-                    if (!decimal.TryParse(parameterParts[1], out number)) {
+                    if (!decimal.TryParse(parameterParts[1], out _)) {
                         IsValid = false;
                         return;
                     }
@@ -66,7 +66,7 @@ namespace GCodeClean.Structure
                     Parameter = parameter;
                 }
 
-                if (!decimal.TryParse(token[1..], out number)) {
+                if (!decimal.TryParse(token[1..], out var number)) {
                     IsValid = false;
                     return;
                 }
@@ -81,6 +81,7 @@ namespace GCodeClean.Structure
                 _code = value;
 
                 IsFileTerminator = false;
+                IsBlockDelete = false;
                 IsComment = false;
                 IsCommand = false;
                 IsCode = false;
@@ -89,22 +90,24 @@ namespace GCodeClean.Structure
                 IsParameterSetting = false;
                 IsOther = false;
 
-                if (FileTerminators.Contains(_code)) {
+                if (Letter.FileTerminators.Contains(_code)) {
                     IsFileTerminator = true;
-                } else if (Comments.Contains(_code)) {
+                } else if (Letter.BlockDeletes.Contains(_code)) {
+                    IsBlockDelete = true;
+                } else if (Letter.Comments.Contains(_code)) {
                     IsComment = true;
-                } else if (Array.Exists(Commands, c => c == _code)) {
+                } else if (Array.Exists(Letter.Commands, c => c == _code)) {
                     IsCommand = true;
-                } else if (Array.Exists(Codes, c => c == _code)) {
+                } else if (Array.Exists(Letter.Codes, c => c == _code)) {
                     IsCode = true;
-                } else if (Array.Exists(Arguments, a => a == _code)) {
+                } else if (Array.Exists(Letter.Arguments, a => a == _code)) {
                     IsArgument = true;
-                } else if (Array.Exists(LineNumbers, l => l == _code)) {
+                } else if (Array.Exists(Letter.LineNumbers, l => l == _code)) {
                     IsLineNumber = true;
-                } else if (Array.Exists(Parameters, p => p == _code)) {
+                } else if (Array.Exists(Letter.Parameters, p => p == _code)) {
                     // Parameter Setting is technically a command, however we handle it separately from commands
                     IsParameterSetting = true;
-                } else if (Array.Exists(Other, a => a == _code)) {
+                } else if (Array.Exists(Letter.Other, a => a == _code)) {
                     IsOther = true;
                 }
             }
@@ -115,19 +118,19 @@ namespace GCodeClean.Structure
             set {
                 _number = value;
 
-                if (IsFileTerminator || IsComment) {
+                if (IsFileTerminator || IsBlockDelete || IsComment) {
                     IsValid = false;
                     return;
                 }
 
                 if (IsCommand) {
-                    if (Code == 'G') {
-                        IsValid = _number.HasValue && GCodes.Contains(_number.Value);
+                    if (Code == Letter.gCommand) {
+                        IsValid = _number.HasValue && Letter.GCodes.Contains(_number.Value);
                         return;
                     }
 
-                    if (Code == 'M') {
-                        IsValid = _number.HasValue && MCodes.Contains(_number.Value);
+                    if (Code == Letter.mCommand) {
+                        IsValid = _number.HasValue && Letter.MCodes.Contains(_number.Value);
                         return;
                     }
 
@@ -145,7 +148,7 @@ namespace GCodeClean.Structure
             set {
                 _parameter = value;
 
-                if (IsFileTerminator || IsComment) {
+                if (IsFileTerminator || IsBlockDelete || IsComment) {
                     IsValid = false;
                     return;
                 }
@@ -157,6 +160,8 @@ namespace GCodeClean.Structure
         }
 
         public bool IsFileTerminator { get; private set; }
+
+        public bool IsBlockDelete { get; private set; }
 
         public bool IsCommand { get; private set; }
 
@@ -173,37 +178,6 @@ namespace GCodeClean.Structure
         public bool IsOther { get; private set; }
 
         public bool IsValid { get; private set; }
-
-        public static readonly char[] FileTerminators = {'%'};
-
-        public static readonly char[] Comments = {'(', ';'};
-
-        public static readonly char[] Commands = {'G', 'M'};
-
-        public static readonly char[] Codes = {'F', 'S', 'T'};
-
-        public static readonly char[] Arguments = {'A', 'B', 'C', 'D', 'H', 'I', 'J', 'K', 'L', 'P', 'R', 'X', 'Y', 'Z'};
-
-        public static readonly char[] LineNumbers = { 'N' };
-
-        /// <summary>
-        /// Parameters are identified by a Hash followed by an integer (from 1 to 5399)
-        /// Parameters may be set (a command) or may be used as a value (after a command, code or argument)
-        /// </summary>
-        public static readonly char[] Parameters = { '#' };
-
-        public static readonly char[] Other = {'E', 'O', 'Q', 'U', 'V'};
-
-        public static readonly decimal[] GCodes = {
-            0, 1, 2, 3, 4, 10, 17, 18, 19, 20, 21, 28, 30, 38.2M,
-            40, 41, 42, 43, 49, 53, 54, 55, 56, 57, 58, 59, 59.1M, 59.2M, 59.3M,
-            61, 61.1M, 64, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89,
-            90, 91, 92, 92.1M, 92.2M, 92.3M, 93, 94, 98, 99
-        };
-
-        public static readonly decimal[] MCodes = {
-            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 30, 48, 49, 60
-        };
 
         /// <summary>
         /// Creates a token from the supplied string
@@ -222,6 +196,17 @@ namespace GCodeClean.Structure
             _code = token.Code;
             _parameter = token.Parameter;
             _number = token.Number;
+
+            IsValid = token.IsValid;
+            IsFileTerminator = token.IsFileTerminator;
+            IsBlockDelete = token.IsBlockDelete;
+            IsComment = token.IsComment;
+            IsCommand = token.IsCommand;
+            IsCode = token.IsCode;
+            IsArgument = token.IsArgument;
+            IsLineNumber = token.IsLineNumber;
+            IsParameterSetting = token.IsParameterSetting;
+            IsOther = token.IsOther;
         }
 
         /// <summary>
@@ -253,7 +238,7 @@ namespace GCodeClean.Structure
                 return a.Source == b.Source;
             }
 
-            if (a.IsFileTerminator) {
+            if (a.IsFileTerminator || a.IsBlockDelete) {
                 return true;
             }
 
@@ -270,7 +255,7 @@ namespace GCodeClean.Structure
         }
 
         public override int GetHashCode() {
-            if (IsComment || IsFileTerminator) {
+            if (IsComment || IsFileTerminator || IsBlockDelete) {
                 return Source.GetHashCode();
             }
 
@@ -278,7 +263,7 @@ namespace GCodeClean.Structure
         }
 
         public override string ToString() {
-            if (IsFileTerminator || IsComment || !IsValid) {
+            if (IsFileTerminator || IsBlockDelete || IsComment || !IsValid) {
                 return Source;
             }
 
