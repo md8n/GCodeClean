@@ -17,9 +17,10 @@ namespace GCodeCleanCLI.Split
         public static string DetermineOutputFoldername(SplitSettings options) {
             var inputFile = options.Filename;
 
+            var outputFolderPath = Path.GetDirectoryName(inputFile);
             var outputFolder = Path.GetFileNameWithoutExtension(inputFile);
 
-            return outputFolder;
+            return Path.Join(outputFolderPath, outputFolder);
         }
 
         public override int Execute([NotNull] CommandContext context, [NotNull] SplitSettings settings) {
