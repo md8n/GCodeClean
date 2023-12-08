@@ -531,7 +531,7 @@ namespace GCodeClean.Processing {
                             travellingLine = new Line(line);
                             travellingLine.ReplaceToken(new Token("G1"), new Token("G0"));
 
-                            line.AppendToken(new Token($"(||Travelling||{blockIx++}||>>{entryLine}>>{exitLine}>>||)"));
+                            line.AppendToken(new Token($"(||Travelling||{context.GetToolNumber()}||{blockIx++}||>>{entryLine}>>{exitLine}>>||)"));
                             entryLine = new Line();
                             entrySet = false;
                         }

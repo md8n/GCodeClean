@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 
 using GCodeClean.Structure;
 
@@ -64,6 +65,35 @@ namespace GCodeClean.Processing
         public static string GetLengthUnits(this Context context) {
             var unitsCommand = context.GetModalState(ModalGroup.ModalUnits);
             return unitsCommand == null || unitsCommand.ToString() == "G20" ? "inch" : "mm";
+        }
+
+        /// <summary>
+        /// Get the current number of the tool in use
+        /// </summary>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public static string GetToolNumber(this Context context) {
+            // What was the last tool selection before the tool change?
+            var toolNumber = "notset";
+            var toolNumberPending = "";
+            foreach (var (line, _) in context.Lines) {
+                var lineToolSelectTokens = line.Tokens.Where(t => t.Code == Letter.selectTool);
+                var lineToolChangeTokens = line.Tokens.Intersect(ModalGroup.ModalToolChange);
+                var hasToolSelect = lineToolSelectTokens.Any();
+                if (!hasToolSelect && toolNumberPending == "") {
+                    continue;
+                }
+                if (hasToolSelect) {
+                    toolNumberPending = lineToolSelectTokens.Last().Number.ToString();
+                }
+                if (!lineToolChangeTokens.Any()) {
+                    continue;
+                }
+                toolNumber = toolNumberPending;
+                toolNumberPending = "";
+            }
+
+            return toolNumber;
         }
 
         /// <summary>

@@ -20,18 +20,19 @@ namespace GCodeClean.Processing
         /// </summary>
         /// <param name="inputLines"></param>
         /// <returns></returns>
-        public static List<(int id, Coord start, Coord end)> GetNodes(this string inputFolder) {
+        public static List<(string tool, int id, Coord start, Coord end)> GetNodes(this string inputFolder) {
             var fileEntries = Directory.GetFiles(inputFolder);
             Array.Sort(fileEntries);
-            List<(int id, Coord start, Coord end)> nodes = [];
+            List<(string tool, int id, Coord start, Coord end)> nodes = [];
             foreach (var filePath in fileEntries) {
                 string[] fileNameParts = Path.GetFileNameWithoutExtension(filePath).Split(separator);
-                var id = int.Parse(fileNameParts[0]);
-                var startCoords = fileNameParts[1].Replace("X", "").Split("Y").Select(c => decimal.Parse(c)).ToArray();
-                var endCoords = fileNameParts[2].Replace("X", "").Split("Y").Select(c => decimal.Parse(c)).ToArray();
+                var tool = fileNameParts[0];
+                var id = int.Parse(fileNameParts[1]);
+                var startCoords = fileNameParts[2].Replace("X", "").Split("Y").Select(c => decimal.Parse(c)).ToArray();
+                var endCoords = fileNameParts[3].Replace("X", "").Split("Y").Select(c => decimal.Parse(c)).ToArray();
                 var start = new Coord(startCoords[0], startCoords[1]);
                 var end = new Coord(endCoords[0], endCoords[1]);
-                nodes.Add((id, start, end));
+                nodes.Add((tool, id, start, end));
             }
 
             return nodes;
@@ -46,8 +47,8 @@ namespace GCodeClean.Processing
             var nodes = GetNodes(inputFolder);
             List<(int idA, int idB)> primaryPairs = [];
 
-            foreach (var (id, start, end) in nodes) {
-                var matchingNodes = nodes.FindAll(n => n.start.X == end.X && n.start.Y == end.Y);
+            foreach (var (tool, id, start, end) in nodes) {
+                var matchingNodes = nodes.FindAll(n => n.tool == tool && n.id != id && n.start.X == end.X && n.start.Y == end.Y);
                 if (matchingNodes.Count == 1) {
                     primaryPairs.Add((id, matchingNodes[0].id));
                 }

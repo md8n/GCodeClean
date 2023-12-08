@@ -16,7 +16,7 @@ namespace GCodeClean.Processing
         /// <summary>
         /// Finds GCodeClean's special 'Travelling' comments
         /// </summary>
-        [GeneratedRegex("\\(\\|{2}Travelling\\|{2}\\d+\\|{2}>>G\\d+.*>>G\\d+.*>>\\|{2}\\)$")]
+        [GeneratedRegex("\\(\\|{2}Travelling\\|{2}.*\\|{2}\\d+\\|{2}>>G\\d+.*>>G\\d+.*>>\\|{2}\\)$")]
         private static partial Regex RegexTravellingPattern();
 
         /// <summary>
@@ -96,7 +96,7 @@ namespace GCodeClean.Processing
             }
             Directory.CreateDirectory(outputFolder);
 
-            var (tLId, _, _) = travellingComments[^1].ParseTravelling();
+            var (_, tLId, _, _) = travellingComments[^1].ParseTravelling();
             var idFtm = $"D{tLId.ToString().Length}";
 
             string firstLine = "";
@@ -111,8 +111,8 @@ namespace GCodeClean.Processing
             }
 
             foreach (var travelling in travellingComments) {
-                var (id, start, end) = travelling.ParseTravelling();
-                var filename = $"{outputFolder}{Path.DirectorySeparatorChar}{id.ToString(idFtm)}_{start.ToXYCoord()}_{end.ToXYCoord()}_gcc.nc";
+                var (tool, id, start, end) = travelling.ParseTravelling();
+                var filename = $"{outputFolder}{Path.DirectorySeparatorChar}{tool}_{id.ToString(idFtm)}_{start.ToXYCoord()}_{end.ToXYCoord()}_gcc.nc";
                 AnsiConsole.MarkupLine($"Filename: [bold yellow]{filename}[/]");
                 File.WriteAllLines(filename, preambleLines);
                 if (firstLine != "") {
@@ -130,39 +130,15 @@ namespace GCodeClean.Processing
             }
         }
 
-        private static (int id, Line start, Line end) ParseTravelling(this string travelling) {
+        private static (string tool, int id, Line start, Line end) ParseTravelling(this string travelling) {
             var tDetails = travelling.Replace("(||Travelling||", "").Replace("||)", "").Split("||");
-            var tId = Convert.ToInt32(tDetails[0]);
-            var tSE = tDetails[1].Split(">>", StringSplitOptions.RemoveEmptyEntries);
+            var tTool = tDetails[0];
+            var tId = Convert.ToInt32(tDetails[1]);
+            var tSE = tDetails[2].Split(">>", StringSplitOptions.RemoveEmptyEntries);
             var lStart = new Line(tSE[0]);
             var lEnd = new Line(tSE[1]);
 
-            return (tId, lStart, lEnd);
-        }
-
-        public static List<(int id, Line start, Line end)> SplitFileFirstPhase(this IEnumerable<string> inputLines) {
-            // Scan through the file for 'travelling' comments and build a table out of them
-            // if there are none, return with a relevant error message
-            List<(int id, Line start, Line end)> cuttingPaths = [];
-
-            foreach (var line in inputLines) {
-                var match = RegexTravellingPattern().Match(line);
-                if (!match.Success) {
-                    continue;
-                }
-
-                var travelling = match.Value;
-                var tDetails = travelling.Replace("(||Travelling||", "").Replace("||)", "").Split("||");
-                var tId = Convert.ToInt32(tDetails[0]);
-                var tSE = tDetails[1].Split(">>", StringSplitOptions.RemoveEmptyEntries);
-                var lStart = new Line(tSE[0]);
-                var lEnd = new Line(tSE[1]);
-                AnsiConsole.MarkupLine($"Output lines: [bold yellow]{tId}: start '{lStart}' end '{lEnd}'[/]");
-
-                cuttingPaths.Add((tId, lStart, lEnd));
-            }
-
-            return cuttingPaths;
+            return (tTool, tId, lStart, lEnd);
         }
     }
 }

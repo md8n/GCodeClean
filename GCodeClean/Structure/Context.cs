@@ -78,6 +78,19 @@ namespace GCodeClean.Structure
             return null;
         }
 
+        public Token GetModalState(char code) {
+            foreach (var (line, _) in Lines) {
+                var lineTokens = line.Tokens.Where(t => t.Code == code);
+                if (!lineTokens.Any()) {
+                    continue;
+                }
+
+                return lineTokens.Last();
+            }
+
+            return null;
+        }
+
         /// <summary>
         /// Output all lines flagged as not yet output (isOutput == false)
         /// </summary>
