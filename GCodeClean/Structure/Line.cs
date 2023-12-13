@@ -1,6 +1,7 @@
 // Copyright (c) 2020-2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -8,28 +9,21 @@ using GCodeClean.Processing;
 
 namespace GCodeClean.Structure
 {
-    public class Line {
+    public sealed class Line : IEquatable<Line> {
         private string _source;
 
         private List<Token> _tokens;
 
         /// <summary>
-        /// Get/Set the current list of all Tokens, get includes any line number token
+        /// Get/Set the current list of all Tokens, get includes any line number token.
+        /// Will reset the statuses for this line
         /// </summary>
         public List<Token> AllTokens {
             get {
-                // Always manipulate the returned list of tokens to put any line number first
-                // Even though we are doing this below in the set
-                var lineNumberToken = _tokens.Where(t => t.IsLineNumber).Take(1);
-                var allOtherTokens = _tokens.Where(t => !t.IsLineNumber);
-#pragma warning disable S2365 // Properties should not make collection or array copies
-                return lineNumberToken.Concat(allOtherTokens).ToList();
-#pragma warning restore S2365 // Properties should not make collection or array copies
+                return _tokens;
             }
             set {
-                var lineNumberToken = value.Where(t => t.IsLineNumber).Take(1);
-                var allOtherTokens = value.Where(t => !t.IsLineNumber);
-                _tokens = lineNumberToken.Concat(allOtherTokens).ToList();
+                SetTokens(value);
             }
         }
 
@@ -44,44 +38,70 @@ namespace GCodeClean.Structure
             }
         }
 
+        /// <summary>
+        /// Set the private member _tokens to the supplied value, ensuring that the order of tokens is correct
+        /// Then set the status values
+        /// </summary>
+        /// <param name="tokens"></param>
+        private void SetTokens(List<Token> tokens) {
+            _tokens = tokens;
+            SetTokens();
+        }
+
+        /// <summary>
+        /// Set the private member _tokens, ensuring that the order of tokens is correct
+        /// Then set the status values
+        /// </summary>
+        private void SetTokens() {
+            var blockDeleteToken = _tokens.Where(t => t.IsBlockDelete).Take(1);
+            var lineNumberToken = _tokens.Where(t => t.IsLineNumber).Take(1);
+            var allCommentTokens = _tokens.Where(t => t.IsComment);
+            var allOtherTokens = _tokens.Where(t => !(t.IsLineNumber || t.IsBlockDelete || t.IsComment));
+
+            _tokens = [.. blockDeleteToken, .. lineNumberToken, .. allOtherTokens, .. allCommentTokens];
+
+            SetStatuses();
+        }
+
+        /// <summary>
+        /// Sets all of the status values from the current list of tokens
+        /// </summary>
+        private void SetStatuses() {
+            IsFileTerminator = false;
+            HasBlockDelete = false;
+            HasLineNumber = false;
+
+            IsEmptyOrWhiteSpace = _tokens.TrueForAll(t => t.Source.Trim().Length == 0);
+            if (IsEmptyOrWhiteSpace) {
+                IsValid = true;
+                return;
+            }
+
+            IsValid = _tokens.TrueForAll(t => t.IsValid);
+
+            if (_tokens.Exists(t => t.IsFileTerminator)) {
+                // Check the file terminator character is the only thing on the line
+                IsFileTerminator = true;
+                IsValid = Tokens.Count == 1;
+                return;
+            }
+
+            HasBlockDelete = _tokens.Exists(t => t.IsBlockDelete);
+            if (HasBlockDelete && !_tokens[0].IsBlockDelete) {
+                // Assuming SetTokens has been called this will never be invoked, however ...
+                IsValid = false;
+            }
+
+            HasLineNumber = _tokens.Exists(t => t.IsLineNumber);
+        }
+
         public string Source {
             get => _source;
             set {
                 _source = value;
-
-                IsValid = true;
-                IsFileTerminator = false;
-                HasBlockDelete = false;
-                HasLineNumber = false;
-
                 _tokens ??= [];
 
-                if (string.IsNullOrWhiteSpace(_source)) {
-                    IsEmptyOrWhiteSpace = true;
-                    return;
-                }
-
-                AllTokens = _source.Tokenise().Select(s => new Token(s)).ToList();
-
-                if (Tokens.Exists(t => t.IsFileTerminator)) {
-                    // Check the file terminator character is the only thing on the line
-                    IsFileTerminator = true;
-                    IsValid = Tokens.Count == 1;
-                    return;
-                }
-
-                if (Tokens.Exists(t => t.IsBlockDelete)) {
-                    // Check the block delete character is the first character on the line
-                    HasBlockDelete = true;
-                    IsValid = Tokens[0].IsBlockDelete;
-                }
-
-                if (!AllTokens.Exists(t => t.IsLineNumber)) {
-                    return;
-                }
-
-                // We have a line number
-                HasLineNumber = true;
+                SetTokens(_source.Tokenise().Select(s => new Token(s)).ToList());
             }
         }
 
@@ -95,23 +115,23 @@ namespace GCodeClean.Structure
 
         public bool HasLineNumber { get; private set; }
 
-        public bool HasTokens(char[] codes) => AllTokens.Exists(t => codes.Contains(t.Code));
+        public bool HasTokens(char[] codes) => _tokens.Exists(t => codes.Contains(t.Code));
 
         public bool HasTokens(IEnumerable<string> tokens) {
             var parsedTokens = tokens.Select(t => new Token(t));
             return HasTokens(parsedTokens);
         }
 
-        public bool HasTokens(IEnumerable<Token> tokens) => AllTokens.Exists(tokens.Contains);
+        public bool HasTokens(IEnumerable<Token> tokens) => _tokens.Exists(tokens.Contains);
 
-        public bool HasToken(char code) => AllTokens.Exists(t => t.Code == code);
+        public bool HasToken(char code) => _tokens.Exists(t => t.Code == code);
 
         public bool HasToken(string token) {
             var parsedToken = new Token(token);
             return HasToken(parsedToken);
         }
 
-        public bool HasToken(Token token) => AllTokens.Exists(t => t == token);
+        public bool HasToken(Token token) => _tokens.Exists(t => t == token);
 
         /// <summary>
         /// Roughly equivalent to `IsNullOrWhiteSpace` this returns true if there are:
@@ -120,7 +140,7 @@ namespace GCodeClean.Structure
         /// * only one or more comments
         /// </summary>
         public bool IsNotCommandCodeOrArguments() {
-            return AllTokens.Count == 0 || AllTokens.TrueForAll(t => t.IsFileTerminator) || AllTokens.TrueForAll(t => t.IsComment);
+            return _tokens.Count == 0 || _tokens.TrueForAll(t => t.IsFileTerminator) || _tokens.TrueForAll(t => t.IsComment);
         }
 
         /// <summary>
@@ -165,13 +185,7 @@ namespace GCodeClean.Structure
         public Line(Line line)
         {
             _source = line.ToString();
-            _tokens = line.AllTokens.Select(t => new Token(t)).ToList();
-
-            IsValid = line.IsValid;
-            IsFileTerminator = line.IsFileTerminator;
-            IsEmptyOrWhiteSpace = line.IsEmptyOrWhiteSpace;
-            HasBlockDelete = line.HasBlockDelete;
-            HasLineNumber = line.HasLineNumber;
+            AllTokens = line.AllTokens.Select(t => new Token(t)).ToList();
         }
 
         /// <summary>
@@ -182,12 +196,7 @@ namespace GCodeClean.Structure
         {
             _source = token.ToString();
             _tokens = [new Token(token)];
-
-            IsValid = _tokens[0].IsValid;
-            IsFileTerminator = _tokens[0].IsFileTerminator;
-            IsEmptyOrWhiteSpace = _tokens[0].Source.Trim().Length == 0;
-            HasBlockDelete = _tokens[0].IsBlockDelete;
-            HasLineNumber = _tokens[0].IsLineNumber;
+            SetStatuses();
         }
 
         /// <summary>
@@ -197,16 +206,7 @@ namespace GCodeClean.Structure
         public Line(IEnumerable<Token> tokens)
         {
             _source = string.Join(' ', tokens);
-            _tokens = tokens.Select(t => new Token(t)).ToList();
-
-            IsValid = _tokens.TrueForAll(t => t.IsValid);
-            IsFileTerminator = _tokens[0].IsFileTerminator;
-            IsEmptyOrWhiteSpace = _tokens.TrueForAll(t => t.Source.Trim().Length == 0);
-            HasBlockDelete = _tokens.Exists(t => t.IsBlockDelete);
-            if (HasBlockDelete && !_tokens[0].IsBlockDelete) {
-                IsValid = false;
-            }
-            HasLineNumber = _tokens.Exists(t => t.IsLineNumber);
+            SetTokens(tokens.Select(t => new Token(t)).ToList());
         }
         #endregion
 
@@ -218,21 +218,19 @@ namespace GCodeClean.Structure
         public void PrependToken(Token token)
         {
             _tokens.Insert(0, token);
-
-            // This little hack handles situations where we have an existing line number
-            // If the supplied token is a line number, then the existing line number will be eliminated
-            // If the supplied token is not a line number, then it will end up immediately after any line number
-            _tokens = AllTokens;
+            SetTokens();
         }
 
         public void AppendToken(Token token)
         {
             _tokens.Add(token);
+            SetTokens();
         }
 
         public void AppendTokens(IEnumerable<Token> tokens)
         {
             _tokens.AddRange(tokens);
+            SetTokens();
         }
 
         public List<Token> RemoveTokens(List<char> codes) {
@@ -246,6 +244,7 @@ namespace GCodeClean.Structure
                 removedTokens.Add(_tokens[ix]);
                 _tokens.RemoveAt(ix);
             }
+            SetTokens();
 
             return removedTokens;
         }
@@ -261,6 +260,7 @@ namespace GCodeClean.Structure
                 removedTokens.Add(_tokens[ix]);
                 _tokens.RemoveAt(ix);
             }
+            SetTokens();
 
             return removedTokens;
         }
@@ -276,6 +276,7 @@ namespace GCodeClean.Structure
                 removedTokens.Add(_tokens[ix]);
                 _tokens.RemoveAt(ix);
             }
+            SetTokens();
 
             return removedTokens;
         }
@@ -291,6 +292,7 @@ namespace GCodeClean.Structure
                 removedTokens.Add(_tokens[ix]);
                 _tokens.RemoveAt(ix);
             }
+            SetTokens();
 
             return removedTokens;
         }
@@ -307,6 +309,7 @@ namespace GCodeClean.Structure
                 _tokens.RemoveAt(ix);
                 _tokens.Insert(ix, replaceToken);
             }
+            SetTokens();
 
             return removedTokens;
         }
@@ -375,6 +378,32 @@ namespace GCodeClean.Structure
             return coords;
         }
 
+        public override bool Equals(object obj) => this.Equals(obj as Line);
+
+        /// <summary>
+        /// Compare this line and another for equality.
+        /// Note that line numbers are not included in the comparison
+        /// </summary>
+        /// <param name="line"></param>
+        /// <returns></returns>
+        public bool Equals(Line line) {
+            if (line is null) {
+                return false;
+            }
+
+            if (Object.ReferenceEquals(this, line)) {
+                return true;
+            }
+
+            if (Tokens.Count != line.Tokens.Count) {
+                return false;
+            }
+
+            return !line.Tokens.Where((t, ix) => Tokens[ix] != t).Any();
+        }
+
+        public override int GetHashCode() => Tokens.Select(t => t.GetHashCode()).GetHashCode();
+
         /// <summary>
         /// Compare two lines for equality.
         /// Note that line numbers are not included in the comparison
@@ -382,56 +411,27 @@ namespace GCodeClean.Structure
         /// <param name="a"></param>
         /// <param name="b"></param>
         /// <returns></returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Blocker Code Smell", "S3875:\"operator==\" should not be overloaded on reference types", Justification = "<Pending>")]
         public static bool operator ==(Line a, Line b) {
-            if (a is null || b is null) {
-                return a is null && b is null;
+            if (a is null) {
+                return b is null;
             }
 
-            if (a.Tokens.Count != b.Tokens.Count) {
-                return false;
-            }
-
-            return !b.Tokens.Where((t, ix) => a.Tokens[ix] != t).Any();
+            return a.Equals(b);
         }
 
-        public static bool operator !=(Line a, Line b) {
-            return !(a == b);
-        }
-
-        public override bool Equals(object obj)
-        {
-            // Compare run-time types.
-            return GetType() == obj?.GetType() && this == (Line)obj;
-        }
-
-        public override int GetHashCode()
-        {
-            return Tokens.Select(t => t.GetHashCode()).GetHashCode();
-        }
+        public static bool operator !=(Line a, Line b) => !(a == b);
         
         /// <summary>
         /// Return the line as a formatted string, with any block delete and line number first and any comments last
         /// </summary>
         /// <returns></returns>
-        public override string ToString()
-        {
-            var allTokensOrdered = _tokens.Where(t => t.IsBlockDelete).Take(1)
-                .Concat(_tokens.Where(t => t.IsLineNumber))
-                .Concat(_tokens.Where(t => !(t.IsBlockDelete || t.IsLineNumber || t.IsComment)))
-                .Concat(_tokens.Where(t => t.IsComment));
-            return string.Join(" ", allTokensOrdered).Trim();
-        }
+        public override string ToString() => string.Join(" ", _tokens).Trim();
 
         /// <summary>
         /// Return the line as a formatted string, but without any line number or comment
         /// </summary>
         /// <returns></returns>
-        public string ToSimpleString() {
-            var allTokensOrdered = _tokens.Where(t => t.IsBlockDelete).Take(1)
-                .Concat(_tokens.Where(t => !(t.IsBlockDelete || t.IsLineNumber || t.IsComment)));
-            return string.Join(" ", allTokensOrdered).Trim();
-        }
+        public string ToSimpleString() => string.Join(" ", _tokens.Where(t => !(t.IsLineNumber || t.IsComment))).Trim();
 
         public string ToXYCoord() {
             var xyz = (Coord)this;

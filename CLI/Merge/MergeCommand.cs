@@ -3,7 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 
-using GCodeClean.Processing;
+using GCodeClean.Merge;
 
 using Spectre.Console;
 using Spectre.Console.Cli;

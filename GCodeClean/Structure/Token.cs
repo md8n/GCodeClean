@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace GCodeClean.Structure
 {
-    public class Token
+    public sealed class Token : IEquatable<Token>
     {
         private string _source;
         private char _code;
@@ -224,34 +224,31 @@ namespace GCodeClean.Structure
             return this;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Blocker Code Smell", "S3875:\"operator==\" should not be overloaded on reference types", Justification = "<Pending>")]
-        public static bool operator ==(Token a, Token b) {
-            if (a is null || b is null) {
-                return a is null && b is null;
-            }
+        public override bool Equals(object obj) => this.Equals(obj as Token);
 
-            if (a.Code != b.Code) {
+        public bool Equals(Token token) {
+            if (token is null) {
                 return false;
             }
 
-            if (a.IsComment) {
-                return a.Source == b.Source;
-            }
-
-            if (a.IsFileTerminator || a.IsBlockDelete) {
+            if (Object.ReferenceEquals(this, token)) {
                 return true;
             }
 
-            return a.Number == b.Number;
-        }
+            if (Code != token.Code) {
+                return false;
+            }
 
-        public static bool operator !=(Token a, Token b) {
-            return !(a == b);
-        }
+            if (IsComment) {
+                return Source == token.Source;
+            }
 
-        public override bool Equals(object obj) {
-            // Compare run-time types.
-            return GetType() == obj?.GetType() && this == (Token) obj;
+            if (IsFileTerminator || IsBlockDelete) {
+                // true because Code comparison is already true
+                return true;
+            }
+
+            return Number == token.Number;
         }
 
         public override int GetHashCode() {
@@ -260,6 +257,18 @@ namespace GCodeClean.Structure
             }
 
             return (Code, Number).GetHashCode();
+        }
+
+        public static bool operator ==(Token a, Token b) {
+            if (a is null) {
+                return b is null;
+            }
+
+            return a.Equals(b);
+        }
+
+        public static bool operator !=(Token a, Token b) {
+            return !(a == b);
         }
 
         public override string ToString() {
