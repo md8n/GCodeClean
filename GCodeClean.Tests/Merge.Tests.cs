@@ -70,6 +70,30 @@ namespace GCodeClean.Tests {
         }
 
         [Fact]
+        public void TestCheckForLoopsLateFork() {
+            List<Edge> sourceEdges = [
+                new Edge(14, 15, 25.1760346361376M, 10),
+                new Edge(15, 13, 0.219672483483936M, 10),
+                new Edge(4, 3, 1.79479943169146M, 10),
+                new Edge(17, 18, 14.2227357776203M, 10),
+                new Edge(18, 19, 25.4259792338466M, 10),
+                new Edge(6, 7, 22.3672135278403M, 10),
+                new Edge(7, 5, 39.6719488429797M, 10),
+                new Edge(9, 10, 28.7073332268952M, 10),
+                new Edge(12, 8, 30.127148371527M, 10),
+                new Edge(1, 2, 98.1337309440541M, 10),
+                new Edge(2, 3, 50.7771087105203M, 10),
+                new Edge(3, 4, 14.2090530296709M, 10),
+                new Edge(19, 18, 76.3650198061914M, 10),
+            ];
+            var pairedEdges = sourceEdges.CheckForLoops();
+
+            Assert.True(sourceEdges.Count == 13);
+            Assert.True(pairedEdges.Count == 13);
+            Assert.True(pairedEdges.Count(pe => pe.Weighting == 100) == 3);
+        }
+
+        [Fact]
         public void TestFilterEdgePairs() {
             List<Edge> sourceEdges = [
                 new Edge(3, 2, 35.630983048465M, 1),

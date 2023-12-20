@@ -1,12 +1,13 @@
 // Copyright (c) 2020-2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Xml.Linq;
-using GCodeClean.Processing;
+
 using Spectre.Console;
+
+using GCodeClean.Processing;
+
 
 namespace GCodeClean.Merge
 {
@@ -78,6 +79,10 @@ namespace GCodeClean.Merge
             return edges.Exists(e => e.Weighting < 100);
         }
 
+        public static List<Node> IntersectNodes(this List<Node> nodes, IEnumerable<Node> otherNodes) {
+            return nodes.IntersectBy(otherNodes.Select(on => on.Id), e => e.Id).ToList();
+        }
+
         public static List<Edge> IntersectEdges(this List<Edge> edges, IEnumerable<Edge> otherEdges) {
             return edges.IntersectBy(otherEdges.Select(oe => (oe.PrevId, oe.NextId)), e => (e.PrevId, e.NextId)).ToList();
         }
@@ -122,15 +127,16 @@ namespace GCodeClean.Merge
                     continue;
                 }
 
-                var longerNodeLists = nodeLists.Where(nl => nl.Count > 2).Select(nl => nl[1..^1]).ToList();
-                if (longerNodeLists.Count > 0) {
-                    var matchingNodeListFork = longerNodeLists.Find(nl => nl.Contains(edge.PrevId) || nl.Contains(edge.NextId));
-
-                    if (matchingNodeListFork != null) {
+                foreach (var nodeList in nodeLists) {
+                    if (nodeList[0..^1].Contains(edge.PrevId)) {
                         // Fork detected - within a nodelist
                         edge.Weighting = 100; // Do not use this
                         testEdges[ix] = edge;
-                        continue;
+                    }
+                    if (nodeList[1..].Contains(edge.NextId)) {
+                        // Fork detected - within a nodelist
+                        edge.Weighting = 100; // Do not use this
+                        testEdges[ix] = edge;
                     }
                 }
 
@@ -196,95 +202,6 @@ namespace GCodeClean.Merge
 
 
         /// <summary>
-        /// Divide the supplied list of edges to lists of continguous nodes (that aren't in original order)
-        /// and determine if that list of edges should be reverted to original order
-        /// </summary>
-        /// <param name="edges"></param>
-        /// <param name="originalNodes"></param>
-        /// <returns></returns>
-        public static List<Edge> DivideAndCheck(this List<Edge> edges, List<Node> originalNodes) {
-            // If we have a list of nodes that covers a continguous set of original nodes
-            // Then we'll compare to see if we've actually saved anything,
-            // and if not we'll revert to original
-            if (edges.IsShorter(originalNodes)) {
-                // Newer is better, so leave it alone
-                return edges;
-            }
-
-            var originalNodeIdsMatch = String.Join(",", originalNodes.Select(n => n.Id.ToString()));
-            // Take a simple binary chop through the list of edges, and shuffle it a bit until
-            // things match up
-            var newNodeIds = edges.GetNodeIds();
-            int chop = newNodeIds.Count / 2;
-
-            List<short> newFirstHalfIds;
-            List<short> newSecondHalfIds;
-            List<short> newFirstHalfIdsOrdered;
-            List<short> newSecondHalfIdsOrdered;
-            string newFirstHalf;
-            string newSecondHalf;
-
-            do {
-                newFirstHalfIds = newNodeIds[0..chop];
-                newSecondHalfIds = newNodeIds[chop..];
-
-                newFirstHalfIdsOrdered = newFirstHalfIds.OrderIds();
-                newSecondHalfIdsOrdered = newSecondHalfIds.OrderIds();
-                newFirstHalf = String.Join(",", newFirstHalfIdsOrdered.Select(n => n.ToString()));
-                newSecondHalf = String.Join(",", newSecondHalfIdsOrdered.Select(n => n.ToString()));
-
-                AnsiConsole.MarkupLine($"[bold yellow]{originalNodeIdsMatch}[/]");
-                AnsiConsole.MarkupLine($"[bold yellow]{newFirstHalf} / {newSecondHalf}[/]");
-
-                chop++;
-            } while (!originalNodeIdsMatch.Contains(newFirstHalf));
-
-            var newFirstHalfEdges = newFirstHalfIds[..^1].Select(fId => edges.First(e => e.PrevId == fId)).ToList();
-            var origFirstHalfNodes = newFirstHalfIdsOrdered.Select(fId => originalNodes.First(n => n.Id == fId)).ToList();
-
-            if (!newFirstHalfEdges.IsShorter(origFirstHalfNodes)) {
-                newFirstHalfEdges = newFirstHalfEdges.DivideAndCheck(origFirstHalfNodes);
-            }
-
-            var newSecondHalfEdges = newSecondHalfIds[..^1].Select(fId => edges.First(e => e.PrevId == fId)).ToList();
-            var origSecondHalfNodes = newSecondHalfIdsOrdered.Select(fId => originalNodes.First(n => n.Id == fId)).ToList();
-
-            if (!newSecondHalfEdges.IsShorter(origSecondHalfNodes)) {
-                newSecondHalfEdges = newSecondHalfEdges.DivideAndCheck(origSecondHalfNodes);
-            }
-
-            edges = [..newFirstHalfEdges,..newSecondHalfEdges];
-
-            return edges;
-
-
-            // var originalNodeIds = String.Join(",", originalNodes.Select(n => n.Id.ToString()));
-
-            // orignalNodeIds has a zero length when we do not want to do reversions
-            //if (originalNodeIds.Length > 0) {
-            //    for (var ix = 0; ix < nodeLists.Count; ix++) {
-            //        var nodeList = nodeLists[ix];
-            //        var orderedNodeList = nodeList.OrderBy(x => x).ToList();
-            //        var newNodeIds = String.Join(",", nodeList.Select(n => n.ToString()));
-            //        var newOrderedNodeIds = String.Join(",", orderedNodeList.Select(n => n.ToString()));
-            //        if (newNodeIds == newOrderedNodeIds) {
-            //            // Nothing to see here, move along
-            //            continue;
-            //        }
-
-            //        if (originalNodeIds.Contains(newOrderedNodeIds)) {
-            //            var currentDistance = originalNodes.TotalDistance(orderedNodeList);
-            //            var newDistance = originalNodes.TotalDistance(nodeList);
-            //            if (currentDistance < newDistance) {
-            //                // revert
-            //                nodeLists[ix] = orderedNodeList;
-            //            }
-            //        }
-            //    }
-            //}
-        }
-
-        /// <summary>
         /// Filter supplied edge pairs for anything with a weighting of 100 or more
         /// </summary>
         /// <param name="edges"></param>
@@ -317,8 +234,8 @@ namespace GCodeClean.Merge
         }
 
         public static (List<short> startIds, List<short> endIds) GetStartsAndEnds(this List<Edge> edges) {
-            var starts = edges.Select(pe => pe.PrevId).ToList();
-            var ends = edges.Select(pe => pe.NextId).ToList();
+            var starts = edges.Where(e => e.Weighting < 100).Select(pe => pe.PrevId).ToList();
+            var ends = edges.Where(e => e.Weighting < 100).Select(pe => pe.NextId).ToList();
             // Find the starting node Ids - one for each tool - if the tool is used for more than one cutting path
             return (starts.Where(si => !ends.Contains(si)).ToList(), ends.Where(ei => !starts.Contains(ei)).ToList());
         }
