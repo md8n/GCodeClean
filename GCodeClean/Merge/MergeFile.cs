@@ -77,27 +77,7 @@ namespace GCodeClean.Merge
             return travellingPairs;
         }
 
-        public static List<Edge> PairSeedingToInjPairings(this List<Edge> pairedEdges, List<Node> nodes, short weighting) {
-            AnsiConsole.MarkupLine($"Pass [bold yellow]{weighting}[/]: Peer Seeding");
-#pragma warning disable S2234 // Arguments should be passed in the same order as the method parameters
-            List<Edge> alreadyPaired = pairedEdges.Select(pe => new Edge(pe.NextId, pe.PrevId, pe.Distance, 100)).ToList();
-#pragma warning restore S2234 // Arguments should be passed in the same order as the method parameters
-            var unpairedPrevNodes = pairedEdges.UnpairedPrevNodes(nodes);
-            var unpairedNextNodes = pairedEdges.UnpairedNextNodes(nodes);
-            List<Edge> seedPairings = [.. alreadyPaired.BuildTravellingPairs(unpairedPrevNodes, unpairedNextNodes, weighting, 1).OrderBy(tp => tp.Distance)];
-            seedPairings = seedPairings.Where(sp => sp.Weighting < 100).ToList().FilterEdgePairsWithCurrentPairs(pairedEdges);
-
-            if (seedPairings.Count == 0) {
-                return pairedEdges;
-            }
-
-            if (pairedEdges.Count == 0) {
-                // No zero length pairings, so choose the shortest edge pairing that there is, as the seed
-                seedPairings = [seedPairings[0]];
-            }
-
-            var unpairedNodes = unpairedPrevNodes.IntersectNodes(unpairedNextNodes);
-
+        public static List<Edge> GetInjectablePairings(this List<Edge> pairedEdges, List<Edge> seedPairings, List<Node> nodes, List<Node> unpairedNodes) {
             List<Edge> injPairings = [];
             for (var ix = 0; ix < seedPairings.Count; ix++) {
                 var seedPairing = seedPairings[ix];
@@ -124,9 +104,11 @@ namespace GCodeClean.Merge
                 foreach (var ap in altPrevEdges) {
                     var an = altNextEdges.Find(an => an.PrevId == ap.NextId);
 #pragma warning disable CS8073
+#pragma warning disable S2589
                     if (an == null) {
                         continue;
                     }
+#pragma warning restore S2589
 #pragma warning restore CS8073
                     altInjEdges.Add((ap, an, ap.Distance + an.Distance));
                 }
@@ -134,7 +116,7 @@ namespace GCodeClean.Merge
                 var triplet = altInjEdges[0];
                 if (triplet.distance - seedPairing.Distance < seedPairing.Distance) {
                     List<Edge> tripPair = [triplet.ap, triplet.an];
-                    tripPair = tripPair.FilterEdgePairsWithCurrentPairs([..pairedEdges, ..seedPairings]);
+                    tripPair = tripPair.FilterEdgePairsWithCurrentPairs([.. pairedEdges, .. seedPairings]);
                     if (tripPair.Count == 2) {
                         seedPairing.Weighting = 100;
                         seedPairings[ix] = seedPairing;
@@ -147,8 +129,32 @@ namespace GCodeClean.Merge
             foreach (var pair in injPairings.Select(tps => (tps.PrevId, tps.NextId, tps.Distance, tps.Weighting))) {
                 AnsiConsole.MarkupLine($"[bold yellow]{pair}[/]");
             }
+            return injPairings;
+        }
 
-            pairedEdges = [.. pairedEdges, .. seedPairings, .. injPairings];
+        public static List<Edge> PairSeedingToInjPairings(this List<Edge> pairedEdges, List<Node> nodes, short weighting) {
+            AnsiConsole.MarkupLine($"Pass [bold yellow]{weighting}[/]: Peer Seeding");
+#pragma warning disable S2234 // Arguments should be passed in the same order as the method parameters
+            List<Edge> alreadyPaired = pairedEdges.Select(pe => new Edge(pe.NextId, pe.PrevId, pe.Distance, 100)).ToList();
+#pragma warning restore S2234 // Arguments should be passed in the same order as the method parameters
+            var unpairedPrevNodes = pairedEdges.UnpairedPrevNodes(nodes);
+            var unpairedNextNodes = pairedEdges.UnpairedNextNodes(nodes);
+            List<Edge> seedPairings = [.. alreadyPaired.BuildTravellingPairs(unpairedPrevNodes, unpairedNextNodes, weighting, 1).OrderBy(tp => tp.Distance)];
+            seedPairings = seedPairings.Where(sp => sp.Weighting < 100).ToList().FilterEdgePairsWithCurrentPairs(pairedEdges);
+
+            if (seedPairings.Count == 0) {
+                return pairedEdges;
+            }
+
+            if (pairedEdges.Count == 0) {
+                // No zero length pairings, so choose the shortest edge pairing that there is, as the seed
+                seedPairings = [seedPairings[0]];
+            }
+
+            //List<Edge> injPairings = [];
+            //var unpairedNodes = unpairedPrevNodes.IntersectNodes(unpairedNextNodes);
+            //injPairings = pairedEdges.GetInjectablePairings(seedPairings, nodes, unpairedNodes);
+            pairedEdges = [.. pairedEdges, .. seedPairings]; //, .. injPairings];
             return pairedEdges.CheckForLoops();
         }
 

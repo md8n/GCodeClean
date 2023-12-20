@@ -60,31 +60,12 @@ namespace GCodeClean.Merge
             return primaryEdges;
         }
 
-        /// <summary>
-        /// If a title has been provided do a dump to the console of the supplied list of edge pairs
-        /// </summary>
-        /// <param name="travellingPairs"></param>
-        /// <param name="title"></param>
-        public static void DebugEdgePairs(this List<Edge> edgePairs, string title = "") {
-            if (title == "") {
-                return;
-            }
-            AnsiConsole.MarkupLine(title);
-            foreach (var pair in edgePairs.Select(tps => (tps.PrevId, tps.NextId, tps.Distance, tps.Weighting)).OrderBy(tps => tps.PrevId)) {
-                AnsiConsole.MarkupLine($"[bold yellow]{pair}[/]");
-            }
-        }
-
-        public static bool HasProcessableEdges(this List<Edge> edges) {
+        private static bool HasProcessableEdges(this List<Edge> edges) {
             return edges.Exists(e => e.Weighting < 100);
         }
 
         public static List<Node> IntersectNodes(this List<Node> nodes, IEnumerable<Node> otherNodes) {
             return nodes.IntersectBy(otherNodes.Select(on => on.Id), e => e.Id).ToList();
-        }
-
-        public static List<Edge> IntersectEdges(this List<Edge> edges, IEnumerable<Edge> otherEdges) {
-            return edges.IntersectBy(otherEdges.Select(oe => (oe.PrevId, oe.NextId)), e => (e.PrevId, e.NextId)).ToList();
         }
 
         public static List<Edge> RemoveDuplicates(this IEnumerable<Edge> edges) {
@@ -187,33 +168,19 @@ namespace GCodeClean.Merge
             return orderedEdges;
         }
 
-        public static List<short> OrderIds(this List<short> nodeIds) {
-            List<short> orderedIds = [nodeIds[0], .. nodeIds[1..^1].OrderBy(x => x), nodeIds[^1]];
-            return orderedIds;
-        }
-
-        public static bool IsShorter(this List<Edge> edges, List<Node> originalNodes) {
-            var originalNodeIds = originalNodes.Select(n => n.Id).ToList();
-            var newNodeIds = edges.GetNodeIds();
-            var currentDistance = originalNodes.TotalDistance(originalNodeIds);
-            var newDistance = originalNodes.TotalDistance(newNodeIds);
-            return currentDistance >= newDistance;
-        }
-
-
         /// <summary>
         /// Filter supplied edge pairs for anything with a weighting of 100 or more
         /// </summary>
         /// <param name="edges"></param>
         /// <returns>A new list of filtered edge pairs</returns>
         public static List<Edge> FilterEdgePairs(this List<Edge> edges) {
-        if (!edges.HasProcessableEdges()) {
-            return [];
-        }
-        return edges.CheckForLoops()
-            .Where(ep => ep.Weighting < 100)
-            .Select(ep => new Edge(ep.PrevId, ep.NextId, ep.Distance, ep.Weighting))
-            .ToList();
+            if (!edges.HasProcessableEdges()) {
+                return [];
+            }
+            return edges.CheckForLoops()
+                .Where(ep => ep.Weighting < 100)
+                .Select(ep => new Edge(ep.PrevId, ep.NextId, ep.Distance, ep.Weighting))
+                .ToList();
         }
 
         /// <summary>
