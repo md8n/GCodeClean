@@ -16,6 +16,8 @@ The primary objective is to be a `GCode Linter`.</Description>
     <Title>GCode Clean CLI</Title>
     <AssemblyName>GCC</AssemblyName>
     <RootNamespace>GCodeClean.CLI</RootNamespace>
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishTrimmed>true</PublishTrimmed>
   </PropertyGroup>
 
   <ItemGroup>

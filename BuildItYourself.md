@@ -2,11 +2,11 @@
 
 ## Before We Get Started
 
-There are standalone release builds available, for Linux, Raspberry Pi (linux-arm), and Windows at [GCodeClean releases](https://github.com/md8n/GCodeClean/releases). It is very easy to a build for MacOS / OSX (osx-64) (see #Deployment below).
+There are standalone release builds available, for Linux, Raspberry Pi (linux-arm), and Windows at [GCodeClean releases](https://github.com/md8n/GCodeClean/releases). It is very easy to a build for MacOS / OSX (osx-64 / osx-arm) (see #Deployment below).
 
 The standalone releases include all the relevant .NET 8.0 libraries for this application.
 
-But can build and run this project yourself, and for that you would need the .NET 8.0 SDK.
+But you can build and run this project yourself, and for that you would need the .NET 8.0 SDK.
 
 And if you do build it yourself then there are a very large number of possible targets including 32bit, and many specific Linux distros, etc.
 
@@ -41,21 +41,21 @@ dotnet run -- --filename <filename>
 ```
 Obviously replacing `<filename>` with your file's name (and path if needed).
 
-Or you can build `CLI` and run it with these two steps:
+Or you can build the `cli` and run it with these two steps:
 ```
-dotnet publish
+dotnet publish -p:PublishProfile=<profile-name>
 ```
-Take a note of the `publish` folder, the `CLI` executable will be located there.
+Take a note of the final line output that starts `CLI ->`, the `GCC` executable will be located there.
 
-And then run the `CLI` executable.
+And then run the `GCC` executable.
 e.g. for Windows that might look like:
 ```
-.\bin\Debug\net8.0\publish\cli --filename FacadeFullAlternate.nc --minimise hard --annotate
+.\bin\Debug\net8.0\publish\gcc clean --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
 
 or for Linux (Ubuntu 18.04 / 20.04 / 22.04)
 ```
-./bin/Debug/net8.0/publish/CLI --filename FacadeFullAlternate.nc --minimise hard --annotate
+./bin/Debug/net8.0/publish/GCC clean --filename FacadeFullAlternate.nc --minimise hard --annotate
 ```
 
 ## GCodeClean Solution Organisation
@@ -69,17 +69,12 @@ GCodeClean is organised into 3 projects:
 
 Run a fresh 'self-contained' `publish` of `GCodeClean` as follows:
 ```
-dotnet publish  /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary --output bin/release/publish --self-contained
+dotnet publish -p:PublishProfile=<profile-name>
 ```
-You can also include the option `--configuration Release` for a release build.
-And target many different platforms by adding `--runtime ` and specifying a runtime platform, e.g.
-* `--runtime win-x64` (64 bit Windows)
-* `--runtime linux-64` (64 bit Linux)
-* `--runtime linux-arm` (Raspberry Pi)
-* `--runtime osx-64` (64 bit MacOS / OSX)
-* There are many more options - including for specific Linux distros
+Where `<profile-name>` is one of `linux-arm`, `linux-x64`, `win-x64`, or `osx-x64`
+Take a note of the final line output that starts `CLI ->`, the `GCC` executable will be located in that folder.
 
-Copy the contents of the `publish` folder above to wherever you need them. Assuming that it is the same OS / Architecture of course.
+Copy the contents of the folder above to wherever you need them. Assuming that it is the same OS / Architecture of course.
 
 The `dotnet restore` command above gets the runtimes for `linux-x64`, `linux-arm`, `win-x64`. But there are many, many more options. If you choose a different option then you may need to allow time for the `restore` of that runtime before publishing can actually take place.
 
