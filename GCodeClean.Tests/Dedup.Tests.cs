@@ -160,5 +160,52 @@ namespace GCodeClean.Tests
             Assert.False(sourceLines.SequenceEqual(resultLinesB));
             Assert.True(expectedLinesB.SequenceEqual(resultLinesB));
         }
+
+        [Fact]
+        public async Task DedupTravelling() {
+            List<string> sourceTextLines = [
+                "G17",
+                "G90",
+                "G21",
+                "G00 Z1.5",
+                "G00 X14.723 Y97.714",
+                "G00 Z0.5",
+                "G01 Z-1.135",
+                "G00 Z0.5",
+                "G00 Z1.5",
+                "G00 X34.033 Y100.094",
+                "G00 X54.033 Y136.094",
+                "G01 Z-0.249",
+                "G01 X54.125 Y136.167 Z-0.307",
+                "G01 X54.178 Y136.211 Z-0.339",
+                "G00 Z0.5",
+                "M30",
+            ];
+            var testLines = sourceTextLines.ConvertAll(l => new Line(l));
+            var lines = AsyncLines(testLines);
+
+            List<Line> expectedLines = [
+                new Line("G17"),
+                new Line("G90"),
+                new Line("G21"),
+                new Line("G0 Z0.5"),
+                new Line("G0 X14.723 Y97.714"),
+                new Line("G1 Z-1.135"),
+                new Line("G0 Z0.5"),
+                new Line("G0 X54.033 Y136.094"),
+                new Line("G1 Z-0.249"),
+                new Line("G1 X54.125 Y136.167 Z-0.307"),
+                new Line("G1 X54.178 Y136.211 Z-0.339"),
+                new Line("G0 Z0.5"),
+                new Line("M30"),
+            ];
+
+            decimal zClamp = 0.5M;
+            var zClampedLines = lines.ZClamp(zClamp);
+
+            var resultLines = await zClampedLines.DedupTravelling().ToArrayAsync(); 
+            Assert.False(testLines.SequenceEqual(resultLines));
+            Assert.True(expectedLines.SequenceEqual(resultLines));
+        }
     }
 }

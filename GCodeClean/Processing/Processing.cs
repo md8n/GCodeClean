@@ -162,7 +162,7 @@ namespace GCodeClean.Processing {
 
 #pragma warning disable S2589 // Boolean expressions should not be gratuitous
             if (hasLeadingFileTerminator && !hasTrailingFileTerminator) {
-                yield return new Line("(Postamble completed by GCodeClean)");
+                yield return new Line(Default.PostAmbleCompleted);
                 // Inject a file demarcation character
                 yield return new Line("%");
             } else if (!hasLeadingFileTerminator && !hasStopping) {
@@ -172,7 +172,7 @@ namespace GCodeClean.Processing {
                     // before the stop command
                     yield return new Line($"G0 Z{zClamp}");
                 }
-                yield return new Line("(Postamble completed by GCodeClean)");
+                yield return new Line(Default.PostAmbleCompleted);
                 // Inject a full stop - M30 used in preference to M2
                 yield return new Line("M30");
             }
