@@ -97,7 +97,8 @@ namespace GCodeClean.Processing
         /// <summary>
         /// Do the actual cleaning of the GCode
         /// </summary>
-        /// <param name="preAndPostamblePhaseLines"></param>
+        /// <param name="inputLines"></param>
+        /// <param name="eliminateNeedlessTravel"></param>
         /// <param name="zClamp"></param>
         /// <param name="arcTolerance"></param>
         /// <param name="tolerance"></param>

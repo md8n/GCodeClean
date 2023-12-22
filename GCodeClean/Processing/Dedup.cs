@@ -104,11 +104,16 @@ namespace GCodeClean.Processing
                     continue;
                 }
 
-                if (!isLineBSet) {
-                    // Set up the B token - this silently drops the previous `lineB`
+                var hasX = lineC.HasToken('X');
+                var hasY = lineC.HasToken('Y');
+                if (!isLineBSet || hasX || hasY) {
+                    // Set up the B token - this silently drops any previous `lineB`
                     lineB = new Line(lineC);
                     isLineBSet = true;
-                }
+                } // else - Only setting height - so keep the previous `lineB` - and silently drop `lineC`
+            }
+            if (isLineASet) {
+                yield return lineA;
             }
         }
 

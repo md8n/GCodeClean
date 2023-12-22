@@ -101,11 +101,19 @@ namespace GCodeClean.Tests
             List<Line> sourceLines = [
                 new Line("G21"),
                 new Line("G90"),
-                new Line("G0 Z0.15"),
-                new Line("G0 Z0.05"),
-                new Line("G1 Z0.0394 F30"),
-                new Line("G1 Z-0.15")
+                new Line("G0 Z1.5"),
+                new Line("G0 X14.723 Y97.714"),
+                new Line("G0 Z0.5"),
+                new Line("G1 Z-1.135"),
+                new Line("G0 Z0.5"),
+                new Line("G0 Z1.5"),
+                new Line("G0 X34.033 Y100.094"),
+                new Line("G0 X54.033 Y136.094"),
+                new Line("G1 Z-0.249"),
+                new Line("G1 X54.125 Y136.167 Z-0.307"),
+                new Line("G1 X54.178 Y136.211 Z-0.339"),
             ];
+
             var testLines = sourceLines.ConvertAll(l => new Line(l));
             var lines = AsyncLines(testLines);
             var setHeight = 1.1M;
@@ -113,9 +121,16 @@ namespace GCodeClean.Tests
                 new Line("G21"),
                 new Line("G90"),
                 new Line($"G0 Z{setHeight}"),
+                new Line("G0 X14.723 Y97.714"),
                 new Line($"G0 Z{setHeight}"),
-                new Line($"G0 Z{setHeight} F30"),
-                new Line("G1 Z-0.15")
+                new Line("G1 Z-1.135"),
+                new Line($"G0 Z{setHeight}"),
+                new Line($"G0 Z{setHeight}"),
+                new Line("G0 X34.033 Y100.094"),
+                new Line("G0 X54.033 Y136.094"),
+                new Line("G1 Z-0.249"),
+                new Line("G1 X54.125 Y136.167 Z-0.307"),
+                new Line("G1 X54.178 Y136.211 Z-0.339"),
             ];
 
             var resultLines = await lines.ZClamp(setHeight).ToListAsync();
@@ -211,12 +226,42 @@ namespace GCodeClean.Tests
                 "/ G1234 (Block Delete)"
             ];
 
-
             var testLines = sourceLines.ConvertAll(l => new Line(l));
             var lines = AsyncLines(testLines);
 
             var resultLines = await lines.Annotate(tokenDefinitions.RootElement).JoinLines("SOFT").ToListAsync();
 
+            Assert.True(expectedLines.SequenceEqual(resultLines));
+        }
+
+        [Fact]
+        public async Task TestDetectTravelling() {
+            List<string> sourceTextLines = [
+                "G0 Z1.5",
+                "G0 X68.904 Y128.746 Z1.5",
+                "G1 X68.904 Y128.746 Z-1.194",
+                "G1 X68.995 Y128.814 Z-1.254",
+                "G1 X69.089 Y128.892 Z-1.322",
+                "G0 Z1.5",
+                "G0 X42.239 Y157.031",
+                "G1 Z-0.413",
+            ];
+            var sourceLineLines = sourceTextLines.ConvertAll(l => new Line(l));
+            var sourceLines = sourceTextLines.ToAsyncEnumerable();
+
+            List<Line> expectedLines = [
+                new Line("G0 Z1.5"),
+                new Line("G0 X68.904 Y128.746 Z1.5"),
+                new Line("G1 X68.904 Y128.746 Z-1.194"),
+                new Line("G1 X68.995 Y128.814 Z-1.254"),
+                new Line("G1 X69.089 Y128.892 Z-1.322"),
+                new Line("G0 X69.089 Y128.892 Z1.5 (||Travelling||notset||0||>>G0 X68.904 Y128.746 Z1.5>>G0 X69.089 Y128.892 Z1.5>>||)"),
+                new Line("G0 X42.239 Y157.031 Z1.5"),
+                new Line("G1 X42.239 Y157.031 Z-0.413"),
+            ];
+
+            var resultLines = await sourceLines.CleanLinesFirstPhase(false).DetectTravelling().ToListAsync();
+            Assert.False(sourceLineLines.SequenceEqual(resultLines));
             Assert.True(expectedLines.SequenceEqual(resultLines));
         }
     }
