@@ -69,5 +69,6 @@ namespace GCodeClean.Processing
 
         public const string PreambleCompletion = "(Preamble completion by GCodeClean)";
         public const string PreambleCompleted = "(Preamble completed by GCodeClean)";
+        public const string PostAmbleCompleted = "(Postamble completed by GCodeClean)";
     }
 }
