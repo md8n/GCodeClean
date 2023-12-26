@@ -17,8 +17,9 @@ namespace GCodeClean.Merge
             return nodes.First(n => n.Id == id);
         }
 
-        public static Edge GetEdge(this IEnumerable<Edge> edges, short prevId, short nextId) {
-            return edges.First(n => n.PrevId == prevId && n.NextId == nextId);
+        public static Edge? GetEdge(this IEnumerable<Edge> edges, short prevId, short nextId) {
+            var foundEdge = edges.FirstOrDefault(n => n.PrevId == prevId && n.NextId == nextId);
+            return (foundEdge.PrevId == 0 && foundEdge.NextId == 0 && foundEdge.Distance == 0) ? null : foundEdge;
         }
 
         public static decimal TotalDistance(this List<Node> nodes, List<short> nodeIds) {
@@ -52,7 +53,13 @@ namespace GCodeClean.Merge
             List<Edge> primaryEdges = [];
             foreach (var (tool, id, start, end) in nodes) {
                 var matchingNodes = nodes.FindAll(n => n.Tool == tool && n.Id != id && n.Start.X == end.X && n.Start.Y == end.Y);
-                if (matchingNodes.Count == 1) {
+                if (matchingNodes.Count > 1) {
+                    // This may be some kind of 'peck-drilling' operation, whatever it is
+                    // simply take the first node
+                    // where the start and end are the same
+                    matchingNodes = matchingNodes.Where(mn => mn.Start.X == mn.End.X && mn.Start.Y == mn.End.Y).Take(1).ToList();
+                }
+                if (matchingNodes.Count == 1 && primaryEdges.GetEdge(matchingNodes[0].Id, id) == null) {
                     primaryEdges.Add(new Edge(id, matchingNodes[0].Id, 0M, 0));
                 }
             }
