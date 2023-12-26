@@ -236,8 +236,7 @@ namespace GCodeClean.Merge
 
             var unpairedPrevNodes = pairedEdges.UnpairedPrevNodes(nodes);
             while (unpairedPrevNodes.Count > 1) {
-                weighting++;
-                List<Edge> residualPairs = pairedEdges.BuildResidualPairs(nodes, weighting);
+                List<Edge> residualPairs = pairedEdges.BuildResidualPairs(nodes, weighting++);
 
                 pairedEdges = [.. pairedEdges, .. residualPairs];
                 pairedEdges = pairedEdges.CheckForLoops();

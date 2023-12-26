@@ -251,8 +251,17 @@ namespace GCodeClean.Merge
                                 testEdges[ix] = edge;
                             } else {
                                 // we need to rotate the list
+                                while(nodeListEdges.First.Value != popEdge) {
+                                    var firstEdge = nodeListEdges.First;
+                                    nodeListEdges.RemoveFirst();
+                                    nodeListEdges.AddLast(firstEdge);
+                                }
+                                var popEdgeIx = testEdges.IndexOf(popEdge);
                                 popEdge.Weighting = 100;
-                                throw new Exception("Need to rotate, dunno how");
+                                testEdges[popEdgeIx] = popEdge;
+                                nodeListEdges.RemoveFirst();
+                                var nodeListIx = nodeLists.IndexOf(matchingNodeListPreceeding);
+                                nodeLists[nodeListIx] = nodeListEdges.ToList().GetNodeIds();
                             }
                         }
                     } else if (matchingNodeListSucceeding != null && matchingNodeListPreceeding != matchingNodeListSucceeding) {
