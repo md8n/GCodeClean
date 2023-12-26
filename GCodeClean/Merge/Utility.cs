@@ -1,6 +1,7 @@
 // Copyright (c) 2020-2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -22,11 +23,21 @@ namespace GCodeClean.Merge
             return (foundEdge.PrevId == 0 && foundEdge.NextId == 0 && foundEdge.Distance == 0) ? null : foundEdge;
         }
 
+        public static Edge? GetEdgeByPrevId(this IEnumerable<Edge> edges, short prevId) {
+            var foundEdge = edges.FirstOrDefault(n => n.PrevId == prevId);
+            return (foundEdge.PrevId == 0 && foundEdge.NextId == 0 && foundEdge.Distance == 0) ? null : foundEdge;
+        }
+
+        public static Edge? GetEdgeByNextId(this IEnumerable<Edge> edges, short nextId) {
+            var foundEdge = edges.FirstOrDefault(n => n.NextId == nextId);
+            return (foundEdge.PrevId == 0 && foundEdge.NextId == 0 && foundEdge.Distance == 0) ? null : foundEdge;
+        }
+
         public static decimal TotalDistance(this List<Node> nodes, List<short> nodeIds) {
             var distance = 0M;
             for (var ix = 0; ix < nodeIds.Count - 1; ix++) {
-                var prevNode = nodes[nodeIds[ix]];
-                var nextNode = nodes[nodeIds[ix + 1]];
+                var prevNode = nodes.GetNode(nodeIds[ix]);
+                var nextNode = nodes.GetNode(nodeIds[ix + 1]);
                 distance += (prevNode.End, nextNode.Start).Distance();
             }
             return distance;
@@ -44,12 +55,33 @@ namespace GCodeClean.Merge
         }
 
         /// <summary>
+        /// Converts a list of node Ids, into a linked list of edges
+        /// </summary>
+        /// <param name="edges"></param>
+        /// <returns></returns>
+        public static List<Edge> GetEdges(this List<short> nodeIds, List<Edge> edges) {
+            List<Edge> nodeListEdges = [];
+            for (var jx = 0; jx < nodeIds.Count - 1; jx++) {
+                var nlEdge = edges.GetEdge(nodeIds[jx], nodeIds[jx + 1]);
+                if (nlEdge == null) {
+                    // There's no way this could happen excluding some weird programmer error
+                    continue;
+                }
+                nodeListEdges.Add((Edge)nlEdge);
+            }
+
+            return nodeListEdges;
+        }
+
+        /// <summary>
         /// Identify primary pairings of cutting paths, where the end of one cutting path is the same as the start of one other cutting path.
         /// These pairings will not be changed in future passes unless a loop is identified
         /// </summary>
         /// <param name="nodes"></param>
         /// <returns></returns>
         public static List<Edge> GetPrimaryEdges(this List<Node> nodes) {
+            AnsiConsole.MarkupLine($"Pass [bold yellow]0[/]: Primary Edges");
+
             List<Edge> primaryEdges = [];
             foreach (var (tool, id, start, end) in nodes) {
                 var matchingNodes = nodes.FindAll(n => n.Tool == tool && n.Id != id && n.Start.X == end.X && n.Start.Y == end.Y);
@@ -65,6 +97,38 @@ namespace GCodeClean.Merge
             }
 
             return primaryEdges;
+        }
+
+        /// <summary>
+        /// Identify secondary pairings of cutting paths, where the end of one cutting path is the same as the start of one other cutting path.
+        /// These pairings will not be changed in future passes unless a loop is identified
+        /// </summary>
+        /// <param name="pairedEdges"></param>
+        /// <param name="nodes"></param>
+        /// <param name="weighting"></param>
+        /// <returns></returns>
+        public static List<Edge> GetSecondaryEdges(this List<Edge> pairedEdges, List<Node> nodes, short weighting) {
+            AnsiConsole.MarkupLine($"Pass [bold yellow]{weighting}[/]: Secondary Edges");
+#pragma warning disable S2234 // Arguments should be passed in the same order as the method parameters
+            // Invert existing pairings, and mark as 'do not use' weighting = 100
+            List<Edge> alreadyPaired = pairedEdges.Select(pe => new Edge(pe.NextId, pe.PrevId, pe.Distance, 100)).ToList();
+#pragma warning restore S2234 // Arguments should be passed in the same order as the method parameters
+            var unpairedPrevNodes = pairedEdges.UnpairedPrevNodes(nodes);
+            var unpairedNextNodes = pairedEdges.UnpairedNextNodes(nodes);
+            List<Edge> seedPairings = [.. alreadyPaired.BuildTravellingPairs(unpairedPrevNodes, unpairedNextNodes, weighting, 1).Where(sp => sp.Distance == 0)];
+            seedPairings = seedPairings.Where(sp => sp.Weighting < 100).ToList().FilterEdgePairsWithCurrentPairs(pairedEdges);
+
+            if (seedPairings.Count == 0) {
+                return pairedEdges;
+            }
+
+            if (pairedEdges.Count == 0) {
+                // No zero length pairings, so choose the shortest edge pairing that there is, as the seed
+                seedPairings = [seedPairings[0]];
+            }
+
+            pairedEdges = [.. pairedEdges, .. seedPairings];
+            return pairedEdges.CheckForLoops().Where(sp => sp.Weighting < 100).ToList();
         }
 
         private static bool HasProcessableEdges(this List<Edge> edges) {
@@ -116,15 +180,48 @@ namespace GCodeClean.Merge
                 }
 
                 foreach (var nodeList in nodeLists) {
+                    var hasFork = false;
                     if (nodeList[0..^1].Contains(edge.PrevId)) {
-                        // Fork detected - within a nodelist
-                        edge.Weighting = 100; // Do not use this
-                        testEdges[ix] = edge;
+                        hasFork = true;
                     }
                     if (nodeList[1..].Contains(edge.NextId)) {
+                        hasFork = true;
+                    }
+                    if (hasFork) {
                         // Fork detected - within a nodelist
-                        edge.Weighting = 100; // Do not use this
-                        testEdges[ix] = edge;
+                        List<Edge> nodeListEdges = nodeList.GetEdges(testEdges);
+                        // Check for inversions
+                        if (nodeListEdges.GetEdge(edge.NextId, edge.PrevId) != null) {
+                            // A simple inversion
+                            edge.Weighting = 100; // Do not use this
+                            testEdges[ix] = edge;
+                        } else {
+                            var altEdge = (Edge)(nodeListEdges.GetEdgeByPrevId(edge.PrevId) ?? nodeListEdges.GetEdgeByNextId(edge.NextId));
+                            if (altEdge.Distance <= edge.Distance) {
+                                edge.Weighting = 100; // Do not use this
+                                testEdges[ix] = edge;
+                            } else {
+                                // Make a decision about the fork
+                                var altEdgeIx = nodeListEdges.IndexOf(altEdge);
+                                if (altEdgeIx != 0 && altEdgeIx != nodeListEdges.Count - 1) {
+                                    // If it is not effectively at the start or end of the nodelist, we'll reject it
+                                    edge.Weighting = 100; // Do not use this
+                                    testEdges[ix] = edge;
+                                } else {
+                                    var altTestEdge = (Edge)testEdges.GetEdge(altEdge.PrevId, altEdge.NextId);
+                                    var altTestEdgeIx = testEdges.IndexOf(altTestEdge);
+                                    altTestEdge.Weighting = 100;
+                                    testEdges[altTestEdgeIx] = altTestEdge;
+                                    nodeListEdges[altEdgeIx] = edge;
+                                    if (altEdgeIx == 0) {
+                                        nodeList[0] = edge.PrevId;
+                                    } else {
+                                        nodeList[altEdgeIx] = edge.NextId;
+                                    }
+                                }
+                            }
+                        }
+                        continue;
                     }
                 }
 
@@ -136,22 +233,34 @@ namespace GCodeClean.Merge
                     continue;
                 }
 
-                if (matchingNodeListPreceeding != null && matchingNodeListPreceeding.Contains(edge.NextId)) {
-                    // Loop detected
-                    edge.Weighting = 100; // Do not use this
-                    testEdges[ix] = edge;
-                }
-                if (matchingNodeListSucceeding != null && matchingNodeListSucceeding.Contains(edge.PrevId)) {
-                    // Loop detected
-                    edge.Weighting = 100; // Do not use this
-                    testEdges[ix] = edge;
-                }
-
-                if (matchingNodeListPreceeding != null && matchingNodeListSucceeding != null && edge.Weighting < 100) {
-                    // Merge two nodelists into one - unless its a loop
-                    matchingNodeListPreceeding.AddRange(matchingNodeListSucceeding);
-                    nodeLists.Remove(matchingNodeListSucceeding);
-                    continue;
+                if (matchingNodeListPreceeding != null) {
+                    if (matchingNodeListPreceeding[0] == edge.NextId) {
+                        // Loop detected - pop the longest edge
+                        // We could alternatively check if preceeding and succeeding are the same nodelist
+                        LinkedList<Edge> nodeListEdges = new LinkedList<Edge>(matchingNodeListPreceeding.GetEdges(testEdges));
+                        var distances = nodeListEdges.Select(nle => nle.Distance).Distinct().ToList();
+                        if (distances.Max() <= edge.Distance) {
+                            edge.Weighting = 100; // Do not use this
+                            testEdges[ix] = edge;
+                        } else {
+                            // Find and pop the longest edge
+                            nodeListEdges.AddLast(edge);
+                            var popEdge = nodeListEdges.OrderByDescending(nle => nle.Distance).First();
+                            if (popEdge == edge) {
+                                edge.Weighting = 100; // Do not use this
+                                testEdges[ix] = edge;
+                            } else {
+                                // we need to rotate the list
+                                popEdge.Weighting = 100;
+                                throw new Exception("Need to rotate, dunno how");
+                            }
+                        }
+                    } else if (matchingNodeListSucceeding != null && matchingNodeListPreceeding != matchingNodeListSucceeding) {
+                        // Merge two nodelists into one - unless its a loop
+                        matchingNodeListPreceeding.AddRange(matchingNodeListSucceeding);
+                        nodeLists.Remove(matchingNodeListSucceeding);
+                        continue;
+                    }
                 }
 
                 if (matchingNodeListPreceeding != null && !matchingNodeListPreceeding.Contains(edge.NextId)) {

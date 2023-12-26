@@ -70,7 +70,6 @@ namespace GCodeClean.Merge
                     .Select(unn => new Edge(upn.Id, unn.Id, (upn.End, unn.Start).Distance(), weighting))
                     .OrderBy(e => e.Distance)
                     .Take(topCount);
-                // Then remove those where the inverse distance is less
                 travellingPairs.AddRange(newPairEdges);
             }
 
@@ -103,13 +102,9 @@ namespace GCodeClean.Merge
                 List<(Edge ap, Edge an, decimal distance)> altInjEdges = [];
                 foreach (var ap in altPrevEdges) {
                     var an = altNextEdges.Find(an => an.PrevId == ap.NextId);
-#pragma warning disable CS8073
-#pragma warning disable S2589
-                    if (an == null) {
+                    if (an.PrevId == 0 && an.NextId == 0 && an.Distance == 0) {
                         continue;
                     }
-#pragma warning restore S2589
-#pragma warning restore CS8073
                     altInjEdges.Add((ap, an, ap.Distance + an.Distance));
                 }
                 altInjEdges = [.. altInjEdges.OrderBy(a => a.distance)];
@@ -135,6 +130,7 @@ namespace GCodeClean.Merge
         public static List<Edge> PairSeedingToInjPairings(this List<Edge> pairedEdges, List<Node> nodes, short weighting) {
             AnsiConsole.MarkupLine($"Pass [bold yellow]{weighting}[/]: Peer Seeding");
 #pragma warning disable S2234 // Arguments should be passed in the same order as the method parameters
+            // Invert existing pairings, and mark as 'do not use' weighting = 100
             List<Edge> alreadyPaired = pairedEdges.Select(pe => new Edge(pe.NextId, pe.PrevId, pe.Distance, 100)).ToList();
 #pragma warning restore S2234 // Arguments should be passed in the same order as the method parameters
             var unpairedPrevNodes = pairedEdges.UnpairedPrevNodes(nodes);
@@ -151,11 +147,11 @@ namespace GCodeClean.Merge
                 seedPairings = [seedPairings[0]];
             }
 
-            //List<Edge> injPairings = [];
-            //var unpairedNodes = unpairedPrevNodes.IntersectNodes(unpairedNextNodes);
-            //injPairings = pairedEdges.GetInjectablePairings(seedPairings, nodes, unpairedNodes);
-            pairedEdges = [.. pairedEdges, .. seedPairings]; //, .. injPairings];
-            return pairedEdges.CheckForLoops();
+            List<Edge> injPairings;
+            var unpairedNodes = unpairedPrevNodes.IntersectNodes(unpairedNextNodes);
+            injPairings = pairedEdges.GetInjectablePairings(seedPairings, nodes, unpairedNodes);
+            pairedEdges = [.. pairedEdges, .. seedPairings, .. injPairings];
+            return pairedEdges.CheckForLoops().Where(sp => sp.Weighting < 100).ToList();
         }
 
         public static List<Edge> BuildResidualPairs(this List<Edge> pairedEdges, List<Node> nodes, short weighting) {
@@ -164,7 +160,10 @@ namespace GCodeClean.Merge
             var unpairedNextNodes = pairedEdges.UnpairedNextNodes(nodes).Select(n => n.Id);
 
             List<Edge> empty = [];
-            List<Edge> residualPairs = empty.BuildTravellingPairs(nodes.Where(n => unpairedPrevNodes.Contains(n.Id)).ToList(), nodes.Where(n => unpairedNextNodes.Contains(n.Id)).ToList(), weighting);
+            List<Edge> residualPairs = empty.BuildTravellingPairs(
+                nodes.Where(n => unpairedPrevNodes.Contains(n.Id)).ToList(),
+                nodes.Where(n => unpairedNextNodes.Contains(n.Id)).ToList(),
+                weighting);
 
             for (var ix = residualPairs.Count - 1; ix >= 0; ix--) {
                 List<Edge> residualPrimary = [residualPairs[ix]];
@@ -174,9 +173,15 @@ namespace GCodeClean.Merge
                 }
             }
 
+            //AnsiConsole.MarkupLine($"Residual Pairings that were good:");
+            //foreach (var pair in residualPairs.Select(tps => (tps.PrevId, tps.NextId, tps.Distance, tps.Weighting))) {
+            //    AnsiConsole.MarkupLine($"[bold yellow]{pair}[/]");
+            //}
+
             List<Edge> finalPairs = [];
             while (residualPairs.Count > 1) {
-                var residualPrimary = residualPairs.OrderByDescending(rp => rp.NextId).ThenBy(rp => rp.Distance).First();
+                var firstNextId = residualPairs.OrderByDescending(rp => rp.NextId).First().NextId;
+                var residualPrimary = residualPairs.Where(rp => rp.NextId == firstNextId).OrderBy(rp => rp.Distance).First();
                 residualPairs = residualPairs.Where(rp => rp.PrevId != residualPrimary.PrevId && rp.NextId != residualPrimary.NextId).ToList();
                 finalPairs.Add(residualPrimary);
             }
@@ -192,13 +197,20 @@ namespace GCodeClean.Merge
                 return;
             }
 
-            var nodes = inputFolder.GetNodes().ToList();
+            //var offset = 0;
+            //var take = 210;
+            var nodes = inputFolder.GetNodes().ToList(); // .Skip(offset).Take(take)
             var tools = nodes.Select(n => n.Tool).Distinct().ToList();
 
             if (tools.Count > 1) {
                 AnsiConsole.MarkupLine("[bold red]Currently only one tool per merge is supported[/]");
                 return;
             }
+
+            //AnsiConsole.MarkupLine($"Nodes:");
+            //foreach (var node in nodes.Select(n => (n.Id, n.Start, n.End))) {
+            //    AnsiConsole.MarkupLine($"[bold yellow]{node}[/]");
+            //}
 
             var currentDistance = nodes.TotalDistance(nodes.Select(n => n.Id).ToList());
 
@@ -209,6 +221,12 @@ namespace GCodeClean.Merge
             int prevCount = 0;
             int postCount = 0;
             short weighting = 1;
+
+            do {
+                prevCount = pairedEdges.Count;
+                pairedEdges = pairedEdges.GetSecondaryEdges(nodes, weighting++);
+                postCount = pairedEdges.Count;
+            } while (prevCount < postCount);
 
             do {
                 prevCount = pairedEdges.Count;
@@ -226,6 +244,16 @@ namespace GCodeClean.Merge
                 pairedEdges = pairedEdges.Where(pe => pe.Weighting < 100).ToList();
 
                 unpairedPrevNodes = pairedEdges.UnpairedPrevNodes(nodes);
+            }
+
+            // Make a final decision about rotating the whole list
+            var firstNode = nodes.GetNode(pairedEdges[0].PrevId);
+            var lastNode = nodes.GetNode(pairedEdges[^1].NextId);
+            var maxEdge = pairedEdges.OrderByDescending(pe => pe.Distance).FirstOrDefault();
+            var lastToFirstEdge = new Edge(lastNode.Id, firstNode.Id, (lastNode.End, firstNode.Start).Distance(), weighting);
+            if (lastToFirstEdge.Distance < maxEdge.Distance) {
+                var maxEdgeIx = pairedEdges.IndexOf(maxEdge);
+                pairedEdges = [..pairedEdges[(maxEdgeIx+1)..], lastToFirstEdge, ..pairedEdges[0..maxEdgeIx]];
             }
 
             //AnsiConsole.MarkupLine($"Pairings that were good:");
