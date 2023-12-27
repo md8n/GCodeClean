@@ -20,7 +20,7 @@ namespace GCodeClean.Tests
             foreach (var line in lines)
             {
                 await Task.Delay(1);
-                yield return line;
+                yield return new Line(line);
             }
         }
 
@@ -204,6 +204,60 @@ namespace GCodeClean.Tests
             var zClampedLines = lines.ZClamp(zClamp);
 
             var resultLines = await zClampedLines.DedupTravelling().ToArrayAsync(); 
+            Assert.False(testLines.SequenceEqual(resultLines));
+            Assert.True(expectedLines.SequenceEqual(resultLines));
+        }
+
+        [Fact]
+        public async Task DedupTravellingAgain() {
+            List<string> sourceTextLines = [
+                "G17",
+                "G90",
+                "G21",
+                "G00 Z1.5",
+                "G01 X54.178 Y136.211",
+                "G01 X54.178 Y136.211 Z-0.678",
+                "G01 X54.125 Y136.168 Z-0.613",
+                "G01 X54.033 Y136.095 Z-0.499",
+                "G00 Z1.5",
+                "G00 X69.089 Y128.892",
+                "G01 Z-0.661",
+                "G01 X68.995 Y128.814 Z-0.627",
+                "G01 X68.905 Y128.746 Z-0.597",
+                "G01 X68.813 Y128.684 Z-0.57",
+                "G00 Z0.5",
+                "M30",
+            ];
+            var testLines = sourceTextLines.ConvertAll(l => new Line(l));
+            var lines = AsyncLines(testLines);
+
+            List<Line> expectedLines = [
+                new Line("G17"),
+                new Line("G90"),
+                new Line("G21"),
+
+                new Line("G0 Z0.5"),
+                new Line("G0 X54.178 Y136.211 Z0.5"),
+                new Line("G1 X54.178 Y136.211 Z-0.678"),
+                new Line("G1 X54.125 Y136.168 Z-0.613"),
+                new Line("G1 X54.033 Y136.095 Z-0.499"),
+                new Line("G0 X54.033 Y136.095 Z0.5"),
+
+                new Line("G0 X69.089 Y128.892 Z0.5"),
+                new Line("G1 X69.089 Y128.892 Z-0.661"),
+                new Line("G1 X68.995 Y128.814 Z-0.627"),
+                new Line("G1 X68.905 Y128.746 Z-0.597"),
+                new Line("G1 X68.813 Y128.684 Z-0.57"),
+                new Line("G0 X68.813 Y128.684 Z0.5"),
+
+                new Line("M30"),
+            ];
+
+            decimal zClamp = 0.5M;
+            var augmentLines = lines.Augment();
+            var zClampedLines = augmentLines.ZClamp(zClamp);
+
+            var resultLines = await zClampedLines.DedupTravelling().ToArrayAsync();
             Assert.False(testLines.SequenceEqual(resultLines));
             Assert.True(expectedLines.SequenceEqual(resultLines));
         }
