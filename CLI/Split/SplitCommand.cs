@@ -8,6 +8,7 @@ using Spectre.Console;
 using Spectre.Console.Cli;
 
 using GCodeClean.IO;
+using GCodeClean.Shared;
 using GCodeClean.Split;
 
 
