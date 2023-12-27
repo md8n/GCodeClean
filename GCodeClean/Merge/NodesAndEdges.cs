@@ -7,6 +7,7 @@ using System.Linq;
 using Spectre.Console;
 
 using GCodeClean.Processing;
+using GCodeClean.Shared;
 
 
 namespace GCodeClean.Merge

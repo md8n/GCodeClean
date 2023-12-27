@@ -4,13 +4,15 @@
 using System.Collections.Generic;
 using System.Linq;
 
-using GCodeClean.Processing;
-
 using Spectre.Console;
 
+using GCodeClean.Processing;
+using GCodeClean.Shared;
+
+
 namespace GCodeClean.Merge
-{       
-    public static class Utilities
+{
+    public static class Utility
     {
         /// <summary>
         /// 'Injects' unpaired nodes within existing edges

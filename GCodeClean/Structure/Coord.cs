@@ -197,28 +197,6 @@ namespace GCodeClean.Structure
             return coords3;
         }
 
-        public override string ToString()
-        {
-            var coords = new List<string>();
-
-            if ((Set & CoordSet.X) == CoordSet.X)
-            {
-                coords.Add($"X:{X:0.####}");
-            }
-
-            if ((Set & CoordSet.Y) == CoordSet.Y)
-            {
-                coords.Add($"Y:{Y:0.####}");
-            }
-
-            if ((Set & CoordSet.Z) == CoordSet.Z)
-            {
-                coords.Add($"Z:{Z:0.####}");
-            }
-
-            return string.Join(',', coords);
-        }
-
         /// <summary>
         /// Determines if all supplied coords are in the same orthogonal plane (X, Y or Z)
         /// </summary>
@@ -258,5 +236,25 @@ namespace GCodeClean.Structure
 
             return allX | allY | allZ;
         }
+
+        public override string ToString() {
+            var coords = new List<string>();
+
+            if ((Set & CoordSet.X) == CoordSet.X) {
+                coords.Add($"X:{X:0.####}");
+            }
+
+            if ((Set & CoordSet.Y) == CoordSet.Y) {
+                coords.Add($"Y:{Y:0.####}");
+            }
+
+            if ((Set & CoordSet.Z) == CoordSet.Z) {
+                coords.Add($"Z:{Z:0.####}");
+            }
+
+            return string.Join(',', coords);
+        }
+
+        public string ToXYCoord() => $"X{this.X}Y{this.Y}";
     }
 }

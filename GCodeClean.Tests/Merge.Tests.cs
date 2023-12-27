@@ -8,9 +8,11 @@ using Xunit;
 using Xunit.Abstractions;
 
 using GCodeClean.Merge;
+using GCodeClean.Shared;
 
 
-namespace GCodeClean.Tests {
+namespace GCodeClean.Tests
+{
     public class MergeTest(ITestOutputHelper testOutputHelper) {
         [Fact]
         public void TestCheckForLoopsFirstPairings() {

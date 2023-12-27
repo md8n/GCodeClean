@@ -4,11 +4,12 @@
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 
-using GCodeClean.IO;
-using GCodeClean.Processing;
-
 using Spectre.Console;
 using Spectre.Console.Cli;
+
+using GCodeClean.IO;
+using GCodeClean.Split;
+
 
 namespace GCodeCleanCLI.Split
 {

@@ -433,9 +433,6 @@ namespace GCodeClean.Structure
         /// <returns></returns>
         public string ToSimpleString() => string.Join(" ", _tokens.Where(t => !(t.IsLineNumber || t.IsComment))).Trim();
 
-        public string ToXYCoord() {
-            var xyz = (Coord)this;
-            return $"X{xyz.X}Y{xyz.Y}";
-        }
+        public string ToXYCoord() => ((Coord)this).ToXYCoord();
     }
 }

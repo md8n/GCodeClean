@@ -53,6 +53,8 @@ namespace GCodeClean.Merge
             AnsiConsole.MarkupLine($"Current travelling distance: {currentDistance}");
             AnsiConsole.MarkupLine($"New travelling distance: {newDistance}");
 
+            inputFolder.MergeNodes(pairedEdges.GetNodes(nodes));
+
             //            List<(string tool, List<int> nodeIds)> cutList = [];
             //            foreach(var toolStartId in toolStartIds) {
             //                var tool = nodes.First(n => n.Id == toolStartId).Tool;

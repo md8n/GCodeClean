@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 using GCodeClean.Processing;
+using GCodeClean.Shared;
 
 
 namespace GCodeClean.Merge
