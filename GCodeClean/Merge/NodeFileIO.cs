@@ -10,6 +10,8 @@ using Spectre.Console;
 
 using GCodeClean.Shared;
 using GCodeClean.Structure;
+using GCodeClean.IO;
+using GCodeClean.Processing;
 
 
 namespace GCodeClean.Merge
@@ -50,10 +52,49 @@ namespace GCodeClean.Merge
         public static void MergeNodes(this string inputFolder, List<Node> nodes) {
             var mergeFileName = $"{inputFolder}-ts.nc";
             var idFtm = $"D{nodes[^1].Id.ToString().Length}";
+
+            var firstNodeFileName = nodes[0].NodeFileName(inputFolder, idFtm);
+            var firstNodeInputLines = firstNodeFileName.ReadFileLines();
+            var preambleLines = firstNodeInputLines.GetPreamble();
+            File.WriteAllLines(mergeFileName, preambleLines);
+
             foreach (var node in nodes) {
                 var nodeFileName = node.NodeFileName(inputFolder, idFtm);
-                File.AppendAllText(mergeFileName, File.ReadAllText(nodeFileName));
+                var inputLines = nodeFileName.ReadFileLines();
+                var travellingComments = inputLines.GetTravellingComments();
+
+                string firstLine = "";
+
+                var iL = inputLines.GetEnumerator();
+
+                while (iL.MoveNext()) {
+                    var line = iL.Current;
+                    if (line == Default.PreambleCompleted) {
+                        break;
+                    }
+                }
+
+                foreach (var travelling in travellingComments) {
+                    if (firstLine != "") {
+                        File.AppendAllLines(mergeFileName, [firstLine]);
+                    }
+
+                    while (iL.MoveNext()) {
+                        var line = iL.Current;
+                        File.AppendAllLines(mergeFileName, [line]);
+                        if (line.EndsWith(travelling)) {
+                            firstLine = (new Line(line)).ToSimpleString();
+                            break;
+                        }
+                    }
+                }
             }
+
+            var lastNodeFileName = nodes[^1].NodeFileName(inputFolder, idFtm);
+            var lastNodeInputLines = lastNodeFileName.ReadFileLines();
+            var lastTravellingComments = lastNodeInputLines.GetTravellingComments();
+            var postambleLines = lastNodeInputLines.GetPostamble(lastTravellingComments[^1]);
+            File.AppendAllLines(mergeFileName, postambleLines);
         }
     }
 }
