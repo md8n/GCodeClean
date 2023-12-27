@@ -7,6 +7,7 @@ using GCodeClean.Structure;
 namespace GCodeClean.Merge
 {       
     public readonly record struct Node(string Tool, short Id, Coord Start, Coord End);
+
     public record struct Edge(short PrevId, short NextId, decimal Distance, short Weighting) {
         public Int16 Weighting { get; set; } = Weighting;
     };
