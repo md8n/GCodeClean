@@ -20,8 +20,7 @@ namespace GCodeClean.Split
             }
             Directory.CreateDirectory(outputFolder);
 
-            var (_, tLId, _, _) = travellingComments[^1].ParseTravelling();
-            var idFtm = tLId.IdFormat();
+            var idFtm = travellingComments.Count.IdFormat();
 
             string firstLine = "";
 

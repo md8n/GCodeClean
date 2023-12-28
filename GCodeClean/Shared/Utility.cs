@@ -90,7 +90,7 @@ namespace GCodeClean.Shared
             return postambleLines;
         }
 
-        public static string IdFormat(this short id) => $"D{id.ToString().Length}";
+        public static string IdFormat(this int idCount) => $"D{idCount.ToString().Length}";
 
         public static string NodeFileName(this Node node, string folderName, string idFtm) {
             return $"{folderName}{Path.DirectorySeparatorChar}{node.Tool}_{node.Id.ToString(idFtm)}_{node.Start.ToXYCoord()}_{node.End.ToXYCoord()}_gcc.nc";

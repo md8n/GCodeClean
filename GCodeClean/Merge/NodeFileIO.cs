@@ -51,19 +51,19 @@ namespace GCodeClean.Merge
 
         public static void MergeNodes(this string inputFolder, List<Node> nodes) {
             var mergeFileName = $"{inputFolder}-ts.nc";
-            var idFtm = $"D{nodes[^1].Id.ToString().Length}";
+            var idFtm = nodes.Count.IdFormat();
 
             var firstNodeFileName = nodes[0].NodeFileName(inputFolder, idFtm);
             var firstNodeInputLines = firstNodeFileName.ReadFileLines();
             var preambleLines = firstNodeInputLines.GetPreamble();
             File.WriteAllLines(mergeFileName, preambleLines);
 
+            var lastLine = new Line("");
+
             foreach (var node in nodes) {
                 var nodeFileName = node.NodeFileName(inputFolder, idFtm);
                 var inputLines = nodeFileName.ReadFileLines();
                 var travellingComments = inputLines.GetTravellingComments();
-
-                string firstLine = "";
 
                 var iL = inputLines.GetEnumerator();
 
@@ -75,15 +75,16 @@ namespace GCodeClean.Merge
                 }
 
                 foreach (var travelling in travellingComments) {
-                    if (firstLine != "") {
-                        File.AppendAllLines(mergeFileName, [firstLine]);
-                    }
-
                     while (iL.MoveNext()) {
                         var line = iL.Current;
-                        File.AppendAllLines(mergeFileName, [line]);
+                        if (new Line(line) != lastLine) {
+                            File.AppendAllLines(mergeFileName, [line]);
+                        }
+                        lastLine = new Line("");
+
                         if (line.EndsWith(travelling)) {
-                            firstLine = (new Line(line)).ToSimpleString();
+                            lastLine = new Line(line);
+                            lastLine = new Line(lastLine.ToSimpleString());
                             break;
                         }
                     }
