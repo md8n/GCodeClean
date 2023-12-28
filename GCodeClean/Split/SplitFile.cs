@@ -22,8 +22,6 @@ namespace GCodeClean.Split
 
             var idFtm = travellingComments.Count.IdFormat();
 
-            string firstLine = "";
-
             var iL = inputLines.GetEnumerator();
 
             while (iL.MoveNext()) {
@@ -39,15 +37,10 @@ namespace GCodeClean.Split
 
                 File.WriteAllLines(filename, preambleLines);
 
-                if (firstLine != "") {
-                    File.AppendAllLines(filename, [firstLine]);
-                }
-
                 while (iL.MoveNext()) {
                     var line = iL.Current;
                     File.AppendAllLines(filename, [line]);
                     if (line.EndsWith(travelling)) {
-                        firstLine = (new Line(line)).ToSimpleString();
                         break;
                     }
                 }
