@@ -39,6 +39,17 @@ namespace GCodeClean.Structure
         }
 
         /// <summary>
+        /// Gets all comment Tokens within the line.
+        /// </summary>
+        public List<Token> AllCommentTokens {
+            get {
+#pragma warning disable S2365 // Properties should not make collection or array copies
+                return _tokens.Where(t => t.IsComment).ToList();
+#pragma warning restore S2365 // Properties should not make collection or array copies
+            }
+        }
+
+        /// <summary>
         /// Set the private member _tokens to the supplied value, ensuring that the order of tokens is correct
         /// Then set the status values
         /// </summary>
@@ -59,6 +70,9 @@ namespace GCodeClean.Structure
             var allOtherTokens = _tokens.Where(t => !(t.IsLineNumber || t.IsBlockDelete || t.IsComment));
 
             _tokens = [.. blockDeleteToken, .. lineNumberToken, .. allOtherTokens, .. allCommentTokens];
+
+            // Reset the _source to match
+            _source = string.Join(' ', _tokens.Select(t => t.Source));
 
             SetStatuses();
         }
