@@ -91,11 +91,13 @@ namespace GCodeCleanCLI.Clean
             var outputFile = DetermineOutputFilename(settings);
             AnsiConsole.MarkupLine($"Outputting to: [bold green]{outputFile}[/]");
 
+            var eliminateNeedlessTravelling = false; // settings.EliminateNeedlessTravelling
+
             // Determine our starting context
             var preambleContext = await inputFile.GetPreambleContext();
 
             var inputLines = inputFile.ReadLinesAsync();
-            var reassembledLines = inputLines.CleanLines(preambleContext, dedupSelection, minimisationStrategy, settings.LineNumbers, settings.EliminateNeedlessTravelling, zClamp, arcTolerance, tolerance, settings.Annotate, tokenDefinitions);
+            var reassembledLines = inputLines.CleanLines(preambleContext, dedupSelection, minimisationStrategy, settings.LineNumbers, eliminateNeedlessTravelling, zClamp, arcTolerance, tolerance, settings.Annotate, tokenDefinitions);
             var lineCount = outputFile.WriteLinesAsync(reassembledLines);
 
             await foreach (var line in lineCount) {

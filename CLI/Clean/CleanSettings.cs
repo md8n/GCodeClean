@@ -45,10 +45,10 @@ namespace GCodeCleanCLI.Clean
         [Description("Restrict z-axis positive values to the supplied value")]
         public FlagValue<decimal> ZClamp { get; set; }
 
-        [CommandOption("--eliminateNeedlessTravelling")]
-        [Description("Eliminate needless 'travelling', extra movements with positive z-axis values")]
-        [DefaultValue(true)]
-        public bool EliminateNeedlessTravelling { get; set; }
+        //[CommandOption("--eliminateNeedlessTravelling")]
+        //[Description("Eliminate needless 'travelling', extra movements with positive z-axis values")]
+        //[DefaultValue(false)]
+        //public bool EliminateNeedlessTravelling { get; set; }
 
         public override ValidationResult Validate() {
             if (string.IsNullOrWhiteSpace(TokenDefs)) {
@@ -65,7 +65,7 @@ namespace GCodeCleanCLI.Clean
         }
 
         public static string GetCleanTokenDefsPath(string tokenDefsPath) {
-            if (tokenDefsPath.ToUpperInvariant() == "TOKENDEFINITIONS.JSON") {
+            if (tokenDefsPath.Equals("TOKENDEFINITIONS.JSON", StringComparison.InvariantCultureIgnoreCase)) {
                 var entryDir = Path.GetDirectoryName(AppContext.BaseDirectory);
 
                 tokenDefsPath = $"{entryDir}{Path.DirectorySeparatorChar}tokenDefinitions.json";

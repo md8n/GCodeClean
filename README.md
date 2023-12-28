@@ -93,8 +93,6 @@ OPTIONS:
                                                                   arcs (G2, G3) below which they will be converted to
                                                                   lines (G1)
         --zClamp [ZCLAMP]                                         Restrict z-axis positive values to the supplied value
-        --eliminateNeedlessTravelling    True                     Eliminate needless 'travelling', extra movements with
-                                                                  positive z-axis values
 
 COMMANDS:
     clean    Clean your GCode file. This is the default command
@@ -121,8 +119,6 @@ COMMANDS:
 `--zClamp` accepts a value to 'clamp' all positive z-axis values.
   - 0.02 to 0.5 for inches or
   - 0.5 to 10.0 for millimeters
-
-`--eliminateNeedlessTravelling` is a simple switch. Normally needless travelling (intermediary `G0` with positive z-axis values) will be eliminated, but adding this flag and setting it to false will ensure they are preserved. If you have something protruding from the surface of the workpiece then you should turn this option to false (just in case).
 
 For the tolerance and clamp values, the smallest value (inch or mm specific) is used as the default value.
 
