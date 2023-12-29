@@ -8,7 +8,6 @@ using Xunit;
 using Xunit.Abstractions;
 
 using GCodeClean.Merge;
-using GCodeClean.Shared;
 
 
 namespace GCodeClean.Tests
