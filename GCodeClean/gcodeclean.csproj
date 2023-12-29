@@ -21,7 +21,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Spectre.Console" Version="0.48.0" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" />    
   </ItemGroup>
 
@@ -32,7 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="SonarAnalyzer.CSharp" Version="9.15.0.81779" />
+    <PackageReference Update="SonarAnalyzer.CSharp" Version="9.16.0.82469" />
   </ItemGroup>  
 
 </Project>

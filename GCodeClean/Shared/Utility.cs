@@ -6,13 +6,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 
+using GCodeClean.Processing;
 using GCodeClean.Structure;
 
-using Spectre.Console;
 
-namespace GCodeClean.Processing
+namespace GCodeClean.Shared
 {
-    public static partial class Split {
+    public static partial class Utility {
         /// <summary>
         /// Finds GCodeClean's special 'Travelling' comments
         /// </summary>
@@ -90,55 +90,21 @@ namespace GCodeClean.Processing
             return postambleLines;
         }
 
-        public static void SplitFile(this IEnumerable<string> inputLines, string outputFolder, List<string> travellingComments, List<string> preambleLines, List<string> postambleLines) {
-            if (Directory.Exists(outputFolder)) {
-                Directory.Delete(outputFolder, true);
-            }
-            Directory.CreateDirectory(outputFolder);
+        public static string IdFormat(this int idCount) => $"D{idCount.ToString().Length}";
 
-            var (_, tLId, _, _) = travellingComments[^1].ParseTravelling();
-            var idFtm = $"D{tLId.ToString().Length}";
-
-            string firstLine = "";
-
-            var iL = inputLines.GetEnumerator();
-
-            while (iL.MoveNext()) {
-                var line = iL.Current;
-                if (line == Default.PreambleCompleted) {
-                    break;
-                }
-            }
-
-            foreach (var travelling in travellingComments) {
-                var (tool, id, start, end) = travelling.ParseTravelling();
-                var filename = $"{outputFolder}{Path.DirectorySeparatorChar}{tool}_{id.ToString(idFtm)}_{start.ToXYCoord()}_{end.ToXYCoord()}_gcc.nc";
-                AnsiConsole.MarkupLine($"Filename: [bold yellow]{filename}[/]");
-                File.WriteAllLines(filename, preambleLines);
-                if (firstLine != "") {
-                    File.AppendAllLines(filename, [firstLine]);
-                }
-                while (iL.MoveNext()) {
-                    var line = iL.Current;
-                    File.AppendAllLines(filename, [line]);
-                    if (line.EndsWith(travelling)) {
-                        firstLine = (new Line(line)).ToSimpleString();
-                        break;
-                    }
-                }
-                File.AppendAllLines(filename, postambleLines);
-            }
+        public static string NodeFileName(this Node node, string folderName, string idFtm) {
+            return $"{folderName}{Path.DirectorySeparatorChar}{node.Tool}_{node.Id.ToString(idFtm)}_{node.Start.ToXYCoord()}_{node.End.ToXYCoord()}_gcc.nc";
         }
 
-        private static (string tool, int id, Line start, Line end) ParseTravelling(this string travelling) {
+        public static Node ParseTravelling(this string travelling) {
             var tDetails = travelling.Replace("(||Travelling||", "").Replace("||)", "").Split("||");
             var tTool = tDetails[0];
-            var tId = Convert.ToInt32(tDetails[1]);
+            var tId = Convert.ToInt16(tDetails[1]);
             var tSE = tDetails[2].Split(">>", StringSplitOptions.RemoveEmptyEntries);
             var lStart = new Line(tSE[0]);
             var lEnd = new Line(tSE[1]);
 
-            return (tTool, tId, lStart, lEnd);
+            return new Node(tTool, tId, (Coord)lStart, (Coord)lEnd);
         }
     }
 }

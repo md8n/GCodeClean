@@ -4,8 +4,6 @@
 
 There are standalone release builds available, for Linux, Raspberry Pi (linux-arm), and Windows at [GCodeClean releases](https://github.com/md8n/GCodeClean/releases). It is very easy to a build for MacOS / OSX (osx-64 / osx-arm) (see #Deployment below).
 
-The standalone releases include all the relevant .NET 8.0 libraries for this application.
-
 But you can build and run this project yourself, and for that you would need the .NET 8.0 SDK.
 
 And if you do build it yourself then there are a very large number of possible targets including 32bit, and many specific Linux distros, etc.
@@ -80,7 +78,7 @@ The `dotnet restore` command above gets the runtimes for `linux-x64`, `linux-arm
 
 ## Authors
 
-* **Lee HUMPHRIES** - *Initial work* - [md8n](https://github.com/md8n)
+* **Lee HUMPHRIES** - *Initial work*, and *everything else* - [md8n](https://github.com/md8n)
 
 ## License
 

@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 
 using GCodeClean.Structure;
 
-using Spectre.Console;
 
 namespace GCodeClean.Processing {
 
@@ -296,12 +295,7 @@ namespace GCodeClean.Processing {
                             travelingToken.Source = "G0";
                         }
                     } else if (zToken.Number == 0 && travelingToken.ToString() == "G1") {
-                        // If Z == 0 and the source is G1, then triple it for later File split markup
-                        yield return line;
-                        var zeroLine = new Line(line);
-                        zeroLine.AllTokens.Intersect(ModalGroup.ModalSimpleMotion).First().Source = "G0";
-                        zeroLine.AllTokens.First(t => t.Code == 'Z').Number = zClampConstrained;
-                        yield return zeroLine;
+                        // If Z == 0 and the source is G1, then we want to leave it alone as a surface exit from a cut
                     } else if (zToken.Number < 0 && travelingToken.ToString() == "G0") {
                         // If Z < 0 and source is G0 then the motion should be G1 (probably)
                         travelingToken.Source = "G1";
@@ -522,6 +516,15 @@ namespace GCodeClean.Processing {
                         entrySet = true;
                     }
                     exitLine = new Line(line);
+                    var exitComments = exitLine.AllCommentTokens;
+                    if (exitComments.Count > 0) {
+                        for (var ix = exitComments.Count - 1; ix >= 0; ix--) {
+                            if (exitComments[ix].Source.StartsWith("(||Travelling||")) {
+                                exitLine.RemoveToken(exitComments[ix]);
+                                break;
+                            }
+                        }
+                    }
                 }
 
                 if (line.HasToken('Z')) {
@@ -531,7 +534,20 @@ namespace GCodeClean.Processing {
                             travellingLine = new Line(line);
                             travellingLine.ReplaceToken(new Token("G1"), new Token("G0"));
 
-                            line.AppendToken(new Token($"(||Travelling||{context.GetToolNumber()}||{blockIx++}||>>{entryLine}>>{exitLine}>>||)"));
+                            // Replace any existing travelling comment
+                            var travellingComment = new Token($"(||Travelling||{context.GetToolNumber()}||{blockIx++}||>>{entryLine}>>{exitLine}>>||)");
+                            var comments = line.AllCommentTokens;
+                            if (comments.Count > 0) {
+                                for (var ix = 0; ix < comments.Count; ix++) {
+                                    if (comments[ix].Source.StartsWith("(||Travelling||")) {
+                                        line.ReplaceToken(comments[ix], travellingComment);
+                                        break;
+                                    }
+                                }
+                            } else {
+                                line.AppendToken(travellingComment);
+                            }
+
                             entryLine = new Line();
                             entrySet = false;
                         }
