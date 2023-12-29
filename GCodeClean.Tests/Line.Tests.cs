@@ -1,5 +1,5 @@
-// Copyright (c) 2021 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
-// Licensed under the MIT license. See LICENSE.txt file in the project root for details.
+// Copyright (c) 2021-2023 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
+// Licensed under the AGPL license. See LICENSE.txt file in the project root for details.
 
 using GCodeClean.Structure;
 
