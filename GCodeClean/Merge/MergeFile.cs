@@ -1,9 +1,8 @@
 // Copyright (c) 2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
+using System;
 using System.Linq;
-
-using Spectre.Console;
 
 
 namespace GCodeClean.Merge
@@ -14,7 +13,7 @@ namespace GCodeClean.Merge
         {
             if (!inputFolder.FolderExists())
             {
-                AnsiConsole.MarkupLine($"No such folder found. Nothing to see here, move along.");
+                Console.WriteLine("No such folder found. Nothing to see here, move along.");
                 return;
             }
 
@@ -22,7 +21,7 @@ namespace GCodeClean.Merge
             var tools = nodes.Select(n => n.Tool).Distinct().ToList();
 
             if (tools.Count > 1) {
-                AnsiConsole.MarkupLine("[bold red]Currently only one tool per merge is supported[/]");
+                Console.WriteLine("Currently only one tool per merge is supported");
                 return;
             }
 
@@ -42,40 +41,18 @@ namespace GCodeClean.Merge
             var nodeIdList = pairedEdges.GetNodeIds();
             var newDistance = nodes.TotalDistance(nodeIdList);
 
-            AnsiConsole.MarkupLine($"Total distinct tools: {tools.Count}");
-            AnsiConsole.MarkupLine($"Total nodes: {nodes.Count}");
-            AnsiConsole.MarkupLine($"Total edges: {pairedEdges.Count}");
+            Console.WriteLine($"Total distinct tools: {tools.Count}");
+            Console.WriteLine($"Total nodes: {nodes.Count}");
+            Console.WriteLine($"Total edges: {pairedEdges.Count}");
 
             var (startIds, endIds) = pairedEdges.GetStartsAndEnds();
-            AnsiConsole.MarkupLine($"Starting node Id: {string.Join(',', startIds)}");
-            AnsiConsole.MarkupLine($"Ending node Id: {string.Join(',', endIds)}");
+            Console.WriteLine($"Starting node Id: {string.Join(',', startIds)}");
+            Console.WriteLine($"Ending node Id: {string.Join(',', endIds)}");
 
-            AnsiConsole.MarkupLine($"Current travelling distance: {currentDistance}");
-            AnsiConsole.MarkupLine($"New travelling distance: {newDistance}");
+            Console.WriteLine($"Current travelling distance: {currentDistance}");
+            Console.WriteLine($"New travelling distance: {newDistance}");
 
             inputFolder.MergeNodes(pairedEdges.GetNodes(nodes));
-
-            //            List<(string tool, List<int> nodeIds)> cutList = [];
-            //            foreach(var toolStartId in toolStartIds) {
-            //                var tool = nodes.First(n => n.Id == toolStartId).Tool;
-            //                var pairedEdge = pairedEdges.Find(pe => pe.PrevId == toolStartId);
-            //                List<int> nodeIds = [pairedEdge.PrevId];
-            //#pragma warning disable S2583
-            //#pragma warning disable CS8073
-            //                do {
-            //                    var nextId = pairedEdge.NextId;
-            //                    nodeIds.Add(nextId);
-            //                    pairedEdge = pairedEdges.Find(pe => pe.PrevId == nextId);
-            //                } while (pairedEdge != null);
-            //#pragma warning restore CS8073
-            //#pragma warning restore S2583
-            //                cutList.Add( (tool, nodeIds) );
-            //            }
-
-            //foreach (var pair in primaryPairs) {
-            //    AnsiConsole.MarkupLine($"Node primary pairs: [bold yellow]{string.Join(',', pair)}[/]");
-            //}
-            //AnsiConsole.MarkupLine($"Count primary pairs: [bold yellow]{primaryPairs.Count}[/]");
         }
     }
 }

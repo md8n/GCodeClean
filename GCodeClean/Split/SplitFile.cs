@@ -1,13 +1,11 @@
 // Copyright (c) 2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 
-using Spectre.Console;
-
 using GCodeClean.Processing;
-using GCodeClean.Structure;
 using GCodeClean.Shared;
 
 
@@ -33,7 +31,7 @@ namespace GCodeClean.Split
 
             foreach (var travelling in travellingComments) {
                 var filename = travelling.ParseTravelling().NodeFileName(outputFolder, idFtm);
-                AnsiConsole.MarkupLine($"Filename: [bold yellow]{filename}[/]");
+                Console.WriteLine($"Filename: {filename}");
 
                 File.WriteAllLines(filename, preambleLines);
 

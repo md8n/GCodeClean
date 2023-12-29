@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 
 using GCodeClean.Structure;
 
-using Spectre.Console;
 
 namespace GCodeClean.Processing {
 

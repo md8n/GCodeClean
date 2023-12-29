@@ -6,8 +6,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-using Spectre.Console;
-
 using GCodeClean.Shared;
 using GCodeClean.Structure;
 using GCodeClean.IO;

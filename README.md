@@ -21,7 +21,7 @@ We also have:
 
 There are standalone release builds available, for Linux, Raspberry Pi (linux-arm), and Windows at [GCodeClean releases](https://github.com/md8n/GCodeClean/releases). It is very easy to a build for MacOS / OSX (osx-64) (see `BuildItYourself.md`). Download the release you need and unzip it in a folder that works for you. GCodeClean is a command line application, so you run it by using a 'terminal' and typing the command in to do what you want.
 
-The standalone releases include all the relevant .NET 8.0 libraries for this application.
+The standalone releases are single file executables that include all the relevant .NET 8.0 libraries.
 
 Alternatively you can build and run this project yourself. See `BuildItYourself.md` for instructions and tips. And how to deploy. And if you do build it yourself then there are a very large number of possible targets including 32bit, and many specific Linux distros, etc.
 
@@ -31,11 +31,11 @@ After downloading the release you need for your OS and unpacking it into its own
 
 Change directory to the location where you unpacked (unzipped) the release - you're looking for the file called `GCC.exe`, this is the command line app you'll use.
 
-GCodeClean has two 'commands' `clean` and `split`. `clean` is the one you'll be most interested in.
+GCodeClean has tthree 'commands' `clean`, `split` and `merge`. `clean` is the one you'll be most interested in.
 
 for Windows you would type in something like and press `enter`:
 ```
-.\GCC.exe --filename <full path to your gcode file here>
+.\gcc --filename <full path to your gcode file here>
 ```
 
 Or for Linux (e.g. Ubuntu 18.04 / 20.04 / 22.04) it would be:
@@ -50,55 +50,56 @@ For the above `<full path to your gcode file here>` tells `GCC` not just the nam
 
 ### Command Line Parameters
 
-Throw the `--help` command line option at the GCodeClean `GCC` (in other words type in `GCC --help`) and you'll get back the following:
+Throw the `--help` command line option at the GCodeClean `GCC` (in other words type in `.\gcc --help`) and you'll get back the following:
 
 ```
-USAGE:
-    GCC.dll [OPTIONS] <COMMAND>
+Description:
+  GCodeClean
 
-OPTIONS:
-    -h, --help       Prints help information
-    -v, --version    Prints version information
+Usage:
+  GCC [command] [options]
 
-COMMANDS:
-    clean
-    split
+Options:
+  --version       Show version information
+  -?, -h, --help  Show help and usage information
+
+Commands:
+  clean  Clean your GCode file.
+  split  Split your GCode file into individual cutting actions.
+  merge  Merge a folder of files, produced by split, back into a single GCode file.
 ```
 
 #### The `clean` Command
 
-Repeat the above `--help` command, but specify `clean` as the command (in other words type in `GCC clean --help`) and you'll get back the following:
+Repeat the above `--help` command, but specify `clean` as the command (in other words type in `.\gcc clean --help`) and you'll get back the following:
 
 ```
-USAGE:
-    GCC.dll clean [OPTIONS] <COMMAND>
+Description:
+  Clean your GCode file.
 
-OPTIONS:
-                                         DEFAULT
-    -h, --help                                                    Prints help information
-    -f, --filename <FILENAME>                                     Full path to the input filename. This is the only
-                                                                  required option
-        --tokenDefs <TOKENDEFS>          tokenDefinitions.json    Full path to the tokenDefinitions.json file
-        --annotate                                                Annotate the GCode with inline comments
-        --lineNumbers                                             Keep line numbers
-        --minimise <MINIMISE>            soft                     Select preferred minimisation strategy,
-                                                                  'soft' - (default) FZ only,
-                                                                  'medium' - All codes excluding IJK (but leave spaces
-                                                                  in place),
-                                                                  'hard' - All codes excluding IJK and remove spaces,
-                                                                  or list of codes e.g. FGXYZ
-        --tolerance [TOLERANCE]                                   Enter a clipping tolerance for the various
-                                                                  deduplication operations
-        --arcTolerance [ARCTOLERANCE]                             Enter a tolerance for the 'point-to-point' length of
-                                                                  arcs (G2, G3) below which they will be converted to
-                                                                  lines (G1)
-        --zClamp [ZCLAMP]                                         Restrict z-axis positive values to the supplied value
+Usage:
+  GCC clean [options]
 
-COMMANDS:
-    clean    Clean your GCode file. This is the default command
+Options:
+  --filename <filename> (REQUIRED)  Full path to the input filename
+  --tokenDefs <tokenDefs>           Full path to the tokenDefinitions.json file [default:
+                                    C:\GitHub\GCodeClean\tokenDefinitions.json]
+  --annotate                        Annotate the GCode with inline comments [default: False]
+  --lineNumbers                     Keep line numbers [default: False]
+  --minimise <minimise>             Select preferred minimisation strategy,
+                                    'soft' - (default) FZ only,
+                                    'medium' - All codes excluding IJK(but leave spaces in place),
+                                    'hard' - All codes excluding IJK and remove spaces,
+                                    or list of codes e.g.FGXYZ [default: soft]
+  --tolerance <tolerance>           Enter a clipping tolerance for the various deduplication operations. Default value
+                                    ultimately depends on the units
+  --arcTolerance <arcTolerance>     Enter a tolerance for the 'point-to-point' length of arcs (G2, G3) below which they will
+                                    be converted to lines (G1)
+  --zClamp <zClamp>                 Restrict z-axis positive values to the supplied value
+  -?, -h, --help                    Show help and usage information
 ```
 
-`--annotate` is a simple switch, include it on its own to have your GCode annotated with inline comments (even if you specify hard minimisation).
+`--annotate` is a simple switch, include it to have your GCode annotated with inline comments (even if you specify hard minimisation).
 
 `--lineNumbers` is also a simple switch. Normally line numbers will be stripped out (they are NOT recommended), but adding this flag will ensure they are preserved (if you must).
 
@@ -130,7 +131,7 @@ The GCodeClean `GCC` will require Read access to that file, and Write access to 
 And then run the `GCC` executable.
 e.g. for Windows that might look like:
 ```
-.\GCC.exe --filename FacadeFullAlternate.nc --minimise soft --annotate
+.\gcc --filename FacadeFullAlternate.nc --minimise soft --annotate
 ```
 
 or for Linux (Ubuntu 18.04 / 20.04)
@@ -145,23 +146,23 @@ Note: If the input file does not exist (or can't be found, i.e. your typo) then 
 
 `Exit code`:
 * `0` - Success
-* `2` - File or Directory not found exception - check for typos etc.
+* some other number - some exception, for example file / folder not found - check for typos etc.
 
 
 #### The `split` Command
 
-Repeat the above `--help` command, but specify `split` as the command (in other words type in `GCC split --help`) and you'll get back the following:
+Repeat the above `--help` command, but specify `split` as the command (in other words type in `.\gcc split --help`) and you'll get back the following:
 
 ```
-DESCRIPTION:
-Split your GCode file into individual cutting actions
+Description:
+  Split your GCode file into individual cutting actions.
 
-USAGE:
-    GCC.dll split [OPTIONS]
+Usage:
+  GCC split [options]
 
-OPTIONS:
-    -h, --help                   Prints help information
-    -f, --filename <FILENAME>    Full path to the input filename. This is the only required option
+Options:
+  --filename <filename> (REQUIRED)  Full path to the input filename
+  -?, -h, --help                    Show help and usage information
 ```
 
 `split` assumes the `filename` provided, is for a GCode file that has already been `clean`ed. It will create a folder with the same name as `filename` but minus the filename extension (`.nc` etc.). And within that folder it will create one individual file for each cutting path in the original file.
@@ -169,6 +170,27 @@ OPTIONS:
 Each individual file should be a valid GCode file that can be run independently.
 
 The name of these files will be made up of 4 parts, the tool number, the index of the cutting path from the original file (starting at 0), the starting XY coordinate of the cutting path, and the finishing XY coordinate of the cutting path. Each part of the filename is delimited with an underscore `_`.
+
+
+#### The `merge` Command
+
+Repeat the above `--help` command, but specify `merge` as the command (in other words type in `.\gcc merge --help`) and you'll get back the following:
+
+```
+Description:
+  Merge a folder of files, produced by split, back into a single GCode file.
+
+Usage:
+  GCC merge [options]
+
+Options:
+  --folder <folder> (REQUIRED)  Full path to the input folder
+  -?, -h, --help                Show help and usage information
+```
+
+`merge` assumes the `folder` provided, is for a GCode file that has already been `split`. It will examine all of the names of the files in that folder and extract from them the necessary details for it to attempt a 'better' order for each of the cutting paths (individual files). Once it has determined that it will merge all of the files back together in that 'better' order.
+
+The output file will have `-ts.nc` appended to name of the input folder that you provided on the command line.
 
 ## What's Special about GCodeClean?
 
@@ -235,7 +257,7 @@ G0 X39.29 Y-105.937
 
 ## Authors
 
-* **Lee HUMPHRIES** - *Initial work* - [md8n](https://github.com/md8n)
+* **Lee HUMPHRIES** - *Initial work*, and *everything else* - [md8n](https://github.com/md8n)
 
 ## License
 
@@ -244,5 +266,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgments
 
 * To all those comments I picked up out of different people's posts in Stack Overflow
-* The quality info on C# 8, and IAsyncEnumerable were invaluable
+* The quality info on C# 8, and IAsyncEnumerable (which came out with C# 5) were invaluable
 * All the sample GCode files provided by the Maslow CNC community [Maslow CNC](https://forums.maslowcnc.com/)

@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Spectre.Console;
 
 using GCodeClean.Processing;
 using GCodeClean.Shared;
@@ -20,7 +19,7 @@ namespace GCodeClean.Merge
         /// <param name="nodes"></param>
         /// <returns></returns>
         public static List<Edge> GetPrimaryEdges(this List<Node> nodes) {
-            AnsiConsole.MarkupLine($"Pass [bold yellow]0[/]: Primary Edges");
+            Console.WriteLine("Pass 0: Primary Edges");
 
             List<Edge> primaryEdges = [];
             foreach (var (tool, id, start, end) in nodes) {
@@ -48,13 +47,13 @@ namespace GCodeClean.Merge
         /// <param name="weighting"></param>
         /// <returns></returns>
         public static List<Edge> GetSecondaryEdges(this List<Edge> pairedEdges, List<Node> nodes, short weighting) {
-            AnsiConsole.MarkupLine($"Pass [bold yellow]{weighting}[/]: Secondary Edges");
+            Console.WriteLine($"Pass {weighting}: Secondary Edges");
             List<Edge> seedPairings = [.. pairedEdges.GetResidualSeedPairings(nodes, weighting).Where(sp => sp.Distance == 0)];
             return seedPairings.GetFilteredSeedPairings(pairedEdges);
         }
 
         public static List<Edge> PairSeedingToInjPairings(this List<Edge> pairedEdges, List<Node> nodes, short weighting) {
-            AnsiConsole.MarkupLine($"Pass [bold yellow]{weighting}[/]: Peer Seeding");
+            Console.WriteLine($"Pass {weighting}: Peer Seeding");
             List<Edge> seedPairings = [.. pairedEdges.GetResidualSeedPairings(nodes, weighting).OrderBy(tp => tp.Distance)];
 
             /* Injecting nodes into other existing edge pairings, not found to be useful */
@@ -67,7 +66,7 @@ namespace GCodeClean.Merge
         }
 
         public static List<Edge> BuildResidualPairs(this List<Edge> pairedEdges, List<Node> nodes, short weighting) {
-            AnsiConsole.MarkupLine($"Pass [bold yellow]{weighting}[/]: Residual pairs");
+            Console.WriteLine($"Pass {weighting}: Residual pairs");
             var unpairedPrevNodes = pairedEdges.UnpairedPrevNodes(nodes).Select(n => n.Id);
             var unpairedNextNodes = pairedEdges.UnpairedNextNodes(nodes).Select(n => n.Id);
 
