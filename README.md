@@ -9,19 +9,21 @@ We also have:
 * linear to arc deduplication, converting several simple lines to a single arc,
 * eliminate meaningless movement commands - especially G0 without any arguments,
 * correcting G1 to G0 when the z-axis is at a positive value,
-* clipping decimal places on arguments to meaningful values,
+* clipping decimal places on arguments to meaningful values (as per the NIST spec),
 * `per line` linting: splitting lines to match the actual execution order as per the NIST gcode spec, and then reorganising the 'words' on a line to conform to some common practices (but not all),
 * `annotate` the GCode with explanatory comments (optional),
 * 'soft', 'medium', 'hard' or custom removal of superfluous tokens (`minimise`).
 * `preamble linting`: Adding a 'standard' set of gcode declarations, i.e. converting the 'implicit' to 'explicit'.
 * `postamble linting`: Similar to the `preamble`, but at the end of the file (obviously).
 * `file terminator matching`: Ensuring that if the file demarcation character `%` is used at the start of the file then it is also used at the end.
+* `split`ting of GCode files into individual files, each with a single cutting path.
+* `merge`ing of previously `split` files, with some effort at ordering them to reduce the amount of travelling (`G0`) distance in total.
 
 ## Getting Started
 
 There are standalone release builds available, for Linux, Raspberry Pi (linux-arm), and Windows at [GCodeClean releases](https://github.com/md8n/GCodeClean/releases). It is very easy to a build for MacOS / OSX (osx-64) (see `BuildItYourself.md`). Download the release you need and unzip it in a folder that works for you. GCodeClean is a command line application, so you run it by using a 'terminal' and typing the command in to do what you want.
 
-The standalone releases are single file executables that include all the relevant .NET 8.0 libraries.
+The standalone releases are single file executables.
 
 Alternatively you can build and run this project yourself. See `BuildItYourself.md` for instructions and tips. And how to deploy. And if you do build it yourself then there are a very large number of possible targets including 32bit, and many specific Linux distros, etc.
 
@@ -31,7 +33,7 @@ After downloading the release you need for your OS and unpacking it into its own
 
 Change directory to the location where you unpacked (unzipped) the release - you're looking for the file called `GCC.exe`, this is the command line app you'll use.
 
-GCodeClean has tthree 'commands' `clean`, `split` and `merge`. `clean` is the one you'll be most interested in.
+GCodeClean has three 'commands' `clean`, `split` and `merge`. `clean` is the one you'll be most interested in.
 
 for Windows you would type in something like and press `enter`:
 ```
@@ -110,11 +112,11 @@ Options:
 - Or a custom selection of codes from the official list of `ABCDFGHLMNPRSTXYZ` (i.e. excluding IJK) and the 'others' `EOQUV`.
 
 `--tolerance` accepts a value to use when 'clipping' all arguments, with the exception of I, J or K.
-  - 0.0005 to 0.05 for inches or
+  - 0.00005 to 0.05 for inches or
   - 0.005 to 0.5 for millimeters
 
 `--arcTolerance` accepts a value to use to 'simplify' very short arcs to lines.
-  - 0.0005 to 0.05 for inches or
+  - 0.00005 to 0.05 for inches or
   - 0.005 to 0.5 for millimeters
 
 `--zClamp` accepts a value to 'clamp' all positive z-axis values.
