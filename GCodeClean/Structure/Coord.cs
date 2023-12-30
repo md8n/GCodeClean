@@ -69,14 +69,6 @@ namespace GCodeClean.Structure
             Set = CoordSet.All;
         }
 
-        public Coord(float a, float b, CoordSet addCoord = CoordSet.Z) : this((decimal) a, (decimal) b, addCoord)
-        {
-        }
-
-        public Coord(float x, float y, float z) : this((decimal) x, (decimal) y, (decimal) z)
-        {
-        }
-
         public Coord(PointF ab, CoordSet addCoord = CoordSet.Z) : this((decimal) ab.X, (decimal) ab.Y, addCoord)
         {
         }
@@ -96,11 +88,6 @@ namespace GCodeClean.Structure
             var hasZ = (Set & CoordSet.Z) == CoordSet.Z ? 1 : 0;
 
             return hasX + hasY + hasZ >= 2;
-        }
-
-        public (double X, double Y, double Z) ToDouble()
-        {
-            return ((double) X, (double) Y, (double) Z);
         }
 
         public PointF ToPointF(CoordSet dropCoord = CoordSet.Z)
