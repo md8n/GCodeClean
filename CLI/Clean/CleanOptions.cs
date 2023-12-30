@@ -45,6 +45,8 @@ namespace GCodeCleanCLI.Clean
                     value = min;
                 } else if (option.Value > max) {
                     value = max;
+                } else {
+                    value = option.Value;
                 }
             }
             Console.WriteLine($"{msg} {value}");
