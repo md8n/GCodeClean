@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2020-2024 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the AGPL license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -27,6 +27,25 @@ namespace GCodeClean.Processing {
         ) {
             var preamble = Default.Preamble();
             foreach (var line in await tokenisedLines.ToListAsync(cancellationToken)) {
+                if (line.HasTokens(ModalGroup.ModalAllMotion)) {
+                    break;
+                }
+                preamble.Update(line, true);
+            }
+
+            return preamble;
+        }
+
+        /// <summary>
+        /// Build the `preamble` from the default Context and
+        /// whatever lines are supplied
+        /// </summary>
+        /// <param name="lines"></param>
+        /// <returns></returns>
+        public static Context BuildPreamble(this List<string> lines) {
+            var preamble = Default.Preamble();
+            foreach (var l in lines) {
+                var line = new Line(l);
                 if (line.HasTokens(ModalGroup.ModalAllMotion)) {
                     break;
                 }
