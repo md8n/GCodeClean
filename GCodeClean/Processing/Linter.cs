@@ -125,8 +125,8 @@ namespace GCodeClean.Processing {
                     currentLine.AllTokens = yieldableLines[0].AllTokens.Concat(currentLine.Tokens).ToList();
                 }
 
-                // Motion commands without arguments are invalid (and should be discarded)
-                if (currentLine.Tokens.Count == 1 && ModalGroup.ModalSimpleMotion.Contains(currentLine.Tokens[0])) {
+                // Motion commands (simple and probe) without arguments are invalid (and should be discarded)
+                if (currentLine.Tokens.Count == 1 && (ModalGroup.ModalSimpleMotion.Contains(currentLine.Tokens[0]) || ModalGroup.ModalProbeMotion.Contains(currentLine.Tokens[0]))) {
                     currentLine.ClearTokens();
                 }
 

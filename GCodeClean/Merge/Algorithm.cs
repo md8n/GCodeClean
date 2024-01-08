@@ -22,8 +22,8 @@ namespace GCodeClean.Merge
             Console.WriteLine("Pass 0: Primary Edges");
 
             List<Edge> primaryEdges = [];
-            foreach (var (tool, id, start, end) in nodes) {
-                var matchingNodes = nodes.FindAll(n => n.Tool == tool && n.Id != id && n.Start.X == end.X && n.Start.Y == end.Y);
+            foreach (var (seq, subSeq, id, maxZ, tool, start, end) in nodes) {
+                var matchingNodes = nodes.FindAll(n => n.Seq == seq && n.SubSeq == subSeq && n.Tool == tool && n.Id != id && n.Start.X == end.X && n.Start.Y == end.Y);
                 if (matchingNodes.Count > 1) {
                     // This may be some kind of 'peck-drilling' operation, whatever it is
                     // simply take the first node

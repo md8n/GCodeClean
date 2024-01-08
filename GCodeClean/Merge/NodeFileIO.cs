@@ -35,13 +35,19 @@ namespace GCodeClean.Merge
             List<Node> nodes = [];
             foreach (var filePath in fileEntries) {
                 var fileNameParts = Path.GetFileNameWithoutExtension(filePath).Split(separator);
-                var tool = fileNameParts[0];
-                var id = Int16.Parse(fileNameParts[1]);
-                var startCoords = fileNameParts[2].Replace("X", "").Split("Y").Select(c => decimal.Parse(c)).ToArray();
-                var endCoords = fileNameParts[3].Replace("X", "").Split("Y").Select(c => decimal.Parse(c)).ToArray();
+
+                var seq = short.Parse(fileNameParts[0]);
+                var subSeq = short.Parse(fileNameParts[1]);
+                var id = short.Parse(fileNameParts[2]);
+                var maxZ = decimal.Parse(fileNameParts[3]);
+                var tool = fileNameParts[4];
+
+                var startCoords = fileNameParts[5].Replace("X", "").Split("Y").Select(c => decimal.Parse(c)).ToArray();
+                var endCoords = fileNameParts[6].Replace("X", "").Split("Y").Select(c => decimal.Parse(c)).ToArray();
                 var start = new Coord(startCoords[0], startCoords[1]);
                 var end = new Coord(endCoords[0], endCoords[1]);
-                nodes.Add(new Node(tool, id, start, end));
+
+                nodes.Add(new Node(seq, subSeq, id, maxZ, tool, start, end));
             }
 
             return nodes;

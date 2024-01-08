@@ -16,7 +16,7 @@ namespace GCodeClean.Shared
         /// <summary>
         /// Finds GCodeClean's special 'Travelling' comments
         /// </summary>
-        [GeneratedRegex("\\(\\|{2}Travelling\\|{2}.*\\|{2}\\d+\\|{2}>>G\\d+.*>>G\\d+.*>>\\|{2}\\)$")]
+        [GeneratedRegex("\\(\\|{2}Travelling(\\|{2}\\d+){3}\\|{2}\\-?\\d+.*\\|{2}.*\\|{2}>>G\\d+.*>>G\\d+.*>>\\|{2}\\)$")]
         private static partial Regex RegexTravellingPattern();
 
         /// <summary>
@@ -96,15 +96,18 @@ namespace GCodeClean.Shared
             return $"{folderName}{Path.DirectorySeparatorChar}{node.Tool}_{node.Id.ToString(idFtm)}_{node.Start.ToXYCoord()}_{node.End.ToXYCoord()}_gcc.nc";
         }
 
-        public static Node ParseTravelling(this string travelling) {
+        public static Node ToNode(this string travelling) {
             var tDetails = travelling.Replace("(||Travelling||", "").Replace("||)", "").Split("||");
-            var tTool = tDetails[0];
-            var tId = Convert.ToInt16(tDetails[1]);
-            var tSE = tDetails[2].Split(">>", StringSplitOptions.RemoveEmptyEntries);
+            var tSeq = short.Parse(tDetails[0]);
+            var tSubSeq = short.Parse(tDetails[1]);
+            var tId = short.Parse(tDetails[2]);
+            var tMaxZ = decimal.Parse(tDetails[3]);
+            var tTool = tDetails[4];
+            var tSE = tDetails[5].Split(">>", StringSplitOptions.RemoveEmptyEntries);
             var lStart = new Line(tSE[0]);
             var lEnd = new Line(tSE[1]);
 
-            return new Node(tTool, tId, (Coord)lStart, (Coord)lEnd);
+            return new Node(tSeq, tSubSeq, tId, tMaxZ, tTool, (Coord)lStart, (Coord)lEnd);
         }
     }
 }

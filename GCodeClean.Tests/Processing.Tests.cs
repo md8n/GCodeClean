@@ -249,18 +249,20 @@ namespace GCodeClean.Tests
             var sourceLineLines = sourceTextLines.ConvertAll(l => new Line(l));
             var sourceLines = sourceTextLines.ToAsyncEnumerable();
 
+            var zClamp = 1.5M;
+
             List<Line> expectedLines = [
                 new Line("G0 Z1.5"),
                 new Line("G0 X68.904 Y128.746 Z1.5"),
                 new Line("G1 X68.904 Y128.746 Z-1.194"),
                 new Line("G1 X68.995 Y128.814 Z-1.254"),
                 new Line("G1 X69.089 Y128.892 Z-1.322"),
-                new Line("G0 X69.089 Y128.892 Z1.5 (||Travelling||notset||0||>>G0 X68.904 Y128.746 Z1.5>>G0 X69.089 Y128.892 Z1.5>>||)"),
+                new Line("G0 X69.089 Y128.892 Z1.5 (||Travelling||notset||0||>>G0 X68.904 Y128.746 Z1.5>>G0 X69.089 Y128.892 Z1.5>>||-1.194||-1.257||-1.322||0.052||)"),
                 new Line("G0 X42.239 Y157.031 Z1.5"),
                 new Line("G1 X42.239 Y157.031 Z-0.413"),
             ];
 
-            var resultLines = await sourceLines.CleanLinesFirstPhase(false).DetectTravelling().ToListAsync();
+            var resultLines = await sourceLines.CleanLinesFirstPhase(false).DetectTravelling(zClamp).ToListAsync();
             Assert.False(sourceLineLines.SequenceEqual(resultLines));
             Assert.True(expectedLines.SequenceEqual(resultLines));
         }

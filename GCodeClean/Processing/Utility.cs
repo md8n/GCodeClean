@@ -97,12 +97,28 @@ namespace GCodeClean.Processing
         }
 
         /// <summary>
-        /// Get the length units from the context
+        /// Get the coordinate plane ("G17", "G18", "G19", "") from the context
         /// </summary>
         /// <param name="context"></param>
         /// <returns></returns>
         public static string GetCoordPlane(this Context context) {
-            return context.GetModalState(ModalGroup.ModalPlane).ToString();
+            var coordPlane = context.GetModalState(ModalGroup.ModalPlane);
+            return coordPlane != null ? coordPlane.ToString() : "";
+        }
+
+        /// <summary>
+        /// Get the standard deviation for the supplied list of decimal values
+        /// </summary>
+        /// <param name="values"></param>
+        /// <returns></returns>
+        public static decimal StdDev(this List<decimal> values) {
+            if (values.Count <= 1) {
+                return 0;
+            }
+            var average = (double)values.Average();
+            var sumOfDerivationAverage = (double)values.Select(v => v * v).Sum() / values.Count;
+            var result = Math.Sqrt(sumOfDerivationAverage - (average * average));
+            return decimal.CreateTruncating(result);
         }
 
         public static decimal ConstrictZClamp(string lengthUnits = "mm", decimal zClamp = 10.0M) {

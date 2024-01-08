@@ -37,7 +37,7 @@ namespace GCodeClean.Split
             Line prevLine = null;
 
             foreach (var travelling in travellingComments) {
-                var filename = travelling.ParseTravelling().NodeFileName(outputFolder, idFtm);
+                var filename = travelling.ToNode().NodeFileName(outputFolder, idFtm);
                 Console.WriteLine($"Filename: {filename}");
 
                 File.WriteAllLines(filename, preambleLines);
