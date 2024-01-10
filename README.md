@@ -171,7 +171,15 @@ Options:
 
 Each individual file should be a valid GCode file that can be run independently.
 
-The name of these files will be made up of 4 parts, the tool number, the index of the cutting path from the original file (starting at 0), the starting XY coordinate of the cutting path, and the finishing XY coordinate of the cutting path. Each part of the filename is delimited with an underscore `_`.
+The name of these files will be made up of several parts, each part of the filename is delimited with an underscore `_`.
+For a filename like `0_1_17_2_X558.657Y373.418_X563.676Y407.742_gcc.nc` you can understand the parts of it as follows:
+* `0_` - The main 'sequence' number this cutting path belongs to. You can think of this as which tool change has occurred. So this would be the first (`0` based index) tool change.
+* `1_` - The 'sub-sequence' number. The range of cutting depths from the shallowest to the deepest for the entire original file is divided into 10 groupings, and then each cutting path is assigned to one of these groupings depending on its maximum cutting depth. Files in the same 'sequence' and 'sub-sequence' will be grouped together when any merge is performed.
+* `17_` - The original index for this cutting path, i.e. its order in the original file.
+* `2_` - The tool name/number for this cutting path. You may see 'notset' if no tool was defined.
+* `X558.657Y373.418_` - The starting coordinates for this cutting path.
+* `X563.676Y407.742_` - The finishing coordinates.
+* `gcc.nc` - yep it is a GCode (nc) file that GCodeClean has messed with.
 
 
 #### The `merge` Command

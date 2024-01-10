@@ -39,11 +39,11 @@ namespace GCodeClean.Merge
                 var seq = short.Parse(fileNameParts[0]);
                 var subSeq = short.Parse(fileNameParts[1]);
                 var id = short.Parse(fileNameParts[2]);
-                var maxZ = decimal.Parse(fileNameParts[3]);
-                var tool = fileNameParts[4];
+                var maxZ = 0M; // We don't have maxZ in the filename parts
+                var tool = fileNameParts[3];
 
-                var startCoords = fileNameParts[5].Replace("X", "").Split("Y").Select(c => decimal.Parse(c)).ToArray();
-                var endCoords = fileNameParts[6].Replace("X", "").Split("Y").Select(c => decimal.Parse(c)).ToArray();
+                var startCoords = fileNameParts[4].Replace("X", "").Split("Y").Select(c => decimal.Parse(c)).ToArray();
+                var endCoords = fileNameParts[5].Replace("X", "").Split("Y").Select(c => decimal.Parse(c)).ToArray();
                 var start = new Coord(startCoords[0], startCoords[1]);
                 var end = new Coord(endCoords[0], endCoords[1]);
 
@@ -55,9 +55,9 @@ namespace GCodeClean.Merge
 
         public static void MergeNodes(this string inputFolder, List<Node> nodes) {
             var mergeFileName = $"{inputFolder}-ts.nc";
-            var idFtm = nodes.Count.IdFormat();
+            int[] idCounts = [nodes.Select(n => n.Seq).Distinct().Count(), nodes.Select(n => n.SubSeq).Distinct().Count(), nodes.Count];
 
-            var firstNodeFileName = nodes[0].NodeFileName(inputFolder, idFtm);
+            var firstNodeFileName = nodes[0].NodeFileName(inputFolder, idCounts);
             var firstNodeInputLines = firstNodeFileName.ReadFileLines();
             var preambleLines = firstNodeInputLines.GetPreamble();
             File.WriteAllLines(mergeFileName, preambleLines);
@@ -65,7 +65,7 @@ namespace GCodeClean.Merge
             var lastLine = new Line("");
 
             foreach (var node in nodes) {
-                var nodeFileName = node.NodeFileName(inputFolder, idFtm);
+                var nodeFileName = node.NodeFileName(inputFolder, idCounts);
                 var inputLines = nodeFileName.ReadFileLines();
                 var travellingComments = inputLines.GetTravellingComments();
 
@@ -95,7 +95,7 @@ namespace GCodeClean.Merge
                 }
             }
 
-            var lastNodeFileName = nodes[^1].NodeFileName(inputFolder, idFtm);
+            var lastNodeFileName = nodes[^1].NodeFileName(inputFolder, idCounts);
             var lastNodeInputLines = lastNodeFileName.ReadFileLines();
             var lastTravellingComments = lastNodeInputLines.GetTravellingComments();
             var postambleLines = lastNodeInputLines.GetPostamble(lastTravellingComments[^1]);

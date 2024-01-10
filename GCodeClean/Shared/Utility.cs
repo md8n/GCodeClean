@@ -92,8 +92,11 @@ namespace GCodeClean.Shared
 
         public static string IdFormat(this int idCount) => $"D{idCount.ToString().Length}";
 
-        public static string NodeFileName(this Node node, string folderName, string idFtm) {
-            return $"{folderName}{Path.DirectorySeparatorChar}{node.Tool}_{node.Id.ToString(idFtm)}_{node.Start.ToXYCoord()}_{node.End.ToXYCoord()}_gcc.nc";
+        public static string NodeFileName(this Node node, string folderName, int[] idCounts) {
+            var seqFtm = idCounts[0].IdFormat();
+            var subSeqFtm = idCounts[1].IdFormat();
+            var idFtm = idCounts[2].IdFormat();
+            return $"{folderName}{Path.DirectorySeparatorChar}{node.Seq.ToString(seqFtm)}_{node.SubSeq.ToString(subSeqFtm)}_{node.Id.ToString(idFtm)}_{node.Tool}_{node.Start.ToXYCoord()}_{node.End.ToXYCoord()}_gcc.nc";
         }
 
         public static Node ToNode(this string travelling) {
@@ -109,5 +112,19 @@ namespace GCodeClean.Shared
 
             return new Node(tSeq, tSubSeq, tId, tMaxZ, tTool, (Coord)lStart, (Coord)lEnd);
         }
+
+        public static string ToTravelling(this Node node) {
+            var entryLine = $"G0 {node.Start.ToString()}";
+            var exitLine = $"G0 {node.End.ToString()}";
+            return $"(||Travelling||{node.Seq}||{node.SubSeq}||{node.Id}||{node.MaxZ:0.###}||{node.Tool}||>>{entryLine}>>{exitLine}>>||)";
+        }
+
+        /// <summary>
+        /// Copy the node, but set its SubSeq value to the supplied value
+        /// </summary>
+        /// <param name="node"></param>
+        /// <param name="subSeq"></param>
+        /// <returns></returns>
+        public static Node CopySetSub(this Node node, short subSeq) => new(node.Seq, subSeq, node.Id, node.MaxZ, node.Tool, node.Start, node.End);
     }
 }

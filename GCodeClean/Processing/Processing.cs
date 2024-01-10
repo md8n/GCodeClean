@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using GCodeClean.Shared;
 using GCodeClean.Structure;
 
 
@@ -533,9 +534,11 @@ namespace GCodeClean.Processing {
             var entrySet = false;
             decimal? entryX = null;
             decimal? entryY = null;
-            var seqIx = 0;
+            short seqIx = 0;
+            // The sub sequence index we'll determine with the `split` command
+            short subSeqIx = 0;
+            short blockIx = 0;
             var currentTool = "";
-            var blockIx = 0;
             List<decimal> allNegZeds = [];
 
             var zClampConstrained = Utility.ConstrictZClamp(context.GetLengthUnits(), zClamp);
@@ -589,20 +592,17 @@ namespace GCodeClean.Processing {
                                 seqIx++;
                             }
 
-                            // The sub sequence index we'll determine with the `split` command
-                            var subSeqIx = 0;
-
-                            // This is the furtherest -ve number from zero - 'max' for our purposes
-                            var zMax = $"{allNegZeds.Min():0.###}";
-
                             if (entryLine.AllTokens.Count == 0) {
 #pragma warning disable S3655
                                 entryLine = new Line($"G0 X{entryX.Value} Y{entryY.Value} {zToken}");
 #pragma warning restore S3655
                             }
 
+                            // allNegZeds.Min() is the furtherest -ve number from zero - 'max' for our purposes
+                            var node = new Node(seqIx, subSeqIx, blockIx++, allNegZeds.Min(), currentTool, entryLine, exitLine);
+
                             // Replace any existing travelling comment
-                            var travellingComment = new Token($"(||Travelling||{seqIx}||{subSeqIx}||{blockIx++}||{zMax}||{currentTool}||>>{entryLine}>>{exitLine}>>||)");
+                            var travellingComment = new Token(node.ToTravelling());
                             var comments = line.AllCommentTokens;
                             if (comments.Count > 0) {
                                 for (var ix = 0; ix < comments.Count; ix++) {

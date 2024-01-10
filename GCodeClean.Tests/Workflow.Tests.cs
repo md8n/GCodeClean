@@ -167,12 +167,12 @@ namespace GCodeClean.Tests
                 new Line("G0 X54.178 Y136.211 Z0.5"),
                 new Line("G1 X54.178 Y136.211 Z-0.678"),
                 new Line("G1 X54.033 Y136.095 Z-0.499"),
-                new Line("G0 X54.033 Y136.095 Z0.5 (||Travelling||notset||0||>>G0 X54.178 Y136.211 Z0.5>>G0 X54.033 Y136.095 Z0.5>>||-0.499||-0.597||-0.678||0.074||)"),
+                new Line("G0 X54.033 Y136.095 Z0.5 (||Travelling||0||0||0||-0.678||notset||>>G0 X54.178 Y136.211 Z0.5>>G0 X54.033 Y136.095 Z0.5>>||)"),
 
                 new Line("G0 X69.089 Y128.892 Z0.5"),
                 new Line("G1 X69.089 Y128.892 Z-0.661"),
                 new Line("G1 X68.813 Y128.684 Z-0.57"),
-                new Line("G0 X68.813 Y128.684 Z0.5 (||Travelling||notset||1||>>G0 X69.089 Y128.892 Z0.5>>G0 X68.813 Y128.684 Z0.5>>||-0.57||-0.614||-0.661||0.034||)"),
+                new Line("G0 X68.813 Y128.684 Z0.5 (||Travelling||0||0||1||-0.661||notset||>>G0 X69.089 Y128.892 Z0.5>>G0 X68.813 Y128.684 Z0.5>>||)"),
 
                 new Line(Default.PostAmbleCompleted),
                 new Line("M30"),
@@ -263,12 +263,12 @@ namespace GCodeClean.Tests
                 new Line("G0 X54.178 Y136.211"),
                 new Line("G1 X54.178 Y136.211 Z-0.678"),
                 new Line("G1 X54.033 Y136.095 Z-0.499"),
-                new Line("G0 X54.033 Y136.095 Z0.5 (||Travelling||notset||0||>>G0 X54.178 Y136.211 Z0.5>>G0 X54.033 Y136.095 Z0.5>>||-0.499||-0.597||-0.678||0.074||)"),
+                new Line("G0 X54.033 Y136.095 Z0.5 (||Travelling||0||0||0||-0.678||notset||>>G0 X54.178 Y136.211 Z0.5>>G0 X54.033 Y136.095 Z0.5>>||)"),
 
                 new Line("G0 X69.089 Y128.892"),
                 new Line("G1 X69.089 Y128.892 Z-0.661"),
                 new Line("G1 X68.813 Y128.684 Z-0.57"),
-                new Line("G0 X68.813 Y128.684 Z0.5 (||Travelling||notset||1||>>G0 X69.089 Y128.892 Z0.5>>G0 X68.813 Y128.684 Z0.5>>||-0.57||-0.614||-0.661||0.034||)"),
+                new Line("G0 X68.813 Y128.684 Z0.5 (||Travelling||0||0||1||-0.661||notset||>>G0 X69.089 Y128.892 Z0.5>>G0 X68.813 Y128.684 Z0.5>>||)"),
 
                 new Line(Default.PostAmbleCompleted),
                 new Line("M30"),
