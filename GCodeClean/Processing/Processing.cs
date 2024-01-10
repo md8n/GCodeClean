@@ -3,11 +3,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using GCodeClean.Shared;
 using GCodeClean.Structure;
 
 
@@ -301,17 +303,27 @@ namespace GCodeClean.Processing {
 
                 if (hasZ && hasTravelling) {
                     var zToken = line.AllTokens.First(t => t.Code == 'Z');
+                    var currZ = zToken.Number.Value;
 
                     var travelingToken = line.AllTokens.Intersect(ModalGroup.ModalSimpleMotion).First();
+                    var hasLinearTravelling = line.HasTokens(["G0", "G1"]);
+                    var coordPlane = context.GetCoordPlane();
+                    var isXYPlane = coordPlane == "G17" || coordPlane == "";
 
                     if (zToken.Number > 0) {
-                        // If Z > 0 then the z value should be constrained
-                        zToken.Number = zClampConstrained;
-                        var xUnchanged = !hasX || line.AllTokens.First(t => t.Code == 'X').Number.Value == prevX;
-                        var yUnchanged = !hasY || line.AllTokens.First(t => t.Code == 'Y').Number.Value == prevY;
-                        if (prevZ > 0 || (xUnchanged || yUnchanged)) {
-                            // If the previous Z value is also > 0 or there's no X or Y movement then the motion should be G0
-                            travelingToken.Source = "G0";
+                        if (!isXYPlane && !hasLinearTravelling) {
+                            // Weird stuff - non XY Plane, and an arc
+                            // Emit a G1 to move back to the previous unclamped Z value
+                            yield return new Line($"G1 X{prevX} Y{prevY} Z{prevZ} (non XY plane curved cut starting point)");
+                        } else {
+                            // If Z > 0 then the z value should be constrained
+                            zToken.Number = zClampConstrained;
+                            var xUnchanged = !hasX || line.AllTokens.First(t => t.Code == 'X').Number.Value == prevX;
+                            var yUnchanged = !hasY || line.AllTokens.First(t => t.Code == 'Y').Number.Value == prevY;
+                            if (prevZ > 0 || (xUnchanged || yUnchanged)) {
+                                // If the previous Z value is also > 0 or there's no X or Y movement then the motion should be G0
+                                travelingToken.Source = "G0";
+                            }
                         }
                     } else if (zToken.Number == 0 && travelingToken.ToString() == "G1") {
                         // If Z == 0 and the source is G1, then we want to leave it alone as a surface exit from a cut
@@ -322,7 +334,7 @@ namespace GCodeClean.Processing {
 
                     prevX = hasX ? line.AllTokens.First(t => t.Code == 'X').Number.Value : prevX;
                     prevY = hasY ? line.AllTokens.First(t => t.Code == 'Y').Number.Value : prevY;
-                    prevZ = zToken.Number.Value;
+                    prevZ = currZ;
                 }
 
                 yield return line;
@@ -511,27 +523,50 @@ namespace GCodeClean.Processing {
         /// </summary>
         /// <param name="tokenisedLines"></param>
         /// <returns></returns>
-        public static async IAsyncEnumerable<Line> DetectTravelling(this IAsyncEnumerable<Line> tokenisedLines) {
+        public static async IAsyncEnumerable<Line> DetectTravelling(
+            this IAsyncEnumerable<Line> tokenisedLines,
+            decimal zClamp = 10.0M
+        ) {
             var context = Default.Preamble();
             var isTravelling = true; // Assuming that things start with +ve z-axis value
             var entryLine = new Line();
             var exitLine = new Line();
             var entrySet = false;
-            var blockIx = 0;
-            Line travellingLine;
+            decimal? entryX = null;
+            decimal? entryY = null;
+            short seqIx = 0;
+            // The sub sequence index we'll determine with the `split` command
+            short subSeqIx = 0;
+            short blockIx = 0;
+            var currentTool = "";
+            List<decimal> allNegZeds = [];
+
+            var zClampConstrained = Utility.ConstrictZClamp(context.GetLengthUnits(), zClamp);
+            var zToken = new Token($"Z{zClampConstrained}");
 
             await foreach (var line in tokenisedLines) {
                 context.Update(line);
 
-                if (line.HasToken('X') || line.HasToken('Y')) {
+                var hasX = line.HasToken('X');
+                var hasY = line.HasToken('Y');
+                var hasZ = line.HasToken('Z');
+
+                if (hasX && !entryX.HasValue) {
+                    entryX = line.AllTokens.First(t => t.Code == 'X').Number.Value;
+                }
+                if (hasX && !entryY.HasValue) {
+                    entryY = line.AllTokens.First(t => t.Code == 'Y').Number.Value;
+                }
+
+                if (hasX || hasY) {
                     if (!entrySet) {
                         var possibleEntryLine = new Line(line);
                         if (possibleEntryLine.HasToken('Z')) {
-                            var zToken = possibleEntryLine.AllTokens.First(t => t.Code == 'Z');
-                            // Determine if the possible entryLine is actually a cutting line
-                            // and change accordingly
-                            entryLine = (zToken.Number > 0) ? possibleEntryLine : new Line(exitLine);
+                            zToken = possibleEntryLine.AllTokens.First(t => t.Code == 'Z');
                         }
+                        // Determine if the possible entryLine is actually a cutting line
+                        // and change accordingly
+                        entryLine = (zToken.Number > 0) ? possibleEntryLine : new Line(exitLine);
                         entrySet = true;
                     }
                     exitLine = new Line(line);
@@ -546,15 +581,28 @@ namespace GCodeClean.Processing {
                     }
                 }
 
-                if (line.HasToken('Z')) {
-                    var zToken = line.AllTokens.First(t => t.Code == 'Z');
+                if (hasZ) {
+                    zToken = line.AllTokens.First(t => t.Code == 'Z');
                     if (zToken.Number > 0) {
                         if (!isTravelling) {
-                            travellingLine = new Line(line);
-                            travellingLine.ReplaceToken(new Token("G1"), new Token("G0"));
+                            if (currentTool == "") {
+                                currentTool = context.GetToolNumber();
+                            } else if (currentTool != context.GetToolNumber()) {
+                                currentTool = context.GetToolNumber();
+                                seqIx++;
+                            }
+
+                            if (entryLine.AllTokens.Count == 0) {
+#pragma warning disable S3655
+                                entryLine = new Line($"G0 X{entryX.Value} Y{entryY.Value} {zToken}");
+#pragma warning restore S3655
+                            }
+
+                            // allNegZeds.Min() is the furtherest -ve number from zero - 'max' for our purposes
+                            var node = new Node(seqIx, subSeqIx, blockIx++, allNegZeds.Min(), currentTool, entryLine, exitLine);
 
                             // Replace any existing travelling comment
-                            var travellingComment = new Token($"(||Travelling||{context.GetToolNumber()}||{blockIx++}||>>{entryLine}>>{exitLine}>>||)");
+                            var travellingComment = new Token(node.ToTravelling());
                             var comments = line.AllCommentTokens;
                             if (comments.Count > 0) {
                                 for (var ix = 0; ix < comments.Count; ix++) {
@@ -565,6 +613,7 @@ namespace GCodeClean.Processing {
                                 }
                             } else {
                                 line.AppendToken(travellingComment);
+                                allNegZeds.Clear();
                             }
 
                             entryLine = new Line();
@@ -575,6 +624,7 @@ namespace GCodeClean.Processing {
                             isTravelling = true;
                         }
                     } else {
+                        allNegZeds.Add((decimal)zToken.Number);
                         isTravelling = false;
                     }
                 }

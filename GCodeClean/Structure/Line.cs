@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2020-2024 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the AGPL license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -174,6 +174,13 @@ namespace GCodeClean.Structure
         /// </summary>
         public bool HasMovementCommand() {
             return !IsArgumentsOnly() && HasTokens(ModalGroup.ModalAllMotion);
+        }
+
+        /// <summary>
+        /// This returns true if there is a Plane Selection Command (G17, G18, G19), comments are ignored for this test
+        /// </summary>
+        public bool HasPlaneSelection() {
+            return !IsArgumentsOnly() && HasTokens(ModalGroup.ModalPlane);
         }
 
         #region Constructors

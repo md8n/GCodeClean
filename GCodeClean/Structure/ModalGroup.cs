@@ -40,9 +40,14 @@ namespace GCodeClean.Structure
         public static readonly ImmutableList<Token> ModalNon = [..ModalDwell, ..ModalChangeCoordinateSystemData, ..ModalCoordinateSystemOffset];
 
         /// <summary>
-        /// G Modal subgroup 1 - motion - G0, G1, G2, G3, G38.2
+        /// G Modal subgroup 1 - motion - G0, G1, G2, G3
         /// </summary>
-        public static readonly ImmutableList<Token> ModalSimpleMotion = [new Token("G0"), new Token("G1"), new Token("G2"), new Token(" G3"), new Token("G38.2")];
+        public static readonly ImmutableList<Token> ModalSimpleMotion = [new Token("G0"), new Token("G1"), new Token("G2"), new Token(" G3")];
+
+        /// <summary>
+        /// G Modal subgroup 1 - motion - G38.2
+        /// </summary>
+        public static readonly ImmutableList<Token> ModalProbeMotion = [new Token("G38.2")];
 
         /// <summary>
         /// G Modal subgroup 1 - canned motion - G80, G81, G82, G83, G84, G85, G86, G87, G88, G89
@@ -56,7 +61,7 @@ namespace GCodeClean.Structure
         /// <summary>
         /// G Modal group 1 - motion - G0, G1, G2, G3, G38.2, G80, G81, G82, G83, G84, G85, G86, G87, G88, G89
         /// </summary>
-        public static readonly ImmutableList<Token> ModalMotion = [..ModalSimpleMotion, ..ModalCannedMotion];
+        public static readonly ImmutableList<Token> ModalMotion = [..ModalSimpleMotion, ..ModalProbeMotion, ..ModalCannedMotion];
 
         /// <summary>
         /// G Modal group 1 - collective - simple motion, canned motion, home motion, special motion, G53

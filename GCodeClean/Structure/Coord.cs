@@ -225,23 +225,23 @@ namespace GCodeClean.Structure
         }
 
         public override string ToString() {
-            var coords = new List<string>();
+            var tokens = new List<Token>();
 
             if ((Set & CoordSet.X) == CoordSet.X) {
-                coords.Add($"X:{X:0.####}");
+                tokens.Add(new Token($"X{X}"));
             }
 
             if ((Set & CoordSet.Y) == CoordSet.Y) {
-                coords.Add($"Y:{Y:0.####}");
+                tokens.Add(new Token($"Y{Y}"));
             }
 
             if ((Set & CoordSet.Z) == CoordSet.Z) {
-                coords.Add($"Z:{Z:0.####}");
+                tokens.Add(new Token($"Z{Z}"));
             }
 
-            return string.Join(',', coords);
+            return string.Join(' ', tokens);
         }
 
-        public string ToXYCoord() => $"X{this.X}Y{this.Y}";
+        public string ToXYCoord() => $"X{X}Y{Y}";
     }
 }

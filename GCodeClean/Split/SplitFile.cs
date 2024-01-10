@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
+using System.Linq;
 
 using GCodeClean.Processing;
 using GCodeClean.Shared;
@@ -20,10 +21,10 @@ namespace GCodeClean.Split
             }
             Directory.CreateDirectory(outputFolder);
 
-            var idFtm = travellingComments.Count.IdFormat();
+            var nodes = travellingComments.Select(tc => tc.ToNode()).ToList();
+            int[] idCounts = [nodes.Select(n => n.Seq).Distinct().Count(), nodes.Select(n => n.SubSeq).Distinct().Count(), nodes.Count];
 
             var iL = inputLines.GetEnumerator();
-
             while (iL.MoveNext()) {
                 var line = iL.Current;
                 if (line == Default.PreambleCompleted) {
@@ -36,8 +37,8 @@ namespace GCodeClean.Split
             var lengthUnits = context.GetLengthUnits();
             Line prevLine = null;
 
-            foreach (var travelling in travellingComments) {
-                var filename = travelling.ParseTravelling().NodeFileName(outputFolder, idFtm);
+            foreach (var node in nodes) {
+                var filename = node.NodeFileName(outputFolder, idCounts);
                 Console.WriteLine($"Filename: {filename}");
 
                 File.WriteAllLines(filename, preambleLines);
@@ -79,8 +80,18 @@ namespace GCodeClean.Split
                             firstLine = false;
                         }
                     }
+
+                    // Clearing the subSeq value will allow us to rebuild the travelling comment as it appears in the GCode
+                    var unSubSeqNode = node.CopySetSub(0);
+                    var origTravelling = unSubSeqNode.ToTravelling();
+                    var travellingFound = line.EndsWith(origTravelling);
+                    if (travellingFound) {
+                        line = line.Replace(origTravelling, node.ToTravelling());
+                    }
+
                     File.AppendAllLines(filename, [line]);
-                    if (line.EndsWith(travelling)) {
+
+                    if (travellingFound) {
                         prevLine = new Line(line);
                         break;
                     }

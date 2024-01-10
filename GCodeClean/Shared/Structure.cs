@@ -7,5 +7,5 @@ using GCodeClean.Structure;
 
 namespace GCodeClean.Shared
 {
-    public readonly record struct Node(string Tool, short Id, Coord Start, Coord End);
+    public readonly record struct Node(short Seq, short SubSeq, short Id, decimal MaxZ, string Tool, Coord Start, Coord End);
 }

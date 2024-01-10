@@ -1,7 +1,5 @@
-// Copyright (c) 2020-2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2020-2024 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the AGPL license. See LICENSE.txt file in the project root for details.
-
-using System.Collections.Generic;
 
 using GCodeClean.Structure;
 
@@ -15,8 +13,7 @@ namespace GCodeClean.Processing
         public static Context Preamble()
         {
             var context = new Context(
-                new List<(Line line, bool isOutput)>
-                {
+                [
                     (new Line("G21"), false), // Length units, mm - alternate G20
                     (new Line("G90"), false), // Distance mode, absolute - alternate G91
                     (new Line("G94"), false), // Feed mode, per minute - alternate G93
@@ -33,7 +30,7 @@ namespace GCodeClean.Processing
                     // (new Line("G4 P2"), false), // Dwell, for 2 seconds - useful before any S command to allow the spindle to speed up
                     // (new Line("S"), false), // Spindle speed
                     // (new Line("M7 M8"), false), // Coolant control, mist and flood - alternates are any one of M7, M8, M9 
-                }
+                ]
             );
 
             return context;
@@ -45,8 +42,7 @@ namespace GCodeClean.Processing
         /// <returns></returns>
         public static Context Postamble() {
             var context = new Context(
-                new List<(Line line, bool isOutput)>
-                {
+                [
                     (new Line("Z10"), false), // Raise the tool - this will need to be zClamped
                     (new Line("G30"), false), // Return to home - alternate G28
                     // The following should all be performed as a part of M2 or M30
@@ -61,7 +57,7 @@ namespace GCodeClean.Processing
                     //(new Line("G1"), false), // Linear motion: at Feed Rate
                     //(new Line("M9"), false), // Coolant: Mist and Flood, Off
                     (new Line("M2"), false), // Program stop, alternates M0, M1, M30, M60
-                }
+                ]
             );
 
             return context;

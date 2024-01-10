@@ -123,7 +123,7 @@ namespace GCodeClean.Processing
                 .Clip(tolerance)
                 .DedupRepeatedTokens()
                 .DedupLine()
-                .DetectTravelling()
+                .DetectTravelling(zClamp)
                 .DedupLinear(tolerance);
 
             await foreach (var line in secondPhaseLines) {

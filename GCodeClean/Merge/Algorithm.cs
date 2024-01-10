@@ -1,4 +1,4 @@
-// Copyright (c) 2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2023-2024 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the AGPL license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -22,8 +22,8 @@ namespace GCodeClean.Merge
             Console.WriteLine("Pass 0: Primary Edges");
 
             List<Edge> primaryEdges = [];
-            foreach (var (tool, id, start, end) in nodes) {
-                var matchingNodes = nodes.FindAll(n => n.Tool == tool && n.Id != id && n.Start.X == end.X && n.Start.Y == end.Y);
+            foreach (var (seq, subSeq, id, maxZ, tool, start, end) in nodes) {
+                var matchingNodes = nodes.FindAll(n => n.Seq == seq && n.SubSeq == subSeq && n.Tool == tool && n.Id != id && n.Start.X == end.X && n.Start.Y == end.Y);
                 if (matchingNodes.Count > 1) {
                     // This may be some kind of 'peck-drilling' operation, whatever it is
                     // simply take the first node
@@ -336,7 +336,7 @@ namespace GCodeClean.Merge
                 unpairedPrevNodes = pairedEdges.UnpairedPrevNodes(nodes);
             }
 
-            // Make a final decision about rotating the whole list
+            // Make a decision about rotating the whole list
             var firstNode = nodes.GetNode(pairedEdges[0].PrevId);
             var lastNode = nodes.GetNode(pairedEdges[^1].NextId);
             var maxEdge = pairedEdges.OrderByDescending(pe => pe.Distance).FirstOrDefault();
