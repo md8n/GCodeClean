@@ -63,6 +63,9 @@ namespace GCodeClean.Merge
             File.WriteAllLines(mergeFileName, preambleLines);
 
             var lastLine = new Line("");
+            var firstNode = true;
+            var expectedFirstTool = nodes[0].Tool;
+            var firstTool = false;
 
             foreach (var node in nodes) {
                 var nodeFileName = node.NodeFileName(inputFolder, idCounts);
@@ -88,6 +91,18 @@ namespace GCodeClean.Merge
                         if (line.HasPlaneSelection()) {
                             lastPlaneSelection = new Line(line);
                         }
+                        if (firstNode && expectedFirstTool != "notset") {
+                            // Test if we need to emit a tool change
+                            if (line.HasToken('T')) {
+                                firstTool = true;
+                            }
+                            if (line.HasMovementCommand() && !line.HasToken("G0") && !firstTool) {
+                                // Emit a tool change
+                                File.AppendAllLines(mergeFileName, [$"T{expectedFirstTool}", "M3"]);
+                                firstTool = true;
+                            }
+                        }
+
                         if (line != lastLine) {
                             File.AppendAllLines(mergeFileName, [line.ToString()]);
                         }
@@ -104,6 +119,7 @@ namespace GCodeClean.Merge
                         }
                     }
                 }
+                firstNode = false;
             }
 
             var lastNodeFileName = nodes[^1].NodeFileName(inputFolder, idCounts);
