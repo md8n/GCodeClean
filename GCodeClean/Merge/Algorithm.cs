@@ -1,4 +1,4 @@
-// Copyright (c) 2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2023-2024 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the AGPL license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -336,7 +336,7 @@ namespace GCodeClean.Merge
                 unpairedPrevNodes = pairedEdges.UnpairedPrevNodes(nodes);
             }
 
-            // Make a final decision about rotating the whole list
+            // Make a decision about rotating the whole list
             var firstNode = nodes.GetNode(pairedEdges[0].PrevId);
             var lastNode = nodes.GetNode(pairedEdges[^1].NextId);
             var maxEdge = pairedEdges.OrderByDescending(pe => pe.Distance).FirstOrDefault();

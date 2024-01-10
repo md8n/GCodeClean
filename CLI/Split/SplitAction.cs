@@ -1,4 +1,4 @@
-// Copyright (c) 2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2023-2024 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -126,6 +126,27 @@ namespace GCodeCleanCLI.Split
             }
             if (depthCutRanges.Count > 0) {
                 // Redo the sub sequence value in the travelling comments
+                for (var ix = 0; ix < travellingComments.Count; ix++) {
+                    var node = travellingComments[ix].ToNode();
+                    short subSeqIx = -1;
+                    for (short jx = 0; jx < depthCutRanges.Count; jx++) {
+                        var (min, max, _) = depthCutRanges[jx];
+                        if (node.MaxZ > max && node.MaxZ < min) {
+                            subSeqIx = jx;
+                            break;
+                        }
+                        if (jx == depthCutRanges.Count - 1 && node.MaxZ == max) {
+                            subSeqIx = jx;
+                            break;
+                        }
+                    }
+                    if (subSeqIx == -1) {
+                        // For some reason we hit the failsafe, so use a failsafe value
+                        subSeqIx = (short)(node.MaxZ > depthCutRanges[0].max ? 0 : depthCutRanges.Count - 1);
+                    }
+                    var subNode = node.CopySetSub(subSeqIx);
+                    travellingComments[ix] = subNode.ToTravelling();
+                }
             }
 
             inputLines.SplitFile(outputFolder, travellingComments, preambleLines, postambleLines);

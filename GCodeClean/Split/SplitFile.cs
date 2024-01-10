@@ -80,10 +80,18 @@ namespace GCodeClean.Split
                             firstLine = false;
                         }
                     }
-                    File.AppendAllLines(filename, [line]);
+
                     // Clearing the subSeq value will allow us to rebuild the travelling comment as it appears in the GCode
                     var unSubSeqNode = node.CopySetSub(0);
-                    if (line.EndsWith(unSubSeqNode.ToTravelling())) {
+                    var origTravelling = unSubSeqNode.ToTravelling();
+                    var travellingFound = line.EndsWith(origTravelling);
+                    if (travellingFound) {
+                        line = line.Replace(origTravelling, node.ToTravelling());
+                    }
+
+                    File.AppendAllLines(filename, [line]);
+
+                    if (travellingFound) {
                         prevLine = new Line(line);
                         break;
                     }

@@ -1,4 +1,4 @@
-// Copyright (c) 2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2023-2024 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the AGPL license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -69,24 +69,35 @@ namespace GCodeClean.Merge
                 var inputLines = nodeFileName.ReadFileLines();
                 var travellingComments = inputLines.GetTravellingComments();
 
-                var iL = inputLines.GetEnumerator();
+                Line lastPlaneSelection = new Line("G17");
 
+                var iL = inputLines.GetEnumerator();
                 while (iL.MoveNext()) {
-                    var line = iL.Current;
-                    if (line == Default.PreambleCompleted) {
+                    var line = new Line(iL.Current);
+                    if (line.HasPlaneSelection()) {
+                        lastPlaneSelection = new Line(line);
+                    }
+                    if (line.ToString() == Default.PreambleCompleted) {
                         break;
                     }
                 }
 
                 foreach (var travelling in travellingComments) {
                     while (iL.MoveNext()) {
-                        var line = iL.Current;
-                        if (new Line(line) != lastLine) {
-                            File.AppendAllLines(mergeFileName, [line]);
+                        var line = new Line(iL.Current);
+                        if (line.HasPlaneSelection()) {
+                            lastPlaneSelection = new Line(line);
+                        }
+                        if (line != lastLine) {
+                            File.AppendAllLines(mergeFileName, [line.ToString()]);
                         }
                         lastLine = new Line("");
 
-                        if (line.EndsWith(travelling)) {
+                        if (line.ToString().EndsWith(travelling)) {
+                            if (lastPlaneSelection.ToString() != "G17") {
+                                // Ensure a reversion to XY plane selection
+                                File.AppendAllLines(mergeFileName, ["G17"]);
+                            }
                             lastLine = new Line(line);
                             lastLine = new Line(lastLine.ToSimpleString());
                             break;
