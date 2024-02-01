@@ -15,7 +15,13 @@ using GCodeClean.Structure;
 namespace GCodeClean.Split
 {
     public static partial class Split {
-        public static void SplitFile(this IEnumerable<string> inputLines, string outputFolder, List<string> travellingComments, List<string> preambleLines, List<string> postambleLines) {
+        public static async IAsyncEnumerable<string> SplitFile(
+            this IEnumerable<string> inputLines,
+            string outputFolder,
+            List<string> travellingComments,
+            List<string> preambleLines,
+            List<string> postambleLines
+        ) {
             if (Directory.Exists(outputFolder)) {
                 Directory.Delete(outputFolder, true);
             }
@@ -37,9 +43,9 @@ namespace GCodeClean.Split
             var lengthUnits = context.GetLengthUnits();
             Line prevLine = null;
 
-            foreach (var node in nodes) {
+            await foreach (var node in nodes.ToAsyncEnumerable()) {
                 var filename = node.NodeFileName(outputFolder, idCounts);
-                Console.WriteLine($"Filename: {filename}");
+                yield return $"Filename: {filename}";
 
                 File.WriteAllLines(filename, preambleLines);
 

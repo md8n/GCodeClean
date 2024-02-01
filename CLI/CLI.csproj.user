@@ -4,6 +4,7 @@
     <DebuggerFlavor>ProjectDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup>
-    <ActiveDebugProfile>Clean</ActiveDebugProfile>
+    <ActiveDebugProfile>Merge Sea Bee 1</ActiveDebugProfile>
+    <_LastSelectedProfileId>C:\GitHub\GCodeClean\CLI\properties\PublishProfiles\win-x64.pubxml</_LastSelectedProfileId>
   </PropertyGroup>
 </Project>

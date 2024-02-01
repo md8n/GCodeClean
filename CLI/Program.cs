@@ -1,14 +1,15 @@
 ﻿// Copyright (c) 2020-2023 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for details.
 
+using System;
 using System.CommandLine;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-using GCodeCleanCLI.Clean;
-using GCodeCleanCLI.Merge;
-using GCodeCleanCLI.Split;
+using Actions.Clean;
+using Actions.Split;
+using Actions.Merge;
 
 
 namespace GCodeCleanCLI
@@ -103,20 +104,43 @@ namespace GCodeCleanCLI
             return await rootCommand.InvokeAsync(args);
         }
 
+        internal static void DoLogging(string logMessage) {
+            Console.WriteLine(logMessage);
+        }
+
         //async method
-        internal static async Task<int> RunCleanAsync(FileInfo filename, FileInfo tokenDefs, bool annotate, bool lineNumbers, string minimise, decimal tolerance, decimal arcTolerance, decimal zClamp) {
-            (tolerance, arcTolerance, zClamp) = CleanOptions.Constrain(tolerance, arcTolerance, zClamp);
+        internal static async Task<int> RunCleanAsync(
+            FileInfo filename,
+            FileInfo tokenDefs,
+            bool annotate,
+            bool lineNumbers,
+            string minimise,
+            decimal tolerance,
+            decimal arcTolerance,
+            decimal zClamp
+        ) {
+            (tolerance, arcTolerance, zClamp) = CleanOptions.Constrain(tolerance, arcTolerance, zClamp, DoLogging);
             var (tokenDefinitions, _) = tokenDefs.LoadAndVerifyTokenDefs();
 
-            return await CleanAction.ExecuteAsync(filename, annotate, lineNumbers, minimise, tolerance, arcTolerance, zClamp, tokenDefinitions);
+            return await CleanAction.ExecuteAsync(filename, annotate, lineNumbers, minimise, tolerance, arcTolerance, zClamp, tokenDefinitions, DoLogging);
         }
 
-        internal static int RunSplit(FileInfo filename) {
-            return SplitAction.Execute(filename);
+        internal static async Task<int> RunSplit(FileInfo filename) {
+            string lastMessage = "";
+            await foreach(string logMessage in SplitAction.ExecuteAsync(filename)) {
+                DoLogging(logMessage);
+                lastMessage = logMessage;
+            }
+            return lastMessage == "Success" ? 0 : 1;
         }
 
-        internal static int RunMerge(DirectoryInfo filename) {
-            return MergeAction.Execute(filename);
+        internal static async Task<int> RunMerge(DirectoryInfo folder) {
+            string lastMessage = "";
+            await foreach (string logMessage in MergeAction.ExecuteAsync(folder)) {
+                DoLogging(logMessage);
+                lastMessage = logMessage;
+            }
+            return lastMessage == "Success" ? 0 : 1;
         }
     }
 }

@@ -53,7 +53,7 @@ namespace GCodeClean.Merge
             return nodes;
         }
 
-        public static void MergeNodes(this string inputFolder, List<Node> nodes) {
+        public static int MergeNodes(this string inputFolder, List<Node> nodes) {
             var mergeFileName = $"{inputFolder}-ts.nc";
             int[] idCounts = [nodes.Select(n => n.Seq).Distinct().Count(), nodes.Select(n => n.SubSeq).Distinct().Count(), nodes.Count];
 
@@ -127,6 +127,9 @@ namespace GCodeClean.Merge
             var lastTravellingComments = lastNodeInputLines.GetTravellingComments();
             var postambleLines = lastNodeInputLines.GetPostamble(lastTravellingComments[^1]);
             File.AppendAllLines(mergeFileName, postambleLines);
+
+            // 0 == success
+            return 0;
         }
     }
 }

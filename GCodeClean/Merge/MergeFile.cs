@@ -13,12 +13,13 @@ namespace GCodeClean.Merge
 {       
     public static class Merge
     {
-        public static void MergeFile(this string inputFolder)
+        public static async IAsyncEnumerable<string> MergeFileAsync (this string inputFolder)
         {
             if (!inputFolder.FolderExists())
             {
-                Console.WriteLine("No such folder found. Nothing to see here, move along.");
-                return;
+                yield return "No such folder found. Nothing to see here, move along.";
+                yield return "Failure";
+                yield break;
             }
 
             var nodes = inputFolder.GetNodes().ToList();
@@ -33,8 +34,8 @@ namespace GCodeClean.Merge
             Node? firstNode = null;
             List<Edge> pairedEdges = [];
 
-            foreach (var (seq, subSeq) in nodes.Select(n => (n.Seq, n.SubSeq)).Distinct()) {
-                Console.WriteLine($"Processing sub-sequence {seq}:{subSeq}");
+            await foreach (var (seq, subSeq) in nodes.Select(n => (n.Seq, n.SubSeq)).Distinct().ToAsyncEnumerable()) {
+                yield return $"Processing sub-sequence {seq}:{subSeq}";
                 var subSeqNodes = nodes.Where(n => n.Seq == seq && n.SubSeq == subSeq).ToList();
                 if (subSeqNodes.Count > 1) {
                     // Reorder the subsequence of nodes with respect to themselves
@@ -68,18 +69,23 @@ namespace GCodeClean.Merge
             var nodeIdList = pairedEdges.GetNodeIds();
             var newDistance = nodes.TotalDistance(nodeIdList);
 
-            Console.WriteLine($"Total distinct tools: {nodes.Select(n => n.Tool).Distinct().Count()}");
-            Console.WriteLine($"Total nodes: {nodes.Count}");
-            Console.WriteLine($"Total edges: {pairedEdges.Count}");
+            yield return $"Total distinct tools: {nodes.Select(n => n.Tool).Distinct().Count()}";
+            yield return $"Total nodes: {nodes.Count}";
+            yield return $"Total edges: {pairedEdges.Count}";
 
             var (startIds, endIds) = pairedEdges.GetStartsAndEnds();
-            Console.WriteLine($"Starting node Id: {string.Join(',', startIds)}");
-            Console.WriteLine($"Ending node Id: {string.Join(',', endIds)}");
+            yield return $"Starting node Id: {string.Join(',', startIds)}";
+            yield return $"Ending node Id: {string.Join(',', endIds)}";
 
-            Console.WriteLine($"Current travelling distance: {currentDistance}");
-            Console.WriteLine($"New travelling distance: {newDistance}");
+            yield return $"Current travelling distance: {currentDistance}";
+            yield return $"New travelling distance: {newDistance}";
 
-            inputFolder.MergeNodes(pairedEdges.GetNodes(nodes));
+            yield return "Commencing file merge";
+
+            int mergeResult = inputFolder.MergeNodes(pairedEdges.GetNodes(nodes));
+            yield return mergeResult == 0 ? "Merge Success" : "Merge Failure";
+
+            yield return "Completed file merge";
         }
 
         private static List<Edge> MaybeRotate(this List<Edge> subSeqEdges, Node prevNode, List<Node> nodes) {
