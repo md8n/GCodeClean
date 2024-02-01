@@ -112,5 +112,30 @@ namespace GCodeClean.Merge
         private static Node LastPairedNode(this List<Edge> pairedEdges, Node? firstNode, List<Node> nodes) {
             return (Node)(firstNode != null ? firstNode : nodes.GetNode(pairedEdges[^1].NextId));
         }
+
+        private static List<Edge> MaybeRotate(this List<Edge> subSeqEdges, Node prevNode, List<Node> nodes) {
+            // Make a decision about rotating the whole list
+            var firstNode = nodes.GetNode(subSeqEdges[0].PrevId);
+            var lastNode = nodes.GetNode(subSeqEdges[^1].NextId);
+            var (prevId, distance) = subSeqEdges.Select(sse => (prevId: sse.PrevId, distance: (prevNode.End, nodes.GetNode(sse.PrevId).Start).Distance())).OrderBy(se => se.distance).First();
+            var maxWeighting = subSeqEdges.Where(sse => sse.Weighting < 100).Select(sse => sse.Weighting).Max();
+            var lastToFirstEdge = new Edge(lastNode.Id, firstNode.Id, (lastNode.End, firstNode.Start).Distance(), maxWeighting);
+            if (lastToFirstEdge.Distance < distance) {
+                var maxEdgeIx = subSeqEdges.FindIndex(sse => sse.PrevId == prevId);
+                subSeqEdges = [.. subSeqEdges[(maxEdgeIx + 1)..], lastToFirstEdge, .. subSeqEdges[0..maxEdgeIx]];
+            }
+
+            return subSeqEdges;
+        }
+
+        private static Edge JoinEdge(this List<Edge> pairedEdges, Node? firstNode, Node firstSubSeqNode, List<Node> nodes) {
+            var lastPairedNode = pairedEdges.LastPairedNode(firstNode, nodes);
+            short weighting = pairedEdges.Count > 0 ? pairedEdges[^1].Weighting : (short)20;
+            return new Edge(lastPairedNode.Id, firstSubSeqNode.Id, (lastPairedNode.End, firstSubSeqNode.Start).Distance(), weighting);
+        }
+
+        private static Node LastPairedNode(this List<Edge> pairedEdges, Node? firstNode, List<Node> nodes) {
+            return (Node)(firstNode != null ? firstNode : nodes.GetNode(pairedEdges[^1].NextId));
+        }
     }
 }
