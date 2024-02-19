@@ -4,14 +4,14 @@ dotnet restore
 @IF """%~1"""=="""""" (set pver=1.0.0) ELSE (set pver=%~1)
 @ECHO version set to %pver%
 
-@ECHO Publishing %1
-@DEL bin\release\publish\%1\*.* /F /Q /S >NUL
-@DEL bin\release\gcodeclean-%1-linux-arm.zip >NUL
-@DEL bin\release\gcodeclean-%1-linux-x64.zip >NUL
-@DEL bin\release\gcodeclean-%1-win-x64.zip >NUL
+@ECHO Publishing CLI %1
+@DEL bin\release\publish\cli-%1\*.* /F /Q /S >NUL
+@DEL bin\release\gcodeclean-cli-%1-linux-arm.zip >NUL
+@DEL bin\release\gcodeclean-cli-%1-linux-x64.zip >NUL
+@DEL bin\release\gcodeclean-cli-%1-win-x64.zip >NUL
 
 @set outDir=cli/bin/release/net8.0/publish/
-@set destZip=bin/release/gcodeclean-%1-
+@set destZip=bin/release/gcodeclean-cli-%1-
 
 @ECHO @dotnet publish --configuration Release /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary --property:PublishDir=%outDir% -p:Version=%pver% --runtime %1 --self-contained
 

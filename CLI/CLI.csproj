@@ -25,10 +25,10 @@ The primary objective is to be a `GCode Linter`.</Description>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\GCodeClean\GCodeClean.csproj" />
+    <ProjectReference Include="..\Actions\Actions.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="SonarAnalyzer.CSharp" Version="9.16.0.82469" />
+    <PackageReference Update="SonarAnalyzer.CSharp" Version="9.19.0.84025" />
   </ItemGroup>
 </Project>
