@@ -56,7 +56,7 @@ public static class CleanAction {
         return outputFile;
     }
 
-    public static async Task<int> ExecuteAsync(
+    public static async IAsyncEnumerable<string> ExecuteAsync(
         FileInfo filename,
         bool annotate,
         bool lineNumbers,
@@ -64,32 +64,30 @@ public static class CleanAction {
         decimal tolerance,
         decimal arcTolerance,
         decimal zClamp,
-        JsonDocument tokenDefinitions,
-        Action<string> Logging
+        JsonDocument tokenDefinitions
     ) {
         var inputFile = filename.ToString();
 
         var (minimisationStrategy, dedupSelection) = GetMinimisationStrategy(minimise, [Letter.feedRate, 'Z']);
 
         var outputFile = inputFile.DetermineOutputFilename();
-        Logging("");
-        Logging($"Outputting to: {outputFile}");
+        yield return "";
+        yield return $"Outputting to: {outputFile}";
 
         var eliminateNeedlessTravelling = false; // settings.EliminateNeedlessTravelling
 
         // Determine our starting context
         var preambleContext = await inputFile.GetPreambleContext();
+        yield return "Preamble context determined";
 
         var inputLines = inputFile.ReadLinesAsync();
         var reassembledLines = inputLines.CleanLines(preambleContext, dedupSelection, minimisationStrategy, lineNumbers, eliminateNeedlessTravelling, zClamp, arcTolerance, tolerance, annotate, tokenDefinitions);
         var lineCount = outputFile.WriteLinesAsync(reassembledLines);
 
         await foreach (var line in lineCount) {
-            Logging($"Output lines: {line}");
+            yield return $"Output lines: {line}";
         }
 
-        Logging("Done");
-
-        return 0;
+        yield return "Success";
     }
 }

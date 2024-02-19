@@ -58,9 +58,10 @@ or for Linux (Ubuntu 18.04 / 20.04 / 22.04)
 
 ## GCodeClean Solution Organisation
 
-GCodeClean is organised into 3 projects:
+GCodeClean is organised into 4 projects:
 1. GCodeClean - A library that contains most of the code
-2. CLI - An executable to call the above library - this also handles the command line arguments and does the actual file handling
+2. Actions - A library of the various commands (actions) provided by GCodeClean, performed by calling the above library - this also does the actual file handling
+3. CLI - An executable to call the Actions library - this also handles the command line arguments
 3. CodeClean.Test - A test suite - which will be 'grown' over time.
 
 ## Deployment

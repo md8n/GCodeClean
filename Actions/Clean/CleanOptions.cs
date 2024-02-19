@@ -35,7 +35,7 @@ public static class CleanOptions {
         return (tokenDefinitions, "");
     }
 
-    private static decimal ConstrainOption(decimal? option, decimal min, decimal max, string msg, Action<string> Logging) {
+    private static decimal ConstrainOption(decimal? option, decimal min, decimal max) {
         var value = min;
         if (option.HasValue) {
             if (option.Value < min) {
@@ -46,16 +46,14 @@ public static class CleanOptions {
                 value = option.Value;
             }
         }
-        Logging($"{msg} {value}");
 
         return value;
     }
 
-    public static (decimal tolerance, decimal arcTolerance, decimal zClamp) Constrain(decimal tolerance, decimal arcTolerance, decimal zClamp, Action<string> Logging) {
-        tolerance = ConstrainOption(tolerance, 0.00005M, 0.5M, "Clipping and general mathematical tolerance:", Logging);
-        arcTolerance = ConstrainOption(arcTolerance, 0.00005M, 0.5M, "Arc simplification tolerance:", Logging);
-        zClamp = ConstrainOption(zClamp, 0.02M, 10.0M, "Z-axis clamping value (max traveling height):", Logging);
-        Logging("All tolerance and clamping values may be further adjusted to allow for inches vs. millimeters");
+    public static (decimal tolerance, decimal arcTolerance, decimal zClamp) Constrain(decimal tolerance, decimal arcTolerance, decimal zClamp) {
+        tolerance = ConstrainOption(tolerance, 0.00005M, 0.5M);
+        arcTolerance = ConstrainOption(arcTolerance, 0.00005M, 0.5M);
+        zClamp = ConstrainOption(zClamp, 0.02M, 10.0M);
 
         return (tolerance, arcTolerance, zClamp);
     }

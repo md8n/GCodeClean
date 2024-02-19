@@ -26,10 +26,9 @@ The primary objective is to be a `GCode Linter`.</Description>
 
   <ItemGroup>
     <ProjectReference Include="..\Actions\Actions.csproj" />
-    <ProjectReference Include="..\GCodeClean\GCodeClean.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="SonarAnalyzer.CSharp" Version="9.18.0.83559" />
+    <PackageReference Update="SonarAnalyzer.CSharp" Version="9.19.0.84025" />
   </ItemGroup>
 </Project>
