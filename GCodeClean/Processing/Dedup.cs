@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2024 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2020-2025 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the AGPL license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -38,16 +38,24 @@ public static class Dedup {
     /// <param name="tokenisedLines"></param>
     /// <returns></returns>
     public static async IAsyncEnumerable<Line> DedupContext(this IAsyncEnumerable<Line> tokenisedLines) {
-        var context = Default.Preamble();
+        // Start with an empty context
+        var context = new Context([]);
+        var preambleTokens = Default.PreambleAll();
         await foreach (var line in tokenisedLines) {
+            // Compare the line against the current context
             var contextTokens = context.Lines.SelectMany(l => l.line.Tokens);
             line.AllTokens = line.AllTokens.Except(contextTokens).ToList();
-
             if (line.AllTokens.Count == 0) {
+                // Same as the current context
                 continue;
             }
 
-            context.Update(line);
+            // Now check for something different
+            var preTok = line.AllTokens.Intersect(preambleTokens).ToList();
+            if (preTok.Count != 0) {
+                // Update the current context object to match
+                context.Update(line);
+            }
 
             yield return line;
         }
@@ -63,6 +71,25 @@ public static class Dedup {
         }
     }
 
+    /// <summary>
+    /// Eliminates superfluous tokens within the one line
+    /// </summary>
+    public static Line CleanSuperfluousTokens(this Line line) {
+        var hasSuperfluousMovement = line.HasMovementWithoutDimension();
+        if (hasSuperfluousMovement) {
+            line.RemoveTokens(ModalGroup.ModalBasicMotion.ToList());
+        }
+        return line;
+    }
+
+    /// <summary>
+    /// Eliminates superfluous tokens from each line
+    /// </summary>
+    public static async IAsyncEnumerable<Line> DedupSuperfluousTokens(this IAsyncEnumerable<Line> tokenisedLines) {
+        await foreach (var line in tokenisedLines) {
+            yield return CleanSuperfluousTokens(line);
+        }
+    }
 
     /// <summary>
     /// Eliminates superfluous +ve Z, G0 commands

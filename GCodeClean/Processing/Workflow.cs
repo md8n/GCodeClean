@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2024 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2022-2025 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the AGPL license. See LICENSE.txt file in the project root for details.
 
 using System.Collections.Generic;
@@ -40,6 +40,7 @@ public static partial class Workflow {
     public static async Task<Context> GetPreambleContext(this string inputFilename) {
         // Determine our starting context
         var preambleSourceLines = inputFilename.ReadLinesAsync();
+        // Get only the lines up to the first motion command
         var preambleContextUnclean = await preambleSourceLines.TokeniseToLine(ModalGroup.ModalAllMotion).BuildPreamble();
         var preambleContextCleanLines = preambleContextUnclean.Lines.Select(cl => cl.line).ToAsyncEnumerable()
             .DedupRepeatedTokens()
@@ -63,6 +64,7 @@ public static partial class Workflow {
     ) {
         var tokenisedLines = inputLines.TokeniseToLine();
         var firstPhaseLines = (lineNumbers ? tokenisedLines : tokenisedLines.EliminateLineNumbers())
+            .DedupSuperfluousTokens()
             .DedupRepeatedTokens()
             .Augment()
             .SingleCommandPerLine()

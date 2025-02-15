@@ -59,6 +59,13 @@ public static partial class Tokeniser {
 
     // ((\%)|((?<linenumber>N\s*\d{1,5})?\s*(?:(?<word>[A-Z]\s*[+-]?(\d|\s)*\.?(\d|\s)*\s*)|(?<comment>\(.*?\)\s*))*|(?<fullcomment>\;.*$)))
 
+    /// <summary>
+    /// Tokenise the supplied lines up to the first appearance of one of the exitTokens
+    /// </summary>
+    /// <param name="lines"></param>
+    /// <param name="exitTokens"></param>
+    /// <remarks>If exitTokens is provided then the lines will be precleaned for superfluous tokens</remarks>
+    /// <returns></returns>
     public static async IAsyncEnumerable<Line> TokeniseToLine(this IAsyncEnumerable<string> lines, IEnumerable<Token> exitTokens = null) {
         if (exitTokens == null) {
             await foreach (var line in lines) {
@@ -67,10 +74,12 @@ public static partial class Tokeniser {
         } else {
             await foreach (var line in lines) {
                 var tokenisedLine = new Line(line);
-                yield return tokenisedLine;
-
-                if (tokenisedLine.HasTokens(exitTokens)) {
+                var preCleanedLine = Dedup.CleanSuperfluousTokens(tokenisedLine);
+                if (preCleanedLine.HasTokens(exitTokens)) {
                     break;
+                }
+                if (preCleanedLine.AllTokens.Count > 0) {
+                    yield return preCleanedLine;
                 }
             }
         }

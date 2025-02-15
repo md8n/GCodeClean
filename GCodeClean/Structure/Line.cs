@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2024 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2020-2025 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the AGPL license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -170,6 +170,18 @@ public sealed class Line : IEquatable<Line> {
     }
 
     /// <summary>
+    /// This returns true if there are one or more movement Commands (not including canned motion) but no Dimensional Arguments.
+    /// Line numbers, comments, codes are ignored for this test
+    /// </summary>
+    public bool HasMovementWithoutDimension() {
+        if (IsNotCommandCodeOrArguments()) {
+            return false;
+        }
+
+        return HasTokens(ModalGroup.ModalBasicMotion) && !HasTokens(Letter.DimensionArguments);
+    }
+
+    /// <summary>
     /// This returns true if there are one or more Arguments and a movement Command, comments are ignored for this test
     /// </summary>
     public bool HasMovementCommand() {
@@ -254,6 +266,11 @@ public sealed class Line : IEquatable<Line> {
         SetTokens();
     }
 
+    /// <summary>
+    /// Performs an in-line removal of any token found matching a code in the supplied list
+    /// </summary>
+    /// <param name="tokens"></param>
+    /// <returns>A list of the remved tokens</returns>
     public List<Token> RemoveTokens(List<char> codes) {
         var removedTokens = new List<Token>();
 
@@ -270,6 +287,11 @@ public sealed class Line : IEquatable<Line> {
         return removedTokens;
     }
 
+    /// <summary>
+    /// Performs an in-line removal of any token found matching a token in the supplied list
+    /// </summary>
+    /// <param name="tokens"></param>
+    /// <returns>A list of the remved tokens</returns>
     public List<Token> RemoveTokens(List<Token> tokens) {
         var removedTokens = new List<Token>();
 

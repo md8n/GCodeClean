@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2024 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2020-2025 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the AGPL license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -26,19 +26,22 @@ public class Dedup(ITestOutputHelper testOutputHelper) {
 
     [Fact]
     public async Task DedupContext() {
-        List<string> sourceTextLines = ["G17", "G40", "G90", "G20", "T1", "S10000", "M3", "G19", "G0 Z3", "G0 X35.747 Y46.824", "G17"];
+        List<string> sourceTextLines = ["G19", "G40", "G90", "G20", "T1", "S10000", "M3", "G19", "G0 Z3", "G0 X35.747 Y46.824", "G17"];
         var sourceLineLines = sourceTextLines.ConvertAll(l => new Line(l));
 
         var testLines = sourceLineLines.ConvertAll(l => new Line(l));
         var lines = AsyncLines(testLines);
         List<Line> expectedLines = [
+            new Line("G19"),
+            new Line("G40"),
+            new Line("G90"),
             new Line("G20"),
             new Line("T1"),
             new Line("S10000"),
-            new Line("G19"),
+            new Line("M3"),
             new Line("G0 Z3"),
             new Line("G0 X35.747 Y46.824"),
-            new Line("G17")
+            new Line("G17"),
         ];
 
         var resultLines = await lines.DedupContext().ToListAsync();

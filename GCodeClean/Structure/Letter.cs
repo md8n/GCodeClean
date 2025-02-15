@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2024 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
+// Copyright (c) 2023-2025 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
 // Licensed under the AGPL license. See LICENSE.txt file in the project root for details.
 
 namespace GCodeClean.Structure;
@@ -30,7 +30,11 @@ public static class Letter
     public static readonly char[] Comments = [commentStart, commentSemi];
     public static readonly char[] Commands = [gCommand, mCommand];
     public static readonly char[] Codes = [feedRate, spindleSpeed, selectTool];
-    public static readonly char[] Arguments = ['A', 'B', 'C', 'D', 'H', 'I', 'J', 'K', 'L', 'P', 'R', 'X', 'Y', 'Z'];
+    public static readonly char[] AxisArguments = ['A', 'B', 'C'];
+    public static readonly char[] ArcArguments = ['I', 'J', 'K'];
+    public static readonly char[] LinearArguments = ['X', 'Y', 'Z'];
+    public static readonly char[] DimensionArguments = [.. AxisArguments, .. ArcArguments, .. LinearArguments];
+    public static readonly char[] Arguments = [.. AxisArguments, 'D', 'H', .. ArcArguments, 'L', 'P', 'R', .. LinearArguments];
     public static readonly char[] LineNumbers = [lineNumber];
     /// <summary>
     /// Parameters are identified by a Hash followed by an integer (from 1 to 5399)
