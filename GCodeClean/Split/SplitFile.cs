@@ -47,7 +47,7 @@ public static partial class Split {
             var filename = node.NodeFileName(outputFolder, idCounts);
             yield return $"Filename: {filename}";
 
-            File.WriteAllLines(filename, preambleLines);
+            await File.WriteAllLinesAsync(filename, preambleLines);
 
             var firstLine = true;
             zClampConstrained = Processing.Utility.ConstrictZClamp(lengthUnits, zClampConstrained);
@@ -79,7 +79,7 @@ public static partial class Split {
                                     throw new ConstraintException($"The first 'movement' line in the individual split file '{filename}' is '{checkLine}'.\r\nHowever, the last movement line from the previous indidivual split file was not a 'G0'.\r\nTherefore a valid GCode file cannot be created.");
                                 }
                             }
-                            File.AppendAllLines(filename, [prevLine.ToString()]);
+                            await File.AppendAllLinesAsync(filename, [prevLine.ToString()]);
                             prevLine = null;
                         }
 
@@ -95,7 +95,7 @@ public static partial class Split {
                     line = line.Replace(origTravelling, node.ToTravelling());
                 }
 
-                File.AppendAllLines(filename, [line]);
+                await File.AppendAllLinesAsync(filename, [line]);
 
                 if (travellingFound) {
                     prevLine = new Line(line);
@@ -103,7 +103,7 @@ public static partial class Split {
                 }
             }
 
-            File.AppendAllLines(filename, postambleLines);
+            await File.AppendAllLinesAsync(filename, postambleLines);
         }
     }
 
