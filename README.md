@@ -11,7 +11,7 @@ We also have:
 * correcting G1 to G0 when the z-axis is at a positive value,
 * clipping decimal places on arguments to meaningful values (as per the NIST spec),
 * `per line` linting: splitting lines to match the actual execution order as per the NIST gcode spec, and then reorganising the 'words' on a line to conform to some common practices (but not all),
-* `annotate` the GCode with explanatory comments (optional),
+* `annotate` the GCode with explanatory comments (optional), note that annotating a cleaned file menas that you may not be able to `split` the file later,
 * 'soft', 'medium', 'hard' or custom removal of superfluous tokens (`minimise`).
 * `preamble linting`: Adding a 'standard' set of gcode declarations, i.e. converting the 'implicit' to 'explicit'.
 * `postamble linting`: Similar to the `preamble`, but at the end of the file (obviously).
@@ -101,7 +101,7 @@ Options:
   -?, -h, --help                    Show help and usage information
 ```
 
-`--annotate` is a simple switch, include it to have your GCode annotated with inline comments (even if you specify hard minimisation).
+`--annotate` is a simple switch, include it to have your GCode annotated with inline comments (even if you specify hard minimisation). **Note** that annotating a file may make it incompatible with the `split` function later
 
 `--lineNumbers` is also a simple switch. Normally line numbers will be stripped out (they are NOT recommended), but adding this flag will ensure they are preserved (if you must).
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2024 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2020-2025 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the AGPL license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -46,14 +46,9 @@ public class Processing(ITestOutputHelper testOutputHelper) {
             new Line("S10000"),
             new Line("M3"),
             new Line(Default.PreambleCompletion),
-            new Line("G21"),
-            new Line("G90"),
             new Line("G94"),
-            new Line("G17"),
-            new Line("G40"),
             new Line("G49"),
             new Line("G54"),
-            new Line("M3"),
             new Line(Default.PreambleCompleted),
             new Line(""),
             new Line($"G0 Z{zClamp}"),

@@ -8,3 +8,4 @@ Samples/
 /CLI/Properties/launchSettings.json
 cli/Facade-gcc/*_gcc.nc
 GCodeSpec.pdf
+.vscode/launch.json

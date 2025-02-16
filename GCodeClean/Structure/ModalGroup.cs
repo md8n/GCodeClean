@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2024 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
+// Copyright (c) 2020-2025 - Lee HUMPHRIES (lee@md8n.com) and contributors. All rights reserved.
 // Licensed under the AGPL license. See LICENSE.txt file in the project root for details.
 
 using System.Collections.Immutable;
@@ -48,6 +48,11 @@ public static class ModalGroup {
     /// G Modal subgroup 1 - motion - G38.2
     /// </summary>
     public static readonly ImmutableList<Token> ModalProbeMotion = [new Token("G38.2")];
+
+    /// <summary>
+    /// G Modal subgroup 1 - basic motion (does not include canned motion) -  G0, G1, G2, G3, G38.2
+    /// </summary>
+    public static readonly ImmutableList<Token> ModalBasicMotion = [.. ModalSimpleMotion, .. ModalProbeMotion];
 
     /// <summary>
     /// G Modal subgroup 1 - canned motion - G80, G81, G82, G83, G84, G85, G86, G87, G88, G89

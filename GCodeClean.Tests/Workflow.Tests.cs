@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2024 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
+// Copyright (c) 2023-2025 - Lee HUMPHRIES (lee@md8n.com). All rights reserved.
 // Licensed under the AGPL license. See LICENSE.txt file in the project root for details.
 
 using System;
@@ -30,7 +30,7 @@ public class Workflow(ITestOutputHelper testOutputHelper) {
     [Fact]
     public async Task CleanLinesFirstPhase() {
         List<string> sourceTextLines = [
-            "G21", "G90", "G94", "G17", "G40", "G49", "G54", "M3",
+            "G0", "G21", "G90", "G94", "G17", "G40", "M3",
             "G00 Z1.5",
             "G00 X14.7236 Y97.7144",
             "G00 Z0.5000",
@@ -44,8 +44,14 @@ public class Workflow(ITestOutputHelper testOutputHelper) {
         ];
         var sourceLineLines = sourceTextLines.ConvertAll(l => new Line(l));
         var sourceLines = sourceTextLines.ToAsyncEnumerable();
-        
+
         List<Line> expectedLines = [
+            new Line("G21"),
+            new Line("G90"),
+            new Line("G94"),
+            new Line("G17"),
+            new Line("G40"),
+            new Line("M3"),
             new Line("G0 Z1.5"),
             new Line("G0 X14.7236 Y97.7144 Z1.5"),
             new Line("G0 X14.7236 Y97.7144 Z0.5"),
@@ -58,7 +64,6 @@ public class Workflow(ITestOutputHelper testOutputHelper) {
             new Line("G1 X54.1775 Y136.2112 Z-0.3391"),
         ];
 
-        // The preamble context effectively gets stripped out, and added back in with the PreAndPostAmblePhase
         var resultLines = await sourceLines.CleanLinesFirstPhase(false).ToListAsync();
         Assert.False(sourceLineLines.SequenceEqual(resultLines));
         Assert.True(expectedLines.SequenceEqual(resultLines));
@@ -69,9 +74,6 @@ public class Workflow(ITestOutputHelper testOutputHelper) {
         List<string> sourceTextLines = [
             "G17",
             "G40",
-            "G90",
-            "G21",
-            "G94",
             "G49",
             "G54",
             "M3",
@@ -89,15 +91,15 @@ public class Workflow(ITestOutputHelper testOutputHelper) {
         var sourceLines = sourceTextLines.ToAsyncEnumerable();
 
         List<Line> expectedLines = [
-            new Line(Default.PreambleCompletion),
-            new Line("G21"),
-            new Line("G90"),
-            new Line("G94"),
             new Line("G17"),
             new Line("G40"),
             new Line("G49"),
             new Line("G54"),
             new Line("M3"),
+            new Line(Default.PreambleCompletion),
+            new Line("G21"),
+            new Line("G90"),
+            new Line("G94"),
             new Line(Default.PreambleCompleted),
             new Line(""),
             new Line("G0 Z0.5"),
@@ -127,11 +129,8 @@ public class Workflow(ITestOutputHelper testOutputHelper) {
         List<string> sourceTextLines = [
             "G17",
             "G40",
-            "G90",
             "G21",
             "G94",
-            "G49",
-            "G54",
             "M3",
             "G00 Z1.5",
             "G01 X54.178 Y136.211",
@@ -151,15 +150,15 @@ public class Workflow(ITestOutputHelper testOutputHelper) {
         var sourceLines = sourceTextLines.ToAsyncEnumerable();
 
         List<Line> expectedLines = [
-            new Line(Default.PreambleCompletion),
-            new Line("G21"),
-            new Line("G90"),
-            new Line("G94"),
             new Line("G17"),
             new Line("G40"),
+            new Line("G21"),
+            new Line("G94"),
+            new Line("M3"),
+            new Line(Default.PreambleCompletion),
+            new Line("G90"),
             new Line("G49"),
             new Line("G54"),
-            new Line("M3"),
             new Line(Default.PreambleCompleted),
             new Line(""),
 
@@ -223,8 +222,6 @@ public class Workflow(ITestOutputHelper testOutputHelper) {
 
         List<string> sourceTextLines = [
             "G17",
-            "G40",
-            "G90",
             "G21",
             "G94",
             "G49",
@@ -247,15 +244,15 @@ public class Workflow(ITestOutputHelper testOutputHelper) {
         var sourceLines = sourceTextLines.ToAsyncEnumerable();
 
         List<Line> expectedLines = [
-            new Line(Default.PreambleCompletion),
-            new Line("G21"),
-            new Line("G90"),
-            new Line("G94"),
             new Line("G17"),
-            new Line("G40"),
+            new Line("G21"),
+            new Line("G94"),
             new Line("G49"),
             new Line("G54"),
             new Line("M3"),
+            new Line(Default.PreambleCompletion),
+            new Line("G90"),
+            new Line("G40"),
             new Line(Default.PreambleCompleted),
             new Line(""),
             new Line("G0 Z0.5"),
